@@ -29,6 +29,7 @@ const FIELDS: Record<Tab, Array<{ key: string; label: string; required?: boolean
     { key: 'telephone', label: 'Téléphone' },
     { key: 'email', label: 'Email', type: 'email' },
     { key: 'numero_client_logiciel', label: 'N° client logiciel' },
+    { key: 'notes', label: 'Notes' },
   ],
   courtiers: [
     { key: 'nom', label: 'Nom', required: true },
