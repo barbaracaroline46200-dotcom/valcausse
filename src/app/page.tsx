@@ -300,13 +300,13 @@ export default function DashboardPage() {
           />
         </div>
         {selectedTransporteur && livraisonsTransporteur.length === 0 && (
-          <EmptyState text="Aucune livraison réalisée pour ce transporteur ce mois-ci." />
+          <EmptyState text="Aucune livraison pour ce transporteur ce mois-ci." />
         )}
         {livraisonsTransporteur.length > 0 && (
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
-                {['Statut', 'Produit', 'Enlèvement', 'Destination', 'Tonnes', 'CMR', 'Facturé'].map(h => (
+                {['Statut', 'Produit', 'Enlèvement', 'Destination', 'Tonnes', 'Date confirmée / Semaine', 'CMR', 'Facturé'].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
@@ -325,6 +325,15 @@ export default function DashboardPage() {
                   <td className="table-cell">{l.ville_destination ?? '—'}</td>
                   <td className="table-cell font-semibold">
                     {l.type === 'planifiee' ? formatTonnes(l.quantite_prevue) : formatTonnes(l.quantite_reelle)}
+                  </td>
+                  <td className="table-cell">
+                    {l.type === 'realisee'
+                      ? <span className="text-sm text-gray-700">{formatDate(l.date_reelle)}</span>
+                      : <DateSemaineCell livraison={l} onSaved={() => {
+                          fetch(`/api/livraisons?transporteur_id=${selectedTransporteur}&mois=${selectedMois}-01`)
+                            .then(r => r.json()).then(setLivraisonsTransporteur)
+                        }} />
+                    }
                   </td>
                   <td className="table-cell">
                     {l.type === 'planifiee' ? <span className="text-gray-400 text-xs">—</span>
@@ -445,5 +454,53 @@ function Section({ icon, title, count, color, subtitle, children }: {
 function EmptyState({ text }: { text: string }) {
   return (
     <div className="px-5 py-8 text-center text-gray-500 text-sm">{text}</div>
+  )
+}
+
+function DateSemaineCell({ livraison, onSaved }: { livraison: any; onSaved: () => void }) {
+  const [date, setDate] = useState(livraison.date_prevue ?? '')
+  const [semaine, setSemaine] = useState(livraison.semaine_prevue ?? '')
+  const [saving, setSaving] = useState(false)
+
+  async function save(field: 'date_prevue' | 'semaine_prevue', value: string) {
+    if (saving) return
+    setSaving(true)
+    await fetch(`/api/livraisons/${livraison.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        date_prevue: field === 'date_prevue' ? (value || null) : null,
+        semaine_prevue: field === 'semaine_prevue' ? (value || null) : null,
+      }),
+    })
+    setSaving(false)
+    onSaved()
+  }
+
+  return (
+    <div className="flex flex-col gap-1 min-w-[150px]">
+      <div className="flex items-center gap-1">
+        <span className="text-xs text-gray-400 w-14 shrink-0">Date :</span>
+        <input
+          type="date"
+          value={date}
+          onChange={e => { setDate(e.target.value); setSemaine('') }}
+          onBlur={e => save('date_prevue', e.target.value)}
+          className="text-xs border border-gray-200 rounded px-1.5 py-0.5 w-full focus:outline-none focus:border-orange-400"
+        />
+      </div>
+      <div className="flex items-center gap-1">
+        <span className="text-xs text-gray-400 w-14 shrink-0">Semaine :</span>
+        <input
+          type="text"
+          value={semaine}
+          placeholder="ex: S23"
+          onChange={e => { setSemaine(e.target.value); setDate('') }}
+          onBlur={e => save('semaine_prevue', e.target.value)}
+          className="text-xs border border-gray-200 rounded px-1.5 py-0.5 w-full focus:outline-none focus:border-orange-400"
+        />
+      </div>
+      {saving && <span className="text-xs text-gray-400">Enreg...</span>}
+    </div>
   )
 }
