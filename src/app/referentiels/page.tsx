@@ -33,7 +33,6 @@ const FIELDS: Record<Tab, Array<{ key: string; label: string; required?: boolean
   ],
   courtiers: [
     { key: 'nom', label: 'Nom', required: true },
-    { key: 'numero_courtier', label: 'N° courtier' },
     { key: 'telephone', label: 'Téléphone' },
     { key: 'email', label: 'Email', type: 'email' },
   ],
@@ -201,19 +200,18 @@ function CortiersList({ data, onEdit }: { data: any[]; onEdit: (item: any) => vo
   return (
     <table className="w-full">
       <thead className="bg-gray-50/50">
-        <tr>{['Nom', 'N° courtier', 'Téléphone', 'Email', ''].map((h, i) => <th key={i} className="table-header">{h}</th>)}</tr>
+        <tr>{['Nom', 'Téléphone', 'Email', ''].map((h, i) => <th key={i} className="table-header">{h}</th>)}</tr>
       </thead>
       <tbody>
         {data.map(c => (
           <tr key={c.id} className="table-row">
             <td className="table-cell font-medium">{c.nom}</td>
-            <td className="table-cell">{c.numero_courtier ?? '—'}</td>
             <td className="table-cell text-gray-500">{c.telephone ?? '—'}</td>
             <td className="table-cell text-gray-500">{c.email ?? '—'}</td>
             <td className="table-cell w-10"><EditBtn onClick={() => onEdit(c)} /></td>
           </tr>
         ))}
-        {data.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Aucun courtier</td></tr>}
+        {data.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">Aucun courtier</td></tr>}
       </tbody>
     </table>
   )
