@@ -71,7 +71,13 @@ export async function GET(req: NextRequest) {
   page.drawLine({ start: { x: 50, y }, end: { x: width - 50, y }, thickness: 0.5, color: rgb(0.9, 0.9, 0.9) })
   y -= 15
 
-  row('Date de livraison souhaitée', liv.mois_prevu ? new Date(liv.mois_prevu).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—')
+  const souhaitAgri = liv.date_souhaitee
+    ? new Date(liv.date_souhaitee).toLocaleDateString('fr-FR')
+    : (liv as any).semaine_souhaitee
+      ? (liv as any).semaine_souhaitee
+      : '—'
+  row('Période souhaitée (agri)', souhaitAgri)
+  row('Mois de livraison prévu', liv.mois_prevu ? new Date(liv.mois_prevu).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—')
   y -= 5
 
   page.drawLine({ start: { x: 50, y }, end: { x: width - 50, y }, thickness: 0.5, color: rgb(0.9, 0.9, 0.9) })

@@ -222,7 +222,7 @@ export default function DashboardPage() {
                         {step1ok ? (
                           <div className="text-xs text-gray-600">
                             <p className="text-gray-400 mb-2">Souhait agri : <strong className="text-gray-700">{l.date_souhaitee ? new Date(l.date_souhaitee).toLocaleDateString('fr-FR') : l.semaine_souhaitee ? l.semaine_souhaitee : '—'}</strong></p>
-                            <a href={`/contrats/${ca?.id}`} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-white text-xs font-medium" style={{ backgroundColor: '#7B2820' }}>
+                            <a href={`/api/pdf/transporteur?livraison_id=${l.id}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-white text-xs font-medium" style={{ backgroundColor: '#7B2820' }}>
                               📥 Télécharger PDF
                             </a>
                           </div>
