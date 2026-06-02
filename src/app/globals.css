@@ -1,0 +1,113 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply bg-cream text-gray-800;
+    font-family: 'Open Sans', Arial, Helvetica, sans-serif;
+  }
+
+  body {
+    @apply bg-cream min-h-screen;
+  }
+}
+
+@layer components {
+  /* Badges famille — couleurs Valcausse */
+  .badge-appro {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background-color: #fef3c7;
+    color: #7B2820;
+  }
+  .badge-negoce {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background-color: #d9ecf5;
+    color: #2a5570;
+  }
+  .badge-en_cours {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background-color: #fff3d0;
+    color: #a37514;
+  }
+  .badge-clos {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800;
+  }
+  .badge-alerte {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700;
+  }
+
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-100 p-5;
+  }
+  .card-section {
+    @apply bg-white rounded-xl shadow-sm border border-gray-100;
+  }
+
+  /* Bouton principal — brun-bordeaux Valcausse */
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2 text-white font-semibold rounded-lg transition-colors text-sm;
+    background-color: #7B2820;
+  }
+  .btn-primary:hover {
+    background-color: #641f19;
+  }
+
+  /* Bouton secondaire */
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 font-semibold rounded-lg border border-gray-200 transition-colors text-sm;
+    color: #7B2820;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors text-sm;
+  }
+
+  /* Bouton accent — orange/or Valcausse */
+  .btn-accent {
+    @apply inline-flex items-center gap-2 px-4 py-2 text-white font-semibold rounded-lg transition-colors text-sm;
+    background-color: #C8941A;
+  }
+  .btn-accent:hover {
+    background-color: #a37514;
+  }
+
+  .input {
+    @apply block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white;
+    outline: none;
+  }
+  .input:focus {
+    outline: none;
+    border-color: #448ab5;
+    box-shadow: 0 0 0 3px rgba(68, 138, 181, 0.15);
+  }
+
+  .label {
+    @apply block text-sm font-semibold mb-1;
+    color: #5a3020;
+  }
+
+  .table-header {
+    @apply text-xs font-semibold uppercase tracking-wide px-4 py-3 text-left;
+    color: #7B2820;
+    opacity: 0.7;
+  }
+  .table-cell {
+    @apply px-4 py-3 text-sm text-gray-800;
+  }
+  .table-row {
+    @apply border-t border-gray-100 transition-colors;
+  }
+  .table-row:hover {
+    background-color: #fdf5f3;
+  }
+
+  /* Liens actifs dans la sidebar */
+  .nav-active {
+    background-color: #fdf5f3;
+    color: #7B2820;
+    font-weight: 600;
+  }
+}

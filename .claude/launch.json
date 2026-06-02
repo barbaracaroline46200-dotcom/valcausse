@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "valcausse-preview",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-c", "import os,http.server,socketserver; os.chdir('/Users/barbarabenoit/Desktop/valcausse-preview'); socketserver.TCPServer(('',3333),http.server.SimpleHTTPRequestHandler).serve_forever()"],
+      "port": 3333
+    }
+  ]
+}

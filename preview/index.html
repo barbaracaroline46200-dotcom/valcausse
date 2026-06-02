@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Valcausse — Aperçu de l'application</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Open Sans', Arial, sans-serif; background: #f8f7f4; color: #333; }
+
+/* ---- NAV PAGES ---- */
+.page-nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: #7B2820; display: flex; gap: 0; padding: 0 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.2);
+}
+.page-nav a {
+  color: rgba(255,255,255,0.75); text-decoration: none; font-size: 12px;
+  font-weight: 600; padding: 10px 14px; transition: .2s;
+}
+.page-nav a:hover, .page-nav a.active { color: #fff; background: rgba(255,255,255,.12); }
+.page-nav .logo-nav { color: #C8941A; font-weight: 800; font-size: 13px; padding: 10px 14px; letter-spacing: .5px; }
+
+/* ---- LAYOUT ---- */
+.app { display: flex; min-height: 100vh; padding-top: 36px; }
+
+/* ---- SIDEBAR ---- */
+.sidebar {
+  width: 256px; background: #fff; border-right: 1px solid #e5e7eb;
+  display: flex; flex-direction: column; flex-shrink: 0;
+  box-shadow: 1px 0 4px rgba(0,0,0,.04);
+}
+.sidebar-logo { padding: 20px 20px 14px; border-bottom: 1px solid #f0f0ee; }
+.sidebar-logo img { height: 46px; width: auto; display: block; }
+.sidebar-subtitle { font-size: 11px; color: #C8941A; font-weight: 600; margin-top: 6px; }
+.sidebar-nav { flex: 1; padding: 12px 10px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+  border-radius: 8px; font-size: 13px; font-weight: 500; color: #6b7280;
+  text-decoration: none; transition: .15s; margin-bottom: 2px; cursor: pointer;
+}
+.nav-item:hover { background: #fafafa; color: #374151; }
+.nav-item.active { background: #fdf5f3; color: #7B2820; font-weight: 600; }
+.nav-item .dot { margin-left: auto; width: 6px; height: 6px; border-radius: 50%; background: #C8941A; }
+.nav-icon { width: 18px; height: 18px; opacity: .6; }
+.nav-item.active .nav-icon { opacity: 1; color: #7B2820; }
+.sidebar-footer { padding: 12px 10px; border-top: 1px solid #f0f0ee; }
+.admin-badge {
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  background: #fdf5f3; border-radius: 8px;
+}
+.admin-dot { width: 8px; height: 8px; border-radius: 50%; background: #C8941A; flex-shrink: 0; }
+.admin-text { font-size: 11px; font-weight: 700; color: #7B2820; }
+
+/* ---- MAIN ---- */
+.main { flex: 1; padding: 24px; overflow-x: auto; }
+.page { display: none; }
+.page.active { display: block; }
+
+/* ---- COMPOSANTS ---- */
+.page-title {
+  font-size: 22px; font-weight: 800; color: #7B2820;
+  display: flex; align-items: center; gap: 10px; margin-bottom: 4px;
+}
+.page-title .icon { color: #C8941A; }
+.page-subtitle { font-size: 13px; color: #9ca3af; margin-bottom: 24px; }
+
+.cards-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+.stat-card {
+  background: #fff; border-radius: 12px; padding: 18px; text-align: center;
+  border: 1px solid; box-shadow: 0 1px 3px rgba(0,0,0,.05);
+}
+.stat-icon { font-size: 28px; margin-bottom: 8px; }
+.stat-value { font-size: 26px; font-weight: 800; line-height: 1; }
+.stat-label { font-size: 11px; font-weight: 600; margin-top: 5px; opacity: .75; }
+
+.card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,.05); overflow: hidden; margin-bottom: 20px; }
+.card-header {
+  display: flex; align-items: center; gap: 12px; padding: 14px 18px;
+  border-bottom: 1px solid #f0ebe9;
+}
+.card-header-icon {
+  width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center;
+  justify-content: center; color: #fff; font-size: 16px; flex-shrink: 0;
+}
+.card-title { font-size: 14px; font-weight: 700; color: #3a1e1a; }
+.card-subtitle { font-size: 11px; color: #7B2820; opacity: .65; margin-top: 1px; }
+.count-badge {
+  margin-left: auto; min-width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; color: #fff;
+}
+
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th {
+  font-size: 11px; font-weight: 700; color: #7B2820; opacity: .65;
+  text-transform: uppercase; letter-spacing: .05em; padding: 10px 16px;
+  text-align: left; background: #fafaf8;
+}
+.table td { padding: 10px 16px; border-top: 1px solid #f3f4f6; color: #374151; }
+.table tr:hover td { background: #fdf5f3; }
+
+/* Badges */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700;
+}
+.badge-negoce { background: #d9ecf5; color: #2a5570; }
+.badge-appro { background: #fef3c7; color: #7B2820; }
+.badge-en-cours { background: #fff3d0; color: #a37514; }
+.badge-clos { background: #dcfce7; color: #15803d; }
+.badge-alerte { background: #fee2e2; color: #b91c1c; }
+.badge-silo { background: #f3e8ff; color: #6b21a8; }
+
+/* Progress bar */
+.progress-wrap { margin-top: 4px; }
+.progress-bg { height: 8px; background: #f3f4f6; border-radius: 99px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 99px; }
+.progress-label { display: flex; justify-content: space-between; font-size: 10px; color: #9ca3af; margin-top: 3px; }
+
+/* Reliquat highlight */
+.reliquat { font-weight: 800; font-size: 14px; color: #C8941A; }
+.reliquat-zero { color: #15803d; }
+
+/* Btn */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; border: none; transition: .15s; }
+.btn-primary { background: #7B2820; color: #fff; }
+.btn-primary:hover { background: #641f19; }
+.btn-secondary { background: #fff; color: #7B2820; border: 1.5px solid #e4b5ad; }
+.btn-small { padding: 4px 10px; font-size: 11px; }
+
+/* Alerte */
+.alert-box {
+  display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+  background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px;
+  color: #b91c1c; font-size: 13px; font-weight: 600; margin-bottom: 16px;
+}
+
+/* Chart */
+.chart-wrap { padding: 16px 18px 12px; }
+.chart-title { font-size: 13px; font-weight: 700; color: #7B2820; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+.bar-chart { display: flex; flex-direction: column; gap: 8px; }
+.bar-row { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+.bar-label { width: 100px; text-align: right; color: #6b7280; font-weight: 500; flex-shrink: 0; }
+.bar-outer { flex: 1; height: 22px; background: #f3f4f6; border-radius: 4px; overflow: hidden; }
+.bar-inner { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 8px; color: #fff; font-size: 11px; font-weight: 700; }
+.bar-val { width: 60px; font-weight: 700; color: #374151; font-size: 12px; }
+
+/* Detail page specific */
+.detail-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 20px; }
+.info-card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; padding: 18px; }
+.info-title { font-size: 13px; font-weight: 700; color: #7B2820; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #f0ebe9; }
+.dl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 24px; }
+.dl-item dt { font-size: 11px; color: #9ca3af; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.dl-item dd { font-size: 13px; color: #374151; font-weight: 600; margin-top: 2px; }
+.progress-card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; padding: 18px; text-align: center; }
+.big-number { font-size: 36px; font-weight: 800; color: #374151; line-height: 1; }
+.big-sub { font-size: 12px; color: #9ca3af; margin-top: 4px; margin-bottom: 14px; }
+.reliquat-box { background: #fff8f0; border: 1px solid #f5d08c; border-radius: 8px; padding: 14px; margin-top: 12px; }
+.reliquat-num { font-size: 28px; font-weight: 800; color: #C8941A; }
+.reliquat-lbl { font-size: 11px; font-weight: 700; color: #a37514; margin-top: 2px; }
+
+/* CMR badge */
+.days-badge { background: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; }
+
+/* Checkbox style */
+.check-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; }
+.check-box { width: 15px; height: 15px; border: 2px solid #d1d5db; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; }
+.check-box.checked { background: #C8941A; border-color: #C8941A; color: #fff; font-size: 10px; }
+
+/* Transport page */
+.transport-totals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
+.total-card { background: #fff; border-radius: 12px; padding: 16px; text-align: center; border: 1px solid; }
+.total-val { font-size: 22px; font-weight: 800; }
+.total-lbl { font-size: 11px; font-weight: 600; color: #9ca3af; margin-top: 4px; }
+
+/* Recherche */
+.search-bar-wrap { position: relative; margin-bottom: 24px; }
+.search-bar-wrap input { width: 100%; padding: 12px 16px 12px 46px; border: 1.5px solid #e5e7eb; border-radius: 10px; font-size: 15px; font-family: inherit; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #9ca3af; }
+.result-group { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; margin-bottom: 14px; }
+.result-header { display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: #fafaf8; border-bottom: 1px solid #f3f4f6; font-size: 12px; font-weight: 700; color: #6b7280; }
+.result-count { margin-left: auto; font-size: 11px; color: #9ca3af; font-weight: 500; }
+.result-item { display: flex; align-items: center; padding: 10px 16px; border-top: 1px solid #f9fafb; font-size: 13px; cursor: pointer; transition: .1s; }
+.result-item:hover { background: #fdf5f3; }
+.result-arrow { margin-left: auto; color: #C8941A; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- Navigation entre pages -->
+<nav class="page-nav">
+  <span class="logo-nav">VALCAUSSE</span>
+  <a href="#" class="active" onclick="showPage('dashboard', this)">🏠 Tableau de bord</a>
+  <a href="#" onclick="showPage('contrats', this)">📄 Contrats achat</a>
+  <a href="#" onclick="showPage('detail', this)">🔍 Détail contrat</a>
+  <a href="#" onclick="showPage('ventes', this)">🛒 Contrats vente</a>
+  <a href="#" onclick="showPage('transport', this)">🚛 Transport & Factures</a>
+  <a href="#" onclick="showPage('referentiels', this)">📚 Référentiels</a>
+  <a href="#" onclick="showPage('recherche', this)">🔎 Recherche</a>
+</nav>
+
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <img src="https://cooperative.valcausse.fr/wp-content/themes/valcause/assets/images/logo.png" alt="Valcausse" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+      <div style="display:none; font-size:20px; font-weight:800; color:#7B2820;">VALCAUSSE</div>
+      <div class="sidebar-subtitle">Gestion des contrats céréales</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" onclick="showPage('dashboard', null)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Tableau de bord <span class="dot"></span>
+      </div>
+      <div class="nav-item" onclick="showPage('contrats', null)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Contrats achat
+      </div>
+      <div class="nav-item" onclick="showPage('ventes', null)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        Contrats vente
+      </div>
+      <div class="nav-item" onclick="showPage('transport', null)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        Transport & Factures
+      </div>
+      <div class="nav-item" onclick="showPage('referentiels', null)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        Référentiels
+      </div>
+      <div class="nav-item" onclick="showPage('recherche', null)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Recherche globale
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="admin-badge">
+        <div class="admin-dot"></div>
+        <span class="admin-text">Mode admin actif</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Contenu principal -->
+  <main class="main">
+
+    <!-- ==================== DASHBOARD ==================== -->
+    <div id="dashboard" class="page active">
+      <h1 class="page-title"><span class="icon">📊</span> Tableau de bord</h1>
+      <p class="page-subtitle">Année agricole 2024/2025 · Lundi 2 juin 2025</p>
+
+      <!-- KPIs -->
+      <div class="cards-row">
+        <div class="stat-card" style="background:#fff8f0;border-color:#f5d08c">
+          <div class="stat-icon">📋</div>
+          <div class="stat-value" style="color:#a37514">14</div>
+          <div class="stat-label" style="color:#a37514">Contrats en cours</div>
+        </div>
+        <div class="stat-card" style="background:#f0fdf4;border-color:#bbf7d0">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value" style="color:#15803d">8</div>
+          <div class="stat-label" style="color:#15803d">Contrats clos</div>
+        </div>
+        <div class="stat-card" style="background:#fdf5f3;border-color:#e4b5ad">
+          <div class="stat-icon">🌾</div>
+          <div class="stat-value" style="color:#7B2820">4 820 t</div>
+          <div class="stat-label" style="color:#7B2820">Négoce livré</div>
+        </div>
+        <div class="stat-card" style="background:#eff6fb;border-color:#a8d2e8">
+          <div class="stat-icon">🌿</div>
+          <div class="stat-value" style="color:#2a5570">1 340 t</div>
+          <div class="stat-label" style="color:#2a5570">Appro livré</div>
+        </div>
+      </div>
+
+      <!-- Graphique -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="chart-wrap">
+          <div class="chart-title">📈 Tonnage livré par produit — année agricole 2024/2025</div>
+          <div class="bar-chart">
+            <div class="bar-row"><span class="bar-label">Blé</span><div class="bar-outer"><div class="bar-inner" style="width:85%;background:#7B2820">1 820 t</div></div><span class="bar-val">1 820 t</span></div>
+            <div class="bar-row"><span class="bar-label">Maïs</span><div class="bar-outer"><div class="bar-inner" style="width:65%;background:#C8941A">1 400 t</div></div><span class="bar-val">1 400 t</span></div>
+            <div class="bar-row"><span class="bar-label">Orge</span><div class="bar-outer"><div class="bar-inner" style="width:50%;background:#7B2820">1 100 t</div></div><span class="bar-val">1 100 t</span></div>
+            <div class="bar-row"><span class="bar-label">Tournesol</span><div class="bar-outer"><div class="bar-inner" style="width:35%;background:#C8941A">750 t</div></div><span class="bar-val">750 t</span></div>
+            <div class="bar-row"><span class="bar-label">Soja</span><div class="bar-outer"><div class="bar-inner" style="width:18%;background:#7B2820">390 t</div></div><span class="bar-val">390 t</span></div>
+            <div class="bar-row"><span class="bar-label">T. colza</span><div class="bar-outer"><div class="bar-inner" style="width:11%;background:#C8941A">240 t</div></div><span class="bar-val">240 t</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section Livraisons à planifier -->
+      <div class="card">
+        <div class="card-header" style="background:#fff8f0;border-bottom-color:#f5d08c">
+          <div class="card-header-icon" style="background:#C8941A">🚛</div>
+          <div>
+            <div class="card-title">Livraisons à planifier ce mois-ci</div>
+            <div class="card-subtitle">Transporteur non encore contacté</div>
+          </div>
+          <div class="count-badge" style="background:#C8941A">3</div>
+        </div>
+        <table class="table">
+          <thead><tr>
+            <th>Produit</th><th>Fournisseur</th><th>Agriculteur dest.</th><th>Enlèvement</th><th>Destination</th><th>Tonnes</th><th>Mois</th><th>Contacté ?</th>
+          </tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Blé</strong></td><td>SARL Dupont</td><td>Ferme des Cèdres</td>
+              <td style="color:#6b7280">Millau</td><td style="color:#6b7280">Saint-Affrique</td>
+              <td><strong>120 t</strong></td><td>juin 2025</td>
+              <td><label class="check-row"><span class="check-box"></span> Non</label></td>
+            </tr>
+            <tr>
+              <td><strong>Maïs</strong></td><td>GFA Martin</td><td>EARL Leblanc</td>
+              <td style="color:#6b7280">Rodez</td><td style="color:#6b7280">Villefranche-de-R.</td>
+              <td><strong>85 t</strong></td><td>juin 2025</td>
+              <td><label class="check-row"><span class="check-box"></span> Non</label></td>
+            </tr>
+            <tr>
+              <td><strong>Orge</strong></td><td>Coopérative du Sud</td><td>GAEC Aubert</td>
+              <td style="color:#6b7280">Millau</td><td style="color:#6b7280">Séverac</td>
+              <td><strong>60 t</strong></td><td>juin 2025</td>
+              <td><label class="check-row"><span class="check-box checked">✓</span> Oui</label></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Section CMR -->
+      <div class="card">
+        <div class="card-header" style="background:#fef2f2;border-bottom-color:#fecaca">
+          <div class="card-header-icon" style="background:#dc2626">📄</div>
+          <div>
+            <div class="card-title">CMR en attente</div>
+            <div class="card-subtitle" style="color:#b91c1c">Livraisons réalisées depuis > 14 jours sans lettre de voiture</div>
+          </div>
+          <div class="count-badge" style="background:#dc2626">2</div>
+        </div>
+        <table class="table">
+          <thead><tr><th>Produit</th><th>Transporteur</th><th>Date livraison</th><th>Contact</th><th>Délai</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Tournesol</strong></td><td>Transports Rouvier</td><td>15/05/2025</td>
+              <td style="color:#6b7280">📞 06 12 34 56 78</td>
+              <td><span class="days-badge">18j</span></td>
+            </tr>
+            <tr>
+              <td><strong>Soja</strong></td><td>BFC Logistics</td><td>10/05/2025</td>
+              <td style="color:#6b7280">📞 05 65 44 33 22</td>
+              <td><span class="days-badge">23j</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Contrats en alerte -->
+      <div class="card">
+        <div class="card-header" style="background:#fef2f2;border-bottom-color:#fecaca">
+          <div class="card-header-icon" style="background:#dc2626">⚠️</div>
+          <div>
+            <div class="card-title">Contrats en alerte</div>
+            <div class="card-subtitle" style="color:#b91c1c">Date d'échéance proche ou dépassée avec reliquat non livré</div>
+          </div>
+          <div class="count-badge" style="background:#dc2626">1</div>
+        </div>
+        <table class="table">
+          <thead><tr><th>Contrat</th><th>Produit</th><th>Fournisseur</th><th>Date fin</th><th>Reliquat</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><a style="color:#7B2820;font-weight:700;text-decoration:none;cursor:pointer" onclick="showPage('detail',null)">CA-2025-004</a></td>
+              <td>Orge</td><td>GFA Martin</td>
+              <td style="color:#b91c1c;font-weight:700">30/06/2025 ⚠️</td>
+              <td><span class="reliquat">200 t</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ==================== CONTRATS ==================== -->
+    <div id="contrats" class="page">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <h1 class="page-title" style="margin-bottom:0"><span class="icon">📄</span> Contrats d'achat</h1>
+        <button class="btn btn-primary">＋ Nouveau contrat</button>
+      </div>
+      <p class="page-subtitle">5 contrats affichés</p>
+
+      <!-- Filtres -->
+      <div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:10px;padding:14px 16px;margin-bottom:18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:12px;font-weight:700;color:#7B2820;display:flex;align-items:center;gap:5px">🔽 Filtres actifs :</span>
+        <span style="background:#fdf5f3;border:1px solid #e4b5ad;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600;color:#7B2820">Famille : Négoce ✕</span>
+        <span style="background:#fdf5f3;border:1px solid #e4b5ad;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600;color:#7B2820">Statut : En cours ✕</span>
+        <button style="font-size:11px;color:#9ca3af;background:none;border:none;cursor:pointer;margin-left:auto">↺ Réinitialiser</button>
+      </div>
+
+      <div class="card">
+        <table class="table">
+          <thead><tr>
+            <th>N° Contrat</th><th>Famille</th><th>Produit</th><th>Fournisseur</th><th>Total</th><th>Livré</th><th>Reliquat</th><th>Prix achat</th><th>Date fin</th><th>Statut</th><th></th>
+          </tr></thead>
+          <tbody>
+            <tr>
+              <td><a style="font-weight:700;color:#7B2820;text-decoration:none;cursor:pointer" onclick="showPage('detail',null)">CA-2025-001</a></td>
+              <td><span class="badge badge-negoce">🌾 Négoce</span></td>
+              <td><strong>Blé</strong></td><td>SARL Dupont</td>
+              <td>500 t</td>
+              <td>
+                <div style="min-width:100px">
+                  <div class="progress-bg"><div class="progress-fill" style="width:72%;background:#7B2820"></div></div>
+                  <div class="progress-label"><span>360 t</span><span>72%</span></div>
+                </div>
+              </td>
+              <td><span class="reliquat">140 t</span></td>
+              <td>185,00 €/t</td><td>30/06/2025</td>
+              <td><span class="badge badge-en-cours">⏳ En cours</span></td>
+              <td><a style="font-size:12px;color:#7B2820;text-decoration:none;cursor:pointer;font-weight:600" onclick="showPage('detail',null)">Voir →</a></td>
+            </tr>
+            <tr>
+              <td><a style="font-weight:700;color:#7B2820;text-decoration:none;cursor:pointer">CA-2025-002</a></td>
+              <td><span class="badge badge-negoce">🌾 Négoce</span></td>
+              <td><strong>Maïs</strong></td><td>GFA Martin</td>
+              <td>300 t</td>
+              <td>
+                <div style="min-width:100px">
+                  <div class="progress-bg"><div class="progress-fill" style="width:100%;background:#15803d"></div></div>
+                  <div class="progress-label"><span>300 t</span><span>100%</span></div>
+                </div>
+              </td>
+              <td><span class="reliquat reliquat-zero">0 t</span></td>
+              <td>172,50 €/t</td><td>31/05/2025</td>
+              <td><span class="badge badge-clos">✓ Clos</span></td>
+              <td><a style="font-size:12px;color:#7B2820;text-decoration:none;font-weight:600;cursor:pointer">Voir →</a></td>
+            </tr>
+            <tr>
+              <td><a style="font-weight:700;color:#7B2820;text-decoration:none;cursor:pointer">CA-2025-003</a></td>
+              <td><span class="badge badge-negoce">🌾 Négoce</span></td>
+              <td><strong>Tournesol</strong></td><td>Coopérative du Sud</td>
+              <td>150 t</td>
+              <td>
+                <div style="min-width:100px">
+                  <div class="progress-bg"><div class="progress-fill" style="width:40%;background:#C8941A"></div></div>
+                  <div class="progress-label"><span>60 t</span><span>40%</span></div>
+                </div>
+              </td>
+              <td><span class="reliquat">90 t</span></td>
+              <td>520,00 €/t</td><td>30/09/2025</td>
+              <td><span class="badge badge-en-cours">⏳ En cours</span></td>
+              <td><a style="font-size:12px;color:#7B2820;text-decoration:none;font-weight:600;cursor:pointer">Voir →</a></td>
+            </tr>
+            <tr>
+              <td><a style="font-weight:700;color:#7B2820;text-decoration:none;cursor:pointer">CA-2025-004</a></td>
+              <td><span class="badge badge-negoce">🌾 Négoce</span></td>
+              <td><strong>Orge</strong></td><td>GFA Martin</td>
+              <td>400 t</td>
+              <td>
+                <div style="min-width:100px">
+                  <div class="progress-bg"><div class="progress-fill" style="width:50%;background:#C8941A"></div></div>
+                  <div class="progress-label"><span>200 t</span><span>50%</span></div>
+                </div>
+              </td>
+              <td><span style="font-weight:800;font-size:14px;color:#dc2626">200 t ⚠️</span></td>
+              <td>168,00 €/t</td><td style="color:#b91c1c;font-weight:700">30/06/2025</td>
+              <td><span class="badge badge-en-cours">⏳ En cours</span></td>
+              <td><a style="font-size:12px;color:#7B2820;text-decoration:none;font-weight:600;cursor:pointer" onclick="showPage('detail',null)">Voir →</a></td>
+            </tr>
+            <tr>
+              <td><a style="font-weight:700;color:#7B2820;text-decoration:none;cursor:pointer">CF-2025-001</a></td>
+              <td><span class="badge badge-appro">🌿 Appro</span></td>
+              <td><strong>Tourteau de soja</strong></td><td>Négoce Aveyron</td>
+              <td>80 t</td>
+              <td>
+                <div style="min-width:100px">
+                  <div class="progress-bg"><div class="progress-fill" style="width:88%;background:#15803d"></div></div>
+                  <div class="progress-label"><span>70 t</span><span>88%</span></div>
+                </div>
+              </td>
+              <td><span class="reliquat">10 t</span></td>
+              <td>410,00 €/t</td><td>15/07/2025</td>
+              <td><span class="badge badge-en-cours">⏳ En cours</span></td>
+              <td><a style="font-size:12px;color:#7B2820;text-decoration:none;font-weight:600;cursor:pointer">Voir →</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ==================== DETAIL CONTRAT ==================== -->
+    <div id="detail" class="page">
+      <button onclick="showPage('contrats',null)" style="font-size:12px;color:#9ca3af;background:none;border:none;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;gap:4px">← Retour</button>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;flex-wrap:wrap">
+        <h1 class="page-title" style="margin-bottom:0"><span>CA-2025-001</span></h1>
+        <span class="badge badge-negoce">🌾 Négoce</span>
+        <span class="badge badge-en-cours">⏳ En cours</span>
+      </div>
+      <p class="page-subtitle">Blé · SARL Dupont</p>
+
+      <div class="detail-grid">
+        <!-- Infos -->
+        <div class="info-card">
+          <div class="info-title">Informations du contrat</div>
+          <div class="dl-grid">
+            <div class="dl-item"><dt>Produit</dt><dd>Blé</dd></div>
+            <div class="dl-item"><dt>Famille</dt><dd>Négoce</dd></div>
+            <div class="dl-item"><dt>Fournisseur</dt><dd>SARL Dupont</dd></div>
+            <div class="dl-item"><dt>Référence fourn.</dt><dd>REF-DUPONT-2025</dd></div>
+            <div class="dl-item"><dt>Transporteur</dt><dd>Transports Rouvier</dd></div>
+            <div class="dl-item"><dt>Courtier</dt><dd>Cabinet Grain (n° 142)</dd></div>
+            <div class="dl-item"><dt>Prix achat</dt><dd>185,00 €/t</dd></div>
+            <div class="dl-item"><dt>Prix transport prévu</dt><dd>12,50 €/t</dd></div>
+            <div class="dl-item"><dt>Point de chargement</dt><dd>Zone agricole Millau Nord</dd></div>
+            <div class="dl-item"><dt>Ville chargement</dt><dd>Millau</dd></div>
+            <div class="dl-item"><dt>Date début</dt><dd>01/01/2025</dd></div>
+            <div class="dl-item"><dt>Date fin</dt><dd style="color:#C8941A;font-weight:700">30/06/2025</dd></div>
+          </div>
+        </div>
+        <!-- Avancement -->
+        <div class="progress-card">
+          <div class="info-title" style="text-align:left">Avancement</div>
+          <div class="big-number">360 t</div>
+          <div class="big-sub">livrées sur 500 t</div>
+          <div class="progress-bg" style="height:12px;margin-bottom:6px">
+            <div class="progress-fill" style="width:72%;background:#7B2820;height:12px"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:#9ca3af;margin-bottom:12px">
+            <span>360 t livrées</span><span style="font-weight:700">72%</span>
+          </div>
+          <div class="reliquat-box">
+            <div class="reliquat-num">140 t</div>
+            <div class="reliquat-lbl">Reliquat à livrer</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contrats de vente liés -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">
+          <div class="card-header-icon" style="background:#7B2820">🛒</div>
+          <div><div class="card-title">Contrats de vente liés</div></div>
+          <div style="margin-left:auto;display:flex;gap:8px">
+            <button class="btn btn-secondary btn-small">＋ Lier existant</button>
+            <button class="btn btn-primary btn-small">＋ Nouveau</button>
+          </div>
+        </div>
+        <table class="table">
+          <thead><tr><th>N° Contrat</th><th>Agriculteur</th><th>Produit</th><th>Quantité</th><th>Prix vente</th><th>Statut</th><th>Facture client</th></tr></thead>
+          <tbody>
+            <tr>
+              <td style="font-weight:700;color:#7B2820">CV-2025-001</td>
+              <td>Ferme des Cèdres</td><td>Blé</td>
+              <td style="font-weight:700">300 t</td><td>196,00 €/t</td>
+              <td><span class="badge badge-en-cours">⏳ En cours</span></td>
+              <td><span style="color:#C8941A;font-size:12px;font-weight:600">À récupérer</span></td>
+            </tr>
+            <tr>
+              <td style="font-weight:700;color:#7B2820">CV-2025-002</td>
+              <td>EARL Leblanc</td><td>Blé</td>
+              <td style="font-weight:700">200 t</td><td>194,50 €/t</td>
+              <td><span class="badge badge-en-cours">⏳ En cours</span></td>
+              <td style="font-size:12px;color:#9ca3af">FA-2025-0042</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Planning livraisons -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-icon" style="background:#C8941A">📅</div>
+          <div><div class="card-title">Planning des livraisons</div></div>
+          <button class="btn btn-primary btn-small" style="margin-left:auto">＋ Ajouter planifiée</button>
+        </div>
+        <!-- Planifiées -->
+        <div style="padding:6px 16px 4px;background:#fff8f0;font-size:11px;font-weight:700;color:#a37514;text-transform:uppercase;letter-spacing:.05em">Planifiées (2)</div>
+        <table class="table">
+          <thead><tr><th>Mois prévu</th><th>Tonnes prév.</th><th>Enlèvement</th><th>Destination</th><th>Pièce fourn.</th><th>Pièce client</th><th>Transporteur</th><th>Contacté ?</th><th>Actions</th></tr></thead>
+          <tbody>
+            <tr>
+              <td style="font-weight:600">juin 2025</td><td>120 t</td>
+              <td style="color:#9ca3af">Millau</td><td style="color:#9ca3af">Saint-Affrique</td>
+              <td style="color:#d1d5db;font-size:12px">BA —</td>
+              <td style="color:#d1d5db;font-size:12px">LVC —</td>
+              <td style="font-size:12px;color:#6b7280">Transports Rouvier</td>
+              <td><label class="check-row"><span class="check-box"></span> Non</label></td>
+              <td style="display:flex;gap:6px;flex-wrap:nowrap">
+                <button class="btn btn-primary btn-small">Réaliser</button>
+                <button class="btn btn-secondary btn-small">⬇ PDF</button>
+              </td>
+            </tr>
+            <tr>
+              <td style="font-weight:600">juil. 2025</td><td>100 t</td>
+              <td style="color:#9ca3af">Millau</td><td style="color:#9ca3af">Villefranche-de-R.</td>
+              <td style="color:#d1d5db;font-size:12px">BA —</td>
+              <td style="color:#d1d5db;font-size:12px">LVC —</td>
+              <td style="font-size:12px;color:#6b7280">Transports Rouvier</td>
+              <td><label class="check-row"><span class="check-box"></span> Non</label></td>
+              <td style="display:flex;gap:6px">
+                <button class="btn btn-primary btn-small">Réaliser</button>
+                <button class="btn btn-secondary btn-small">⬇ PDF</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <!-- Réalisées -->
+        <div style="padding:6px 16px 4px;background:#f0fdf4;border-top:1px solid #e5e7eb;font-size:11px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.05em">Réalisées (3)</div>
+        <table class="table">
+          <thead><tr><th>Date réelle</th><th>Tonnes réelles</th><th>Enlèvement</th><th>Destination</th><th>CMR</th><th>Pièce fourn.</th><th>Pièce client</th><th>Transport prévu</th><th>Réel</th><th>Écart</th><th>Facturé</th></tr></thead>
+          <tbody>
+            <tr>
+              <td style="font-weight:600">15/03/2025</td><td style="font-weight:700">120 t</td>
+              <td style="color:#9ca3af">Millau</td><td style="color:#9ca3af">Saint-Affrique</td>
+              <td><span class="badge badge-clos" style="font-size:10px">CMR-2025-042</span></td>
+              <td style="font-size:12px">BA 1042</td><td style="font-size:12px">LVC 0312</td>
+              <td style="font-size:12px;color:#9ca3af">1 500,00 €</td>
+              <td style="font-size:12px">1 480,00 €</td>
+              <td style="font-weight:800;color:#15803d">-20,00 €</td>
+              <td><span class="badge badge-clos" style="font-size:10px">✓</span></td>
+            </tr>
+            <tr>
+              <td style="font-weight:600">20/04/2025</td><td style="font-weight:700">140 t</td>
+              <td style="color:#9ca3af">Millau</td><td style="color:#9ca3af">Villefranche-de-R.</td>
+              <td><span class="badge badge-clos" style="font-size:10px">CMR-2025-071</span></td>
+              <td style="font-size:12px">BA 1043</td><td style="font-size:12px">LVC 0313</td>
+              <td style="font-size:12px;color:#9ca3af">1 750,00 €</td>
+              <td style="font-size:12px">1 820,00 €</td>
+              <td style="font-weight:800;color:#dc2626">+70,00 €</td>
+              <td><span class="badge badge-en-cours" style="font-size:10px">Non</span></td>
+            </tr>
+            <tr>
+              <td style="font-weight:600">10/05/2025</td><td style="font-weight:700">100 t</td>
+              <td style="color:#9ca3af">Millau</td><td style="color:#9ca3af">Saint-Affrique</td>
+              <td><span class="badge badge-alerte" style="font-size:10px">Manquant</span></td>
+              <td style="font-size:12px">BA 1044</td><td style="font-size:12px">LVC 0314</td>
+              <td style="font-size:12px;color:#9ca3af">1 250,00 €</td>
+              <td style="font-size:12px;color:#d1d5db">—</td>
+              <td style="color:#d1d5db">—</td>
+              <td><span class="badge badge-en-cours" style="font-size:10px">Non</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ==================== VENTES ==================== -->
+    <div id="ventes" class="page">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <h1 class="page-title" style="margin-bottom:0"><span class="icon">🛒</span> Contrats de vente</h1>
+        <button class="btn btn-primary">＋ Nouveau (départ silo)</button>
+      </div>
+      <p class="page-subtitle">6 contrats</p>
+      <div class="card">
+        <table class="table">
+          <thead><tr><th>N° Contrat</th><th>Agriculteur</th><th>Produit</th><th>Contrat achat lié</th><th>Quantité</th><th>Prix vente</th><th>Statut</th></tr></thead>
+          <tbody>
+            <tr>
+              <td style="font-weight:700;color:#7B2820">CV-2025-001</td><td style="font-weight:600">Ferme des Cèdres</td><td>Blé</td>
+              <td><a style="color:#7B2820;font-weight:600;text-decoration:none;cursor:pointer" onclick="showPage('detail',null)">CA-2025-001</a></td>
+              <td style="font-weight:700">300 t</td><td>196,00 €/t</td><td><span class="badge badge-en-cours">⏳ En cours</span></td>
+            </tr>
+            <tr>
+              <td style="font-weight:700;color:#7B2820">CV-2025-002</td><td style="font-weight:600">EARL Leblanc</td><td>Blé</td>
+              <td><a style="color:#7B2820;font-weight:600;text-decoration:none;cursor:pointer" onclick="showPage('detail',null)">CA-2025-001</a></td>
+              <td style="font-weight:700">200 t</td><td>194,50 €/t</td><td><span class="badge badge-en-cours">⏳ En cours</span></td>
+            </tr>
+            <tr>
+              <td style="font-weight:700;color:#7B2820">CV-2025-003</td><td style="font-weight:600">GAEC Aubert</td><td>Maïs</td>
+              <td><a style="color:#7B2820;font-weight:600;text-decoration:none;cursor:pointer">CA-2025-002</a></td>
+              <td style="font-weight:700">300 t</td><td>185,00 €/t</td><td><span class="badge badge-clos">✓ Clos</span></td>
+            </tr>
+            <tr>
+              <td style="font-weight:700;color:#7B2820">CV-2025-004</td><td style="font-weight:600">Ferme du Causse</td><td>Tournesol</td>
+              <td><a style="color:#7B2820;font-weight:600;text-decoration:none;cursor:pointer">CA-2025-003</a></td>
+              <td style="font-weight:700">60 t</td><td>530,00 €/t</td><td><span class="badge badge-en-cours">⏳ En cours</span></td>
+            </tr>
+            <tr>
+              <td style="font-weight:700;color:#7B2820">CC-2025-001</td><td style="font-weight:600">Élevage Blanc</td><td>Tourteau de soja</td>
+              <td><a style="color:#7B2820;font-weight:600;text-decoration:none;cursor:pointer">CF-2025-001</a></td>
+              <td style="font-weight:700">70 t</td><td>425,00 €/t</td><td><span class="badge badge-en-cours">⏳ En cours</span></td>
+            </tr>
+            <tr>
+              <td style="font-weight:700;color:#7B2820">CV-2025-005</td><td style="font-weight:600">SCA Leclerc</td><td>Orge</td>
+              <td><span class="badge badge-silo">Départ silo</span></td>
+              <td style="font-weight:700">50 t</td><td>175,00 €/t</td><td><span class="badge badge-en-cours">⏳ En cours</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ==================== TRANSPORT ==================== -->
+    <div id="transport" class="page">
+      <h1 class="page-title"><span class="icon">🚛</span> Suivi factures transporteur</h1>
+      <p class="page-subtitle">Contrôle des factures par transporteur et par mois</p>
+      <div class="card" style="display:flex;gap:16px;align-items:flex-end;padding:16px 18px;margin-bottom:18px">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#5a3020;margin-bottom:5px">Transporteur</div>
+          <select style="padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:inherit;font-size:13px;color:#374151;width:220px">
+            <option>Transports Rouvier</option>
+          </select>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#5a3020;margin-bottom:5px">Mois</div>
+          <select style="padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:inherit;font-size:13px;color:#374151">
+            <option>mai 2025</option>
+          </select>
+        </div>
+      </div>
+      <!-- Totaux annuels -->
+      <div class="transport-totals">
+        <div class="total-card" style="background:#eff6fb;border-color:#a8d2e8">
+          <div class="total-val" style="color:#2a5570">14 750 €</div>
+          <div class="total-lbl">Transport prévu — 2024/2025</div>
+        </div>
+        <div class="total-card" style="background:#f0fdf4;border-color:#bbf7d0">
+          <div class="total-val" style="color:#15803d">14 230 €</div>
+          <div class="total-lbl">Transport facturé</div>
+        </div>
+        <div class="total-card" style="background:#f0fdf4;border-color:#bbf7d0">
+          <div class="total-val" style="color:#15803d">-520 €</div>
+          <div class="total-lbl">Écart cumulé annuel</div>
+        </div>
+      </div>
+      <!-- Table du mois -->
+      <div class="card">
+        <div class="card-header" style="background:#fafaf8">
+          <div style="font-size:13px;font-weight:700;color:#7B2820">Livraisons de mai 2025 — triées par poids réel</div>
+          <div style="font-size:11px;color:#9ca3af;margin-left:8px">Rapprochement avec la facture reçue</div>
+        </div>
+        <table class="table">
+          <thead><tr><th>Enlèvement</th><th>Destination</th><th>Date</th><th>Tonnes</th><th>Prévu</th><th>Réel (€)</th><th>Écart</th><th>Facturé</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Millau</td><td>Saint-Affrique</td><td>28/05/2025</td>
+              <td style="font-weight:700">140 t</td><td style="color:#9ca3af">1 750 €</td>
+              <td><input type="number" value="1820" style="width:90px;padding:4px 8px;border:1.5px solid #e5e7eb;border-radius:6px;font-size:12px;font-family:inherit"></td>
+              <td style="font-weight:800;color:#dc2626">+70 €</td>
+              <td><label class="check-row"><span class="check-box"></span></label></td>
+            </tr>
+            <tr>
+              <td>Millau</td><td>Villefranche-de-R.</td><td>15/05/2025</td>
+              <td style="font-weight:700">120 t</td><td style="color:#9ca3af">1 500 €</td>
+              <td><input type="number" value="1480" style="width:90px;padding:4px 8px;border:1.5px solid #e5e7eb;border-radius:6px;font-size:12px;font-family:inherit"></td>
+              <td style="font-weight:800;color:#15803d">-20 €</td>
+              <td><label class="check-row"><span class="check-box checked">✓</span></label></td>
+            </tr>
+            <tr>
+              <td>Millau</td><td>Séverac</td><td>08/05/2025</td>
+              <td style="font-weight:700">80 t</td><td style="color:#9ca3af">1 000 €</td>
+              <td><input type="number" placeholder="Saisir..." style="width:90px;padding:4px 8px;border:1.5px solid #e5e7eb;border-radius:6px;font-size:12px;font-family:inherit;color:#9ca3af"></td>
+              <td style="color:#d1d5db">—</td>
+              <td><label class="check-row"><span class="check-box"></span></label></td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr style="background:#fafaf8;border-top:2px solid #e5e7eb">
+              <td colspan="3" style="padding:10px 16px;font-size:13px;font-weight:700;color:#374151">Total</td>
+              <td style="padding:10px 16px;font-size:13px;font-weight:700">340 t</td>
+              <td style="padding:10px 16px;font-size:13px;font-weight:700;color:#9ca3af">4 250 €</td>
+              <td style="padding:10px 16px;font-size:13px;font-weight:700">3 300 €</td>
+              <td style="padding:10px 16px;font-size:13px;font-weight:800;color:#dc2626">+50 €</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- ==================== RÉFÉRENTIELS ==================== -->
+    <div id="referentiels" class="page">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <h1 class="page-title" style="margin-bottom:0"><span class="icon">📚</span> Référentiels</h1>
+        <button class="btn btn-primary">＋ Ajouter</button>
+      </div>
+      <p class="page-subtitle">Administration des données de référence</p>
+      <!-- Onglets -->
+      <div style="display:flex;gap:2px;border-bottom:2px solid #e5e7eb;margin-bottom:18px">
+        <div style="padding:10px 16px;font-size:13px;font-weight:700;color:#7B2820;border-bottom:2px solid #7B2820;margin-bottom:-2px;cursor:pointer">🌾 Fournisseurs <span style="color:#9ca3af;font-weight:400">(4)</span></div>
+        <div style="padding:10px 16px;font-size:13px;font-weight:500;color:#6b7280;cursor:pointer">👥 Agriculteurs <span style="color:#9ca3af;font-weight:400">(12)</span></div>
+        <div style="padding:10px 16px;font-size:13px;font-weight:500;color:#6b7280;cursor:pointer">🤝 Courtiers <span style="color:#9ca3af;font-weight:400">(3)</span></div>
+        <div style="padding:10px 16px;font-size:13px;font-weight:500;color:#6b7280;cursor:pointer">🚛 Transporteurs <span style="color:#9ca3af;font-weight:400">(2)</span></div>
+        <div style="padding:10px 16px;font-size:13px;font-weight:500;color:#6b7280;cursor:pointer">📦 Produits <span style="color:#9ca3af;font-weight:400">(12)</span></div>
+      </div>
+      <div class="card">
+        <table class="table">
+          <thead><tr><th>Nom</th><th>Téléphone</th><th>Email</th><th>Points de chargement</th></tr></thead>
+          <tbody>
+            <tr>
+              <td style="font-weight:700">SARL Dupont</td>
+              <td style="color:#6b7280">05 65 12 34 56</td>
+              <td style="color:#6b7280">contact@dupont.fr</td>
+              <td style="font-size:12px;color:#6b7280">Zone Nord Millau — Millau<br>Hangar Route de Nant — Nant</td>
+            </tr>
+            <tr>
+              <td style="font-weight:700">GFA Martin</td>
+              <td style="color:#6b7280">05 65 98 76 54</td>
+              <td style="color:#6b7280">gfa.martin@gmail.com</td>
+              <td style="font-size:12px;color:#6b7280">Ferme principale — Rodez</td>
+            </tr>
+            <tr>
+              <td style="font-weight:700">Coopérative du Sud</td>
+              <td style="color:#6b7280">05 65 44 22 11</td>
+              <td style="color:#6b7280">—</td>
+              <td style="font-size:12px;color:#6b7280">Silo central — Millau<br>Dépôt annexe — Saint-Georges-de-Luzençon</td>
+            </tr>
+            <tr>
+              <td style="font-weight:700">Négoce Aveyron</td>
+              <td style="color:#6b7280">05 65 33 11 99</td>
+              <td style="color:#6b7280">negoce12@outlook.com</td>
+              <td style="font-size:12px;color:#6b7280">Plateforme logistique — Millau</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ==================== RECHERCHE ==================== -->
+    <div id="recherche" class="page">
+      <h1 class="page-title"><span class="icon">🔎</span> Recherche globale</h1>
+      <p class="page-subtitle">Contrats, pièces, factures, noms, villes…</p>
+      <div class="search-bar-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" value="Dupont" placeholder="Rechercher un numéro, un nom, une ville…" readonly>
+      </div>
+      <div class="result-group">
+        <div class="result-header">📄 Contrats d'achat <span class="result-count">2 résultats</span></div>
+        <div class="result-item" onclick="showPage('detail',null)">
+          <div>
+            <div style="font-weight:700;color:#7B2820">CA-2025-001 <span class="badge badge-negoce" style="font-size:10px;vertical-align:middle">🌾 Négoce</span></div>
+            <div style="font-size:12px;color:#9ca3af;margin-top:2px">Blé · SARL Dupont</div>
+          </div>
+          <span class="result-arrow">→</span>
+        </div>
+        <div class="result-item">
+          <div>
+            <div style="font-weight:700;color:#7B2820">CA-2024-018 <span class="badge badge-negoce" style="font-size:10px;vertical-align:middle">🌾 Négoce</span></div>
+            <div style="font-size:12px;color:#9ca3af;margin-top:2px">Orge · SARL Dupont</div>
+          </div>
+          <span class="result-arrow">→</span>
+        </div>
+      </div>
+      <div class="result-group">
+        <div class="result-header">🌾 Fournisseurs <span class="result-count">1 résultat</span></div>
+        <div class="result-item">
+          <div style="font-weight:600">SARL Dupont</div>
+          <span class="result-arrow">→</span>
+        </div>
+      </div>
+      <div class="result-group">
+        <div class="result-header">🚛 Livraisons / Pièces <span class="result-count">3 résultats</span></div>
+        <div class="result-item">
+          <div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <span class="badge badge-appro" style="font-size:10px">BA 1042</span>
+              <span class="badge badge-negoce" style="font-size:10px">LVC 0312</span>
+            </div>
+            <div style="font-size:12px;color:#9ca3af;margin-top:3px">Millau → Saint-Affrique</div>
+          </div>
+          <span class="result-arrow">→</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+function showPage(id, link) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.page-nav a').forEach(a => a.classList.remove('active'));
+  const map = { dashboard:1, contrats:2, detail:3, ventes:4, transport:5, referentiels:6, recherche:7 };
+  const navLinks = document.querySelectorAll('.page-nav a');
+  if (navLinks[map[id]-1]) navLinks[map[id]-1].classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const navItems = document.querySelectorAll('.nav-item');
+  const navMap = { dashboard:0, contrats:1, detail:1, ventes:2, transport:3, referentiels:4, recherche:5 };
+  if (navItems[navMap[id]]) navItems[navMap[id]].classList.add('active');
+  window.scrollTo(0, 0);
+}
+</script>
+</body>
+</html>

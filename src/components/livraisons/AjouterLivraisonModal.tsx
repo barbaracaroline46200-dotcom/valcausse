@@ -1,0 +1,108 @@
+'use client'
+import { useState } from 'react'
+import Modal from '@/components/ui/Modal'
+import { getPrefixes } from '@/lib/prefixes'
+
+interface Props {
+  contrat: any
+  onClose: () => void
+  onSaved: () => void
+}
+
+export default function AjouterLivraisonModal({ contrat, onClose, onSaved }: Props) {
+  const prefixes = getPrefixes(contrat.famille)
+  const agriculteur = contrat.contrats_vente?.[0]?.agriculteur
+
+  const [form, setForm] = useState({
+    mois_prevu: '',
+    quantite_prevue: '',
+    ville_chargement: contrat.ville_chargement ?? '',
+    ville_destination: agriculteur?.ville_livraison ?? '',
+    piece_fournisseur_prefixe: prefixes.fournisseur,
+    piece_fournisseur_numero: '',
+    piece_client_prefixe: prefixes.client,
+    piece_client_numero: '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  function f(key: string) {
+    return (e: React.ChangeEvent<HTMLInputElement>) =>
+      setForm(prev => ({ ...prev, [key]: e.target.value }))
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    setSaving(true)
+    const body = {
+      contrat_achat_id: contrat.id,
+      type: 'planifiee',
+      mois_prevu: form.mois_prevu + '-01',
+      quantite_prevue: parseFloat(form.quantite_prevue),
+      ville_chargement: form.ville_chargement || null,
+      ville_destination: form.ville_destination || null,
+      piece_fournisseur_prefixe: form.piece_fournisseur_prefixe || null,
+      piece_fournisseur_numero: form.piece_fournisseur_numero || null,
+      piece_client_prefixe: form.piece_client_prefixe || null,
+      piece_client_numero: form.piece_client_numero || null,
+    }
+    const res = await fetch('/api/livraisons', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    if (res.ok) { onSaved() } else {
+      const d = await res.json()
+      setError(d.error ?? 'Erreur')
+    }
+    setSaving(false)
+  }
+
+  return (
+    <Modal title="Ajouter une livraison planifiée" onClose={onClose} size="md">
+      <form onSubmit={submit} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="label">Mois prévu *</label>
+            <input type="month" className="input" value={form.mois_prevu} onChange={f('mois_prevu')} required />
+          </div>
+          <div>
+            <label className="label">Quantité prévue (t) *</label>
+            <input type="number" step="0.001" className="input" value={form.quantite_prevue} onChange={f('quantite_prevue')} required />
+          </div>
+          <div>
+            <label className="label">Ville d'enlèvement</label>
+            <input className="input" value={form.ville_chargement} onChange={f('ville_chargement')} />
+          </div>
+          <div>
+            <label className="label">Ville de destination</label>
+            <input className="input" value={form.ville_destination} onChange={f('ville_destination')} />
+          </div>
+          <div>
+            <label className="label">Pièce fournisseur (préfixe)</label>
+            <input className="input" value={form.piece_fournisseur_prefixe} onChange={f('piece_fournisseur_prefixe')} placeholder={prefixes.fournisseur} />
+          </div>
+          <div>
+            <label className="label">Pièce fournisseur (n°)</label>
+            <input className="input" value={form.piece_fournisseur_numero} onChange={f('piece_fournisseur_numero')} placeholder="Numéro..." />
+          </div>
+          <div>
+            <label className="label">Pièce client (préfixe)</label>
+            <input className="input" value={form.piece_client_prefixe} onChange={f('piece_client_prefixe')} placeholder={prefixes.client} />
+          </div>
+          <div>
+            <label className="label">Pièce client (n°)</label>
+            <input className="input" value={form.piece_client_numero} onChange={f('piece_client_numero')} placeholder="Numéro..." />
+          </div>
+        </div>
+        {error && <p className="text-red-600 text-sm">{error}</p>}
+        <div className="flex justify-end gap-3">
+          <button type="button" onClick={onClose} className="btn-secondary">Annuler</button>
+          <button type="submit" disabled={saving} className="btn-primary">
+            {saving ? 'Enregistrement...' : 'Ajouter'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
