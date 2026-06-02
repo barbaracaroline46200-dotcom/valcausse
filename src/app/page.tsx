@@ -230,21 +230,24 @@ export default function DashboardPage() {
                           <span className={`text-xs font-semibold ${etapeActive === 2 ? 'text-orange-700' : 'text-gray-700'}`}>📄 PDF transporteur</span>
                         </div>
                         {step1ok ? (
-                          <div className="text-xs text-gray-600">
-                            <p className="text-gray-400 mb-2">Souhait agri : <strong className="text-gray-700">{l.date_souhaitee ? new Date(l.date_souhaitee).toLocaleDateString('fr-FR') : l.semaine_souhaitee ?? '—'}</strong></p>
+                          <div className="text-xs text-gray-600 space-y-2">
+                            <p className="text-gray-400">Souhait agri : <strong className="text-gray-700">{l.date_souhaitee ? new Date(l.date_souhaitee).toLocaleDateString('fr-FR') : l.semaine_souhaitee ?? '—'}</strong></p>
                             <a
                               href={`/api/pdf/transporteur?livraison_id=${l.id}`}
                               target="_blank" rel="noopener noreferrer"
-                              onClick={async () => {
-                                if (!l.pdf_envoye) {
-                                  await fetch(`/api/livraisons/${l.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pdf_envoye: true }) })
-                                  const d = await fetch('/api/dashboard').then(r => r.json()); setData(d)
-                                }
-                              }}
                               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-white text-xs font-medium"
-                              style={{ backgroundColor: step2ok ? '#16a34a' : '#7B2820' }}>
-                              {step2ok ? '✓ PDF envoyé' : '📥 Télécharger PDF'}
+                              style={{ backgroundColor: '#7B2820' }}>
+                              📥 Télécharger PDF
                             </a>
+                            <label className="flex items-center gap-2 cursor-pointer pt-1">
+                              <input type="checkbox" checked={!!l.pdf_envoye}
+                                onChange={async () => {
+                                  await fetch(`/api/livraisons/${l.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pdf_envoye: !l.pdf_envoye }) })
+                                  const d = await fetch('/api/dashboard').then(r => r.json()); setData(d)
+                                }}
+                                className="w-4 h-4 accent-orange-500" />
+                              <span className="text-gray-600">{l.pdf_envoye ? '✓ PDF envoyé' : 'Marquer comme envoyé'}</span>
+                            </label>
                           </div>
                         ) : (
                           <p className="text-xs text-gray-400">Compléter l'étape 1 d'abord</p>
