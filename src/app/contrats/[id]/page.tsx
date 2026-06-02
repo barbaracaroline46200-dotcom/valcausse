@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Loader2, ArrowLeft, AlertTriangle, Plus, FileDown, Edit, CheckCircle } from 'lucide-react'
+import { Loader2, ArrowLeft, AlertTriangle, Plus, FileDown, Edit, CheckCircle, Pencil, Trash2 } from 'lucide-react'
 import { BadgeFamille, BadgeStatut } from '@/components/ui/Badge'
 import ProgressBar from '@/components/ui/ProgressBar'
 import { formatDate, formatTonnes, formatEurosParTonne, formatEuros } from '@/lib/annee-agricole'
@@ -10,6 +10,7 @@ import { useAdmin } from '@/components/ui/AdminProvider'
 import Link from 'next/link'
 import AjouterLivraisonModal from '@/components/livraisons/AjouterLivraisonModal'
 import RealiserLivraisonModal from '@/components/livraisons/RealiserLivraisonModal'
+import ModifierLivraisonModal from '@/components/livraisons/ModifierLivraisonModal'
 import LierVenteModal from '@/components/contrats/LierVenteModal'
 import NouvelleVenteModal from '@/components/contrats/NouvelleVenteModal'
 import { getPrefixes } from '@/lib/prefixes'
@@ -24,6 +25,7 @@ export default function ContratDetailPage() {
   const [realiserLiv, setRealiserLiv] = useState<any>(null)
   const [showLierVente, setShowLierVente] = useState(false)
   const [showNouvelleVente, setShowNouvelleVente] = useState(false)
+  const [modifierLiv, setModifierLiv] = useState<any>(null)
 
   async function reload() {
     const data = await fetch(`/api/contrats/${id}`).then(r => r.json())
@@ -40,6 +42,12 @@ export default function ContratDetailPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ statut: nouveau }),
     })
+    reload()
+  }
+
+  async function supprimerLivraison(livId: string) {
+    if (!confirm('Supprimer cette livraison ?')) return
+    await fetch(`/api/livraisons/${livId}`, { method: 'DELETE' })
     reload()
   }
 
@@ -272,17 +280,23 @@ export default function ContratDetailPage() {
                         </label>
                       </td>
                       <td className="table-cell">
-                        <div className="flex gap-2">
+                        <div className="flex gap-1 flex-wrap">
                           {isAdmin && (
                             <button onClick={() => setRealiserLiv(l)} className="btn-primary text-xs py-1 px-2">
                               Réaliser
                             </button>
                           )}
-                          <a
-                            href={`/api/pdf/transporteur?livraison_id=${l.id}`}
-                            target="_blank"
-                            className="btn-secondary text-xs py-1 px-2"
-                          >
+                          {isAdmin && (
+                            <button onClick={() => setModifierLiv(l)} className="btn-secondary text-xs py-1 px-2">
+                              <Pencil size={11} />
+                            </button>
+                          )}
+                          {isAdmin && (
+                            <button onClick={() => supprimerLivraison(l.id)} className="btn-danger text-xs py-1 px-2">
+                              <Trash2 size={11} />
+                            </button>
+                          )}
+                          <a href={`/api/pdf/transporteur?livraison_id=${l.id}`} target="_blank" className="btn-secondary text-xs py-1 px-2">
                             <FileDown size={12} /> PDF
                           </a>
                         </div>
@@ -414,6 +428,14 @@ export default function ContratDetailPage() {
           contrat={contrat}
           onClose={() => setRealiserLiv(null)}
           onSaved={() => { setRealiserLiv(null); reload() }}
+        />
+      )}
+      {modifierLiv && (
+        <ModifierLivraisonModal
+          livraison={modifierLiv}
+          contrat={contrat}
+          onClose={() => setModifierLiv(null)}
+          onSaved={() => { setModifierLiv(null); reload() }}
         />
       )}
       {showLierVente && (
