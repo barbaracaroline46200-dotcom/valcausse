@@ -82,6 +82,7 @@ export default function DashboardPage() {
   const alertes = (data?.contratsAlerte ?? []).filter((c: any) => reliquat(c.quantite_totale, c.livraisons ?? []) > 0)
 
   return (
+    <>
     <div className="space-y-8 pb-10">
       <div>
         <h1 className="text-2xl font-bold" style={{ color: '#7B2820' }}>Tableau de bord</h1>
@@ -556,6 +557,7 @@ export default function DashboardPage() {
         }}
       />
     )}
+    </>
   )
 }
 
