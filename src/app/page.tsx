@@ -153,7 +153,10 @@ export default function DashboardPage() {
                 const isRetard = moisLiv < moisCourant.slice(0, 7)
                 const isProchain = moisSuivant && moisLiv >= moisSuivant.slice(0, 7)
                 const step1ok = l.agriculteur_contacte && (l.date_souhaitee || l.semaine_souhaitee)
+                const step2ok = step1ok && l.pdf_envoye
                 const step3ok = l.transporteur_contacte && (l.date_prevue || l.semaine_prevue)
+                // Étape active = la première non complète
+                const etapeActive = step3ok ? 0 : step2ok ? 3 : step1ok ? 2 : 1
                 return (
                   <div key={l.id} className={`px-5 py-4 ${isRetard ? 'bg-red-50/40' : isProchain ? 'bg-blue-50/40' : ''}`}>
                     {/* En-tête ligne */}
@@ -175,13 +178,16 @@ export default function DashboardPage() {
                     </div>
 
                     {/* 3 étapes */}
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className={`grid grid-cols-3 gap-3 ${step3ok ? 'opacity-50' : ''}`}>
 
-                      {/* Étape 1 : Agri contacté + date ou semaine souhaitée */}
-                      <div className={`rounded-lg p-3 border ${step1ok ? 'border-green-200 bg-green-50' : 'border-blue-100 bg-blue-50/50'}`}>
+                      {/* Étape 1 */}
+                      <div className={`rounded-lg p-3 border-2 transition-all ${
+                        step1ok ? 'border-green-200 bg-green-50' :
+                        etapeActive === 1 ? 'border-blue-400 bg-blue-50 shadow-sm' : 'border-gray-100 bg-gray-50'
+                      }`}>
                         <div className="flex items-center gap-1.5 mb-2">
-                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${step1ok ? 'bg-green-500 text-white' : 'bg-blue-100 text-blue-700'}`}>1</span>
-                          <span className="text-xs font-semibold text-gray-700">📞 Agri contacté</span>
+                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${step1ok ? 'bg-green-500 text-white' : etapeActive === 1 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-500'}`}>1</span>
+                          <span className={`text-xs font-semibold ${etapeActive === 1 ? 'text-blue-700' : 'text-gray-700'}`}>📞 Agri contacté</span>
                         </div>
                         <label className="flex items-center gap-2 mb-2 cursor-pointer">
                           <input type="checkbox" checked={!!l.agriculteur_contacte}
@@ -214,16 +220,30 @@ export default function DashboardPage() {
                       </div>
 
                       {/* Étape 2 : PDF */}
-                      <div className={`rounded-lg p-3 border ${step1ok ? 'border-orange-200 bg-orange-50/50' : 'border-gray-100 bg-gray-50 opacity-60'}`}>
+                      <div className={`rounded-lg p-3 border-2 transition-all ${
+                        step2ok ? 'border-green-200 bg-green-50' :
+                        etapeActive === 2 ? 'border-orange-400 bg-orange-50 shadow-sm' :
+                        step1ok ? 'border-orange-100 bg-orange-50/30' : 'border-gray-100 bg-gray-50 opacity-50'
+                      }`}>
                         <div className="flex items-center gap-1.5 mb-2">
-                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${step1ok ? 'bg-orange-100 text-orange-700' : 'bg-gray-200 text-gray-500'}`}>2</span>
-                          <span className="text-xs font-semibold text-gray-700">📄 PDF transporteur</span>
+                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${step2ok ? 'bg-green-500 text-white' : etapeActive === 2 ? 'bg-orange-500 text-white' : 'bg-orange-100 text-orange-600'}`}>2</span>
+                          <span className={`text-xs font-semibold ${etapeActive === 2 ? 'text-orange-700' : 'text-gray-700'}`}>📄 PDF transporteur</span>
                         </div>
                         {step1ok ? (
                           <div className="text-xs text-gray-600">
-                            <p className="text-gray-400 mb-2">Souhait agri : <strong className="text-gray-700">{l.date_souhaitee ? new Date(l.date_souhaitee).toLocaleDateString('fr-FR') : l.semaine_souhaitee ? l.semaine_souhaitee : '—'}</strong></p>
-                            <a href={`/api/pdf/transporteur?livraison_id=${l.id}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-white text-xs font-medium" style={{ backgroundColor: '#7B2820' }}>
-                              📥 Télécharger PDF
+                            <p className="text-gray-400 mb-2">Souhait agri : <strong className="text-gray-700">{l.date_souhaitee ? new Date(l.date_souhaitee).toLocaleDateString('fr-FR') : l.semaine_souhaitee ?? '—'}</strong></p>
+                            <a
+                              href={`/api/pdf/transporteur?livraison_id=${l.id}`}
+                              target="_blank" rel="noopener noreferrer"
+                              onClick={async () => {
+                                if (!l.pdf_envoye) {
+                                  await fetch(`/api/livraisons/${l.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pdf_envoye: true }) })
+                                  const d = await fetch('/api/dashboard').then(r => r.json()); setData(d)
+                                }
+                              }}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-white text-xs font-medium"
+                              style={{ backgroundColor: step2ok ? '#16a34a' : '#7B2820' }}>
+                              {step2ok ? '✓ PDF envoyé' : '📥 Télécharger PDF'}
                             </a>
                           </div>
                         ) : (
@@ -232,10 +252,14 @@ export default function DashboardPage() {
                       </div>
 
                       {/* Étape 3 : Transporteur confirmé + date/semaine */}
-                      <div className={`rounded-lg p-3 border ${step3ok ? 'border-green-200 bg-green-50' : step1ok ? 'border-gray-200 bg-white' : 'border-gray-100 bg-gray-50 opacity-60'}`}>
+                      <div className={`rounded-lg p-3 border-2 transition-all ${
+                        step3ok ? 'border-green-200 bg-green-50' :
+                        etapeActive === 3 ? 'border-green-400 bg-green-50 shadow-sm' :
+                        step2ok ? 'border-green-100 bg-green-50/30' : 'border-gray-100 bg-gray-50 opacity-50'
+                      }`}>
                         <div className="flex items-center gap-1.5 mb-2">
-                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${step3ok ? 'bg-green-500 text-white' : 'bg-green-100 text-green-700'}`}>3</span>
-                          <span className="text-xs font-semibold text-gray-700">🚛 Transporteur</span>
+                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${step3ok ? 'bg-green-500 text-white' : etapeActive === 3 ? 'bg-green-500 text-white' : 'bg-green-100 text-green-700'}`}>3</span>
+                          <span className={`text-xs font-semibold ${etapeActive === 3 ? 'text-green-700' : 'text-gray-700'}`}>🚛 Transporteur</span>
                         </div>
                         <label className="flex items-center gap-2 mb-2 cursor-pointer">
                           <input type="checkbox" checked={!!l.transporteur_contacte}
