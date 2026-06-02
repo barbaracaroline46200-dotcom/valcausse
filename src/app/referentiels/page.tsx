@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { BookOpen, Plus, Loader2, Users, Wheat, Truck, UserCheck, Package } from 'lucide-react'
+import { BookOpen, Plus, Loader2, Users, Wheat, Truck, UserCheck, Package, Pencil } from 'lucide-react'
 import { useAdmin } from '@/components/ui/AdminProvider'
 import Modal from '@/components/ui/Modal'
 
@@ -14,6 +14,47 @@ const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
   { key: 'produits', label: 'Produits', icon: <Package size={16} /> },
 ]
 
+const FIELDS: Record<Tab, Array<{ key: string; label: string; required?: boolean; type?: string; options?: any[] }>> = {
+  fournisseurs: [
+    { key: 'nom', label: 'Nom', required: true },
+    { key: 'telephone', label: 'Téléphone' },
+    { key: 'email', label: 'Email', type: 'email' },
+    { key: 'adresse', label: 'Adresse' },
+    { key: 'notes', label: 'Notes' },
+  ],
+  agriculteurs: [
+    { key: 'nom', label: 'Nom', required: true },
+    { key: 'adresse_livraison', label: 'Adresse livraison' },
+    { key: 'ville_livraison', label: 'Ville livraison' },
+    { key: 'telephone', label: 'Téléphone' },
+    { key: 'email', label: 'Email', type: 'email' },
+    { key: 'numero_client_logiciel', label: 'N° client logiciel' },
+  ],
+  courtiers: [
+    { key: 'nom', label: 'Nom', required: true },
+    { key: 'numero_courtier', label: 'N° courtier' },
+    { key: 'telephone', label: 'Téléphone' },
+    { key: 'email', label: 'Email', type: 'email' },
+  ],
+  transporteurs: [
+    { key: 'nom', label: 'Nom', required: true },
+    { key: 'telephone', label: 'Téléphone' },
+    { key: 'email', label: 'Email', type: 'email' },
+  ],
+  produits: [
+    { key: 'nom', label: 'Nom', required: true },
+    { key: 'famille', label: 'Famille', required: true, type: 'select', options: [{ value: 'negoce', label: 'Négoce' }, { value: 'appro', label: 'Appro' }] },
+  ],
+}
+
+const URLS: Record<Tab, string> = {
+  fournisseurs: '/api/referentiels/fournisseurs',
+  agriculteurs: '/api/referentiels/agriculteurs',
+  courtiers: '/api/referentiels/courtiers',
+  transporteurs: '/api/referentiels/transporteurs',
+  produits: '/api/referentiels/produits',
+}
+
 export default function ReferentielsPage() {
   const { isAdmin } = useAdmin()
   const [tab, setTab] = useState<Tab>('fournisseurs')
@@ -21,7 +62,8 @@ export default function ReferentielsPage() {
     fournisseurs: [], agriculteurs: [], courtiers: [], transporteurs: [], produits: [],
   })
   const [loading, setLoading] = useState(true)
-  const [showModal, setShowModal] = useState(false)
+  const [showAdd, setShowAdd] = useState(false)
+  const [editing, setEditing] = useState<any | null>(null)
 
   async function loadAll() {
     const [f, a, c, t, p] = await Promise.all([
@@ -54,12 +96,11 @@ export default function ReferentielsPage() {
           <BookOpen size={24} style={{ color: '#C8941A' }} />
           Référentiels
         </h1>
-        <button onClick={() => setShowModal(true)} className="btn-primary">
+        <button onClick={() => setShowAdd(true)} className="btn-primary">
           <Plus size={16} /> Ajouter
         </button>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 border-b border-gray-200">
         {TABS.map(t => (
           <button
@@ -78,29 +119,39 @@ export default function ReferentielsPage() {
         ))}
       </div>
 
-      {/* Contenu */}
       <div className="card-section overflow-hidden">
         <div className="overflow-x-auto">
-          {tab === 'fournisseurs' && <FournisseursList data={data.fournisseurs} />}
-          {tab === 'agriculteurs' && <AgriculteursList data={data.agriculteurs} />}
-          {tab === 'courtiers' && <CortiersList data={data.courtiers} />}
-          {tab === 'transporteurs' && <TransporteursList data={data.transporteurs} />}
-          {tab === 'produits' && <ProduitsList data={data.produits} />}
+          {tab === 'fournisseurs' && <FournisseursList data={data.fournisseurs} onEdit={setEditing} />}
+          {tab === 'agriculteurs' && <AgriculteursList data={data.agriculteurs} onEdit={setEditing} />}
+          {tab === 'courtiers' && <CortiersList data={data.courtiers} onEdit={setEditing} />}
+          {tab === 'transporteurs' && <TransporteursList data={data.transporteurs} onEdit={setEditing} />}
+          {tab === 'produits' && <ProduitsList data={data.produits} onEdit={setEditing} />}
         </div>
       </div>
 
-      {showModal && (
-        <AddModal tab={tab} onClose={() => setShowModal(false)} onSaved={() => { setShowModal(false); loadAll() }} />
+      {showAdd && (
+        <EntryModal tab={tab} onClose={() => setShowAdd(false)} onSaved={() => { setShowAdd(false); loadAll() }} />
+      )}
+      {editing && (
+        <EntryModal tab={tab} initial={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); loadAll() }} />
       )}
     </div>
   )
 }
 
-function FournisseursList({ data }: { data: any[] }) {
+function EditBtn({ onClick }: { onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors">
+      <Pencil size={14} />
+    </button>
+  )
+}
+
+function FournisseursList({ data, onEdit }: { data: any[]; onEdit: (item: any) => void }) {
   return (
     <table className="w-full">
       <thead className="bg-gray-50/50">
-        <tr>{['Nom', 'Téléphone', 'Email', 'Points de chargement'].map(h => <th key={h} className="table-header">{h}</th>)}</tr>
+        <tr>{['Nom', 'Téléphone', 'Email', 'Points de chargement', ''].map((h, i) => <th key={i} className="table-header">{h}</th>)}</tr>
       </thead>
       <tbody>
         {data.map(f => (
@@ -113,19 +164,20 @@ function FournisseursList({ data }: { data: any[] }) {
                 <div key={p.id} className="text-xs text-gray-600">{p.libelle} — {p.ville}</div>
               ))}
             </td>
+            <td className="table-cell w-10"><EditBtn onClick={() => onEdit(f)} /></td>
           </tr>
         ))}
-        {data.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">Aucun fournisseur</td></tr>}
+        {data.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Aucun fournisseur</td></tr>}
       </tbody>
     </table>
   )
 }
 
-function AgriculteursList({ data }: { data: any[] }) {
+function AgriculteursList({ data, onEdit }: { data: any[]; onEdit: (item: any) => void }) {
   return (
     <table className="w-full">
       <thead className="bg-gray-50/50">
-        <tr>{['Nom', 'Ville livraison', 'Téléphone', 'Email', 'N° client'].map(h => <th key={h} className="table-header">{h}</th>)}</tr>
+        <tr>{['Nom', 'Ville livraison', 'Téléphone', 'Email', 'N° client', ''].map((h, i) => <th key={i} className="table-header">{h}</th>)}</tr>
       </thead>
       <tbody>
         {data.map(a => (
@@ -135,19 +187,20 @@ function AgriculteursList({ data }: { data: any[] }) {
             <td className="table-cell text-gray-500">{a.telephone ?? '—'}</td>
             <td className="table-cell text-gray-500">{a.email ?? '—'}</td>
             <td className="table-cell text-xs text-gray-400">{a.numero_client_logiciel ?? '—'}</td>
+            <td className="table-cell w-10"><EditBtn onClick={() => onEdit(a)} /></td>
           </tr>
         ))}
-        {data.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Aucun agriculteur</td></tr>}
+        {data.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Aucun agriculteur</td></tr>}
       </tbody>
     </table>
   )
 }
 
-function CortiersList({ data }: { data: any[] }) {
+function CortiersList({ data, onEdit }: { data: any[]; onEdit: (item: any) => void }) {
   return (
     <table className="w-full">
       <thead className="bg-gray-50/50">
-        <tr>{['Nom', 'N° courtier', 'Téléphone', 'Email'].map(h => <th key={h} className="table-header">{h}</th>)}</tr>
+        <tr>{['Nom', 'N° courtier', 'Téléphone', 'Email', ''].map((h, i) => <th key={i} className="table-header">{h}</th>)}</tr>
       </thead>
       <tbody>
         {data.map(c => (
@@ -156,19 +209,20 @@ function CortiersList({ data }: { data: any[] }) {
             <td className="table-cell">{c.numero_courtier ?? '—'}</td>
             <td className="table-cell text-gray-500">{c.telephone ?? '—'}</td>
             <td className="table-cell text-gray-500">{c.email ?? '—'}</td>
+            <td className="table-cell w-10"><EditBtn onClick={() => onEdit(c)} /></td>
           </tr>
         ))}
-        {data.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">Aucun courtier</td></tr>}
+        {data.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Aucun courtier</td></tr>}
       </tbody>
     </table>
   )
 }
 
-function TransporteursList({ data }: { data: any[] }) {
+function TransporteursList({ data, onEdit }: { data: any[]; onEdit: (item: any) => void }) {
   return (
     <table className="w-full">
       <thead className="bg-gray-50/50">
-        <tr>{['Nom', 'Téléphone', 'Email'].map(h => <th key={h} className="table-header">{h}</th>)}</tr>
+        <tr>{['Nom', 'Téléphone', 'Email', ''].map((h, i) => <th key={i} className="table-header">{h}</th>)}</tr>
       </thead>
       <tbody>
         {data.map(t => (
@@ -176,19 +230,20 @@ function TransporteursList({ data }: { data: any[] }) {
             <td className="table-cell font-medium">{t.nom}</td>
             <td className="table-cell text-gray-500">{t.telephone ?? '—'}</td>
             <td className="table-cell text-gray-500">{t.email ?? '—'}</td>
+            <td className="table-cell w-10"><EditBtn onClick={() => onEdit(t)} /></td>
           </tr>
         ))}
-        {data.length === 0 && <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-400">Aucun transporteur</td></tr>}
+        {data.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">Aucun transporteur</td></tr>}
       </tbody>
     </table>
   )
 }
 
-function ProduitsList({ data }: { data: any[] }) {
+function ProduitsList({ data, onEdit }: { data: any[]; onEdit: (item: any) => void }) {
   return (
     <table className="w-full">
       <thead className="bg-gray-50/50">
-        <tr>{['Nom', 'Famille'].map(h => <th key={h} className="table-header">{h}</th>)}</tr>
+        <tr>{['Nom', 'Famille', ''].map((h, i) => <th key={i} className="table-header">{h}</th>)}</tr>
       </thead>
       <tbody>
         {data.map(p => (
@@ -199,33 +254,29 @@ function ProduitsList({ data }: { data: any[] }) {
                 {p.famille === 'negoce' ? 'Négoce' : 'Appro'}
               </span>
             </td>
+            <td className="table-cell w-10"><EditBtn onClick={() => onEdit(p)} /></td>
           </tr>
         ))}
-        {data.length === 0 && <tr><td colSpan={2} className="px-4 py-8 text-center text-gray-400">Aucun produit</td></tr>}
+        {data.length === 0 && <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-400">Aucun produit</td></tr>}
       </tbody>
     </table>
   )
 }
 
-function AddModal({ tab, onClose, onSaved }: { tab: Tab; onClose: () => void; onSaved: () => void }) {
-  const [form, setForm] = useState<Record<string, string>>({})
+function EntryModal({ tab, initial, onClose, onSaved }: {
+  tab: Tab; initial?: any; onClose: () => void; onSaved: () => void
+}) {
+  const isEdit = !!initial
+  const [form, setForm] = useState<Record<string, string>>(initial ?? {})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  const urls: Record<Tab, string> = {
-    fournisseurs: '/api/referentiels/fournisseurs',
-    agriculteurs: '/api/referentiels/agriculteurs',
-    courtiers: '/api/referentiels/courtiers',
-    transporteurs: '/api/referentiels/transporteurs',
-    produits: '/api/referentiels/produits',
-  }
-
   const titles: Record<Tab, string> = {
-    fournisseurs: 'Ajouter un fournisseur',
-    agriculteurs: 'Ajouter un agriculteur',
-    courtiers: 'Ajouter un courtier',
-    transporteurs: 'Ajouter un transporteur',
-    produits: 'Ajouter un produit',
+    fournisseurs: isEdit ? 'Modifier le fournisseur' : 'Ajouter un fournisseur',
+    agriculteurs: isEdit ? 'Modifier l\'agriculteur' : 'Ajouter un agriculteur',
+    courtiers: isEdit ? 'Modifier le courtier' : 'Ajouter un courtier',
+    transporteurs: isEdit ? 'Modifier le transporteur' : 'Ajouter un transporteur',
+    produits: isEdit ? 'Modifier le produit' : 'Ajouter un produit',
   }
 
   function f(key: string) {
@@ -236,8 +287,10 @@ function AddModal({ tab, onClose, onSaved }: { tab: Tab; onClose: () => void; on
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
-    const res = await fetch(urls[tab], {
-      method: 'POST',
+    const url = isEdit ? `${URLS[tab]}/${initial.id}` : URLS[tab]
+    const method = isEdit ? 'PATCH' : 'POST'
+    const res = await fetch(url, {
+      method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
     })
@@ -248,42 +301,10 @@ function AddModal({ tab, onClose, onSaved }: { tab: Tab; onClose: () => void; on
     setSaving(false)
   }
 
-  const fields: Record<Tab, Array<{ key: string; label: string; required?: boolean; type?: string; options?: any[] }>> = {
-    fournisseurs: [
-      { key: 'nom', label: 'Nom', required: true },
-      { key: 'telephone', label: 'Téléphone' },
-      { key: 'email', label: 'Email', type: 'email' },
-      { key: 'adresse', label: 'Adresse' },
-    ],
-    agriculteurs: [
-      { key: 'nom', label: 'Nom', required: true },
-      { key: 'adresse_livraison', label: 'Adresse livraison' },
-      { key: 'ville_livraison', label: 'Ville livraison' },
-      { key: 'telephone', label: 'Téléphone' },
-      { key: 'email', label: 'Email', type: 'email' },
-      { key: 'numero_client_logiciel', label: 'N° client logiciel' },
-    ],
-    courtiers: [
-      { key: 'nom', label: 'Nom', required: true },
-      { key: 'numero_courtier', label: 'N° courtier' },
-      { key: 'telephone', label: 'Téléphone' },
-      { key: 'email', label: 'Email', type: 'email' },
-    ],
-    transporteurs: [
-      { key: 'nom', label: 'Nom', required: true },
-      { key: 'telephone', label: 'Téléphone' },
-      { key: 'email', label: 'Email', type: 'email' },
-    ],
-    produits: [
-      { key: 'nom', label: 'Nom', required: true },
-      { key: 'famille', label: 'Famille', required: true, type: 'select', options: [{ value: 'negoce', label: 'Négoce' }, { value: 'appro', label: 'Appro' }] },
-    ],
-  }
-
   return (
     <Modal title={titles[tab]} onClose={onClose} size="sm">
       <form onSubmit={submit} className="space-y-4">
-        {fields[tab].map(field => (
+        {FIELDS[tab].map(field => (
           <div key={field.key}>
             <label className="label">{field.label}{field.required && ' *'}</label>
             {field.type === 'select' ? (
@@ -306,7 +327,7 @@ function AddModal({ tab, onClose, onSaved }: { tab: Tab; onClose: () => void; on
         <div className="flex justify-end gap-3">
           <button type="button" onClick={onClose} className="btn-secondary">Annuler</button>
           <button type="submit" disabled={saving} className="btn-primary">
-            {saving ? 'Enregistrement...' : 'Ajouter'}
+            {saving ? 'Enregistrement...' : isEdit ? 'Enregistrer' : 'Ajouter'}
           </button>
         </div>
       </form>
