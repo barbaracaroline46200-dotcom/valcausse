@@ -41,10 +41,13 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Filtre transporteur (via contrat_achat)
+  // Filtre transporteur : livraison spécifique OU transporteur par défaut du contrat
   let result = data ?? []
   if (transporteurId) {
-    result = result.filter((l: any) => l.contrat_achat?.transporteur_id === transporteurId)
+    result = result.filter((l: any) =>
+      l.transporteur_id === transporteurId ||
+      (!l.transporteur_id && l.contrat_achat?.transporteur_id === transporteurId)
+    )
   }
   if (sansFf === 'true') {
     result = result.filter((l: any) => l.type === 'realisee' && !l.facture_fournisseur_id)

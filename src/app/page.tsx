@@ -28,7 +28,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!selectedTransporteur) return
-    fetch(`/api/livraisons?transporteur_id=${selectedTransporteur}&mois=${selectedMois}-01&type=realisee`)
+    fetch(`/api/livraisons?transporteur_id=${selectedTransporteur}&mois=${selectedMois}-01`)
       .then(r => r.json())
       .then(setLivraisonsTransporteur)
   }, [selectedTransporteur, selectedMois])
@@ -306,28 +306,38 @@ export default function DashboardPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
-                {['Enlèvement', 'Destination', 'Date', 'Tonnes', 'CMR', 'Facturé'].map(h => (
+                {['Statut', 'Produit', 'Enlèvement', 'Destination', 'Tonnes', 'CMR', 'Facturé'].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {livraisonsTransporteur.map((l: any) => (
-                <tr key={l.id} className="table-row">
-                  <td className="table-cell">{l.ville_chargement ?? '—'}</td>
-                  <td className="table-cell">{l.ville_destination ?? '—'}</td>
-                  <td className="table-cell">{formatDate(l.date_reelle)}</td>
-                  <td className="table-cell font-semibold">{formatTonnes(l.quantite_reelle)}</td>
+                <tr key={l.id} className={`table-row ${l.type === 'planifiee' ? 'bg-blue-50/50' : ''}`}>
                   <td className="table-cell">
-                    {l.numero_lettre_voiture
-                      ? <span className="badge-clos">{l.numero_lettre_voiture}</span>
-                      : <span className="badge-alerte">Manquant</span>
+                    {l.type === 'planifiee'
+                      ? <span className="badge-en_cours text-xs">Planifiée</span>
+                      : <span className="badge-clos text-xs">Réalisée</span>
+                    }
+                  </td>
+                  <td className="table-cell text-sm">{l.contrat_achat?.produit?.nom ?? '—'}</td>
+                  <td className="table-cell">{l.ville_chargement ?? l.contrat_achat?.ville_chargement ?? '—'}</td>
+                  <td className="table-cell">{l.ville_destination ?? '—'}</td>
+                  <td className="table-cell font-semibold">
+                    {l.type === 'planifiee' ? formatTonnes(l.quantite_prevue) : formatTonnes(l.quantite_reelle)}
+                  </td>
+                  <td className="table-cell">
+                    {l.type === 'planifiee' ? <span className="text-gray-400 text-xs">—</span>
+                      : l.numero_lettre_voiture
+                        ? <span className="badge-clos">{l.numero_lettre_voiture}</span>
+                        : <span className="badge-alerte">Manquant</span>
                     }
                   </td>
                   <td className="table-cell">
-                    {l.transport_facture
-                      ? <span className="badge-clos">✓</span>
-                      : <span className="badge-en_cours">Non</span>
+                    {l.type === 'planifiee' ? <span className="text-gray-400 text-xs">—</span>
+                      : l.transport_facture
+                        ? <span className="badge-clos">✓</span>
+                        : <span className="badge-en_cours">Non</span>
                     }
                   </td>
                 </tr>
