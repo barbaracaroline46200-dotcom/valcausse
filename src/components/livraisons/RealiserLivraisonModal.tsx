@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
 import { getPrefixes } from '@/lib/prefixes'
 import { formatTonnes } from '@/lib/annee-agricole'
@@ -13,6 +13,8 @@ interface Props {
 
 export default function RealiserLivraisonModal({ livraison, contrat, onClose, onSaved }: Props) {
   const prefixes = getPrefixes(contrat.famille)
+  const [transporteurs, setTransporteurs] = useState<any[]>([])
+
   const [form, setForm] = useState({
     date_reelle: '',
     quantite_reelle: String(livraison.quantite_prevue ?? ''),
@@ -24,12 +26,17 @@ export default function RealiserLivraisonModal({ livraison, contrat, onClose, on
     piece_client_prefixe: livraison.piece_client_prefixe ?? prefixes.client,
     piece_client_numero: livraison.piece_client_numero ?? '',
     montant_transport_reel: '',
+    transporteur_id: livraison.transporteur_id ?? '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  useEffect(() => {
+    fetch('/api/referentiels/transporteurs').then(r => r.json()).then(setTransporteurs)
+  }, [])
+
   function f(key: string) {
-    return (e: React.ChangeEvent<HTMLInputElement>) =>
+    return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm(prev => ({ ...prev, [key]: e.target.value }))
   }
 
@@ -48,6 +55,7 @@ export default function RealiserLivraisonModal({ livraison, contrat, onClose, on
       piece_client_prefixe: form.piece_client_prefixe || null,
       piece_client_numero: form.piece_client_numero || null,
       montant_transport_reel: form.montant_transport_reel ? parseFloat(form.montant_transport_reel) : null,
+      transporteur_id: form.transporteur_id || null,
     }
     const res = await fetch(`/api/livraisons/${livraison.id}`, {
       method: 'PATCH',
@@ -90,6 +98,15 @@ export default function RealiserLivraisonModal({ livraison, contrat, onClose, on
           <div>
             <label className="label">Ville de destination</label>
             <input className="input" value={form.ville_destination} onChange={f('ville_destination')} />
+          </div>
+          <div className="col-span-2">
+            <label className="label">Transporteur pour cette livraison</label>
+            <select className="input" value={form.transporteur_id} onChange={f('transporteur_id')}>
+              <option value="">Par défaut ({contrat.transporteur?.nom ?? '—'})</option>
+              {transporteurs.map(t => (
+                <option key={t.id} value={t.id}>{t.nom}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="label">Pièce fournisseur ({prefixes.fournisseur})</label>

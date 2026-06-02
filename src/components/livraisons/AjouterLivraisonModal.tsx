@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
 import { getPrefixes } from '@/lib/prefixes'
 
@@ -12,6 +12,7 @@ interface Props {
 export default function AjouterLivraisonModal({ contrat, onClose, onSaved }: Props) {
   const prefixes = getPrefixes(contrat.famille)
   const agriculteur = contrat.contrats_vente?.[0]?.agriculteur
+  const [transporteurs, setTransporteurs] = useState<any[]>([])
 
   const [form, setForm] = useState({
     mois_prevu: '',
@@ -22,12 +23,17 @@ export default function AjouterLivraisonModal({ contrat, onClose, onSaved }: Pro
     piece_fournisseur_numero: '',
     piece_client_prefixe: prefixes.client,
     piece_client_numero: '',
+    transporteur_id: '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  useEffect(() => {
+    fetch('/api/referentiels/transporteurs').then(r => r.json()).then(setTransporteurs)
+  }, [])
+
   function f(key: string) {
-    return (e: React.ChangeEvent<HTMLInputElement>) =>
+    return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm(prev => ({ ...prev, [key]: e.target.value }))
   }
 
@@ -45,6 +51,7 @@ export default function AjouterLivraisonModal({ contrat, onClose, onSaved }: Pro
       piece_fournisseur_numero: form.piece_fournisseur_numero || null,
       piece_client_prefixe: form.piece_client_prefixe || null,
       piece_client_numero: form.piece_client_numero || null,
+      transporteur_id: form.transporteur_id || null,
     }
     const res = await fetch('/api/livraisons', {
       method: 'POST',
@@ -77,6 +84,15 @@ export default function AjouterLivraisonModal({ contrat, onClose, onSaved }: Pro
           <div>
             <label className="label">Ville de destination</label>
             <input className="input" value={form.ville_destination} onChange={f('ville_destination')} />
+          </div>
+          <div className="col-span-2">
+            <label className="label">Transporteur pour cette livraison</label>
+            <select className="input" value={form.transporteur_id} onChange={f('transporteur_id')}>
+              <option value="">Par défaut ({contrat.transporteur?.nom ?? '—'})</option>
+              {transporteurs.map(t => (
+                <option key={t.id} value={t.id}>{t.nom}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="label">Pièce fournisseur (préfixe)</label>
