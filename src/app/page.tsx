@@ -221,7 +221,7 @@ export default function DashboardPage() {
         title="Factures clients à récupérer"
         count={facturesMq.length}
         color="brun"
-        subtitle="Livraisons réalisées depuis > 30 jours sans facture client — aller chercher le numéro dans le logiciel"
+        subtitle="Livraisons réalisées depuis > 30 jours sans facture client — aller chercher le numéro dans Atys"
       >
         {facturesMq.length === 0 ? (
           <EmptyState text="Toutes les factures sont à jour 🎉" />

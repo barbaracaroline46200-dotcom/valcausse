@@ -360,7 +360,7 @@ export default function ContratDetailPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50">
-                {['N° Facture', 'N° Pièce logiciel', 'Montant HT', 'Montant TTC', 'Mode paiement', 'Date paiement'].map(h => (
+                {['N° Facture', 'N° Pièce Atys', 'Montant HT', 'Montant TTC', 'Mode paiement', 'Date paiement'].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
