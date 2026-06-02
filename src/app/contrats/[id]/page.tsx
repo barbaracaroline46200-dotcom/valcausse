@@ -146,11 +146,15 @@ export default function ContratDetailPage() {
             <div className="text-2xl font-bold text-orange-600">{formatTonnes(rel)}</div>
             <div className="text-xs text-orange-700 font-medium">Reliquat à livrer</div>
           </div>
-          {depassementVente && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
-              <div className="text-sm font-semibold text-red-600">Ventes : {formatTonnes(totalVentes)}</div>
+          <div className={`border rounded-lg p-3 text-center ${totalVentes > contrat.quantite_totale ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}>
+            <div className={`text-2xl font-bold ${totalVentes > contrat.quantite_totale ? 'text-red-600' : 'text-blue-700'}`}>
+              {formatTonnes(Math.max(0, contrat.quantite_totale - totalVentes))}
             </div>
-          )}
+            <div className={`text-xs font-medium ${totalVentes > contrat.quantite_totale ? 'text-red-600' : 'text-blue-700'}`}>
+              {totalVentes > contrat.quantite_totale ? '⚠ Dépassement ventes' : 'Disponible (non vendu)'}
+            </div>
+            <div className="text-xs text-gray-400 mt-0.5">Vendu : {formatTonnes(totalVentes)}</div>
+          </div>
         </div>
       </div>
 
@@ -224,7 +228,7 @@ export default function ContratDetailPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50/50">
-                    {['Mois prévu', 'Tonnes prévues', 'Ville enlèv.', 'Ville dest.', 'Transporteur', 'Pièce fourn.', 'Pièce client', 'Contacté ?', 'Actions'].map(h => (
+                    {['Mois prévu', 'Client / Destination', 'Tonnes prévues', 'Ville enlèv.', 'Ville dest.', 'Transporteur', 'Pièce fourn.', 'Pièce client', 'Contacté ?', 'Actions'].map(h => (
                       <th key={h} className="table-header">{h}</th>
                     ))}
                   </tr>
@@ -233,6 +237,14 @@ export default function ContratDetailPage() {
                   {livraisonsPlanifiees.map((l: any) => (
                     <tr key={l.id} className="table-row">
                       <td className="table-cell font-medium">{formatDate(l.mois_prevu)}</td>
+                      <td className="table-cell text-xs">
+                        {l.destination_silo
+                          ? <span className="badge-appro">Silo</span>
+                          : l.contrat_vente_id
+                            ? <span className="text-green-700 font-medium">{(contrat.contrats_vente ?? []).find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur?.nom ?? '—'}</span>
+                            : <span className="text-gray-400">Non affecté</span>
+                        }
+                      </td>
                       <td className="table-cell">{formatTonnes(l.quantite_prevue)}</td>
                       <td className="table-cell text-gray-500">{l.ville_chargement ?? contrat.ville_chargement ?? '—'}</td>
                       <td className="table-cell text-gray-500">{l.ville_destination ?? '—'}</td>

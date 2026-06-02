@@ -28,6 +28,8 @@ export default function RealiserLivraisonModal({ livraison, contrat, onClose, on
     montant_transport_reel: '',
     transporteur_id: livraison.transporteur_id ?? '',
     numero_mise_a_disposition: livraison.numero_mise_a_disposition ?? '',
+    contrat_vente_id: livraison.contrat_vente_id ?? '',
+    destination_silo: livraison.destination_silo ?? false,
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -58,6 +60,8 @@ export default function RealiserLivraisonModal({ livraison, contrat, onClose, on
       montant_transport_reel: form.montant_transport_reel ? parseFloat(form.montant_transport_reel) : null,
       transporteur_id: form.transporteur_id || null,
       numero_mise_a_disposition: form.numero_mise_a_disposition || null,
+      contrat_vente_id: form.destination_silo ? null : (form.contrat_vente_id || null),
+      destination_silo: form.destination_silo,
     }
     const res = await fetch(`/api/livraisons/${livraison.id}`, {
       method: 'PATCH',
@@ -72,6 +76,7 @@ export default function RealiserLivraisonModal({ livraison, contrat, onClose, on
   }
 
   const prevu = livraison.quantite_prevue ? livraison.quantite_prevue * contrat.prix_transport_prevu : null
+  const ventesLiees = contrat.contrats_vente ?? []
 
   return (
     <Modal title="Réaliser la livraison" onClose={onClose} size="md">
@@ -100,6 +105,25 @@ export default function RealiserLivraisonModal({ livraison, contrat, onClose, on
           <div>
             <label className="label">Ville de destination</label>
             <input className="input" value={form.ville_destination} onChange={f('ville_destination')} />
+          </div>
+          <div className="col-span-2">
+            <label className="label">Affectation de cette livraison</label>
+            <div className="flex gap-3 items-center mb-2">
+              <label className="flex items-center gap-2 cursor-pointer text-sm">
+                <input type="checkbox" checked={form.destination_silo} onChange={e => setForm(prev => ({ ...prev, destination_silo: e.target.checked, contrat_vente_id: '' }))} className="w-4 h-4 rounded" />
+                Livraison vers notre silo (Silo / Silo Gare)
+              </label>
+            </div>
+            {!form.destination_silo && ventesLiees.length > 0 && (
+              <select className="input" value={form.contrat_vente_id} onChange={f('contrat_vente_id')}>
+                <option value="">— Non affecté à un contrat de vente —</option>
+                {ventesLiees.map((cv: any) => (
+                  <option key={cv.id} value={cv.id}>
+                    {cv.numero_contrat} · {cv.agriculteur?.nom} · {cv.quantite} t
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
           {contrat.famille === 'appro' && (
             <div className="col-span-2">
