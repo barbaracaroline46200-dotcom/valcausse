@@ -12,6 +12,7 @@ import AjouterLivraisonModal from '@/components/livraisons/AjouterLivraisonModal
 import RealiserLivraisonModal from '@/components/livraisons/RealiserLivraisonModal'
 import ModifierLivraisonModal from '@/components/livraisons/ModifierLivraisonModal'
 import ModifierContratModal from '@/components/contrats/ModifierContratModal'
+import ModifierVenteModal from '@/components/contrats/ModifierVenteModal'
 import LierVenteModal from '@/components/contrats/LierVenteModal'
 import NouvelleVenteModal from '@/components/contrats/NouvelleVenteModal'
 import { getPrefixes } from '@/lib/prefixes'
@@ -28,6 +29,7 @@ export default function ContratDetailPage() {
   const [showNouvelleVente, setShowNouvelleVente] = useState(false)
   const [modifierLiv, setModifierLiv] = useState<any>(null)
   const [showModifierContrat, setShowModifierContrat] = useState(false)
+  const [modifierVente, setModifierVente] = useState<any>(null)
 
   async function reload() {
     const data = await fetch(`/api/contrats/${id}`).then(r => r.json())
@@ -192,7 +194,7 @@ export default function ContratDetailPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50">
-                {['N° Contrat', 'Agriculteur', 'Produit', 'Quantité', 'Prix vente', 'Statut', 'Facture client'].map(h => (
+                {['N° Contrat', 'Agriculteur', 'Produit', 'Quantité', 'Prix vente', 'Statut', 'Facture client', ''].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
@@ -229,6 +231,22 @@ export default function ContratDetailPage() {
                         })()
                     }
                   </td>
+                  {isAdmin && (
+                    <td className="table-cell">
+                      <div className="flex gap-1">
+                        <button onClick={() => setModifierVente(cv)} className="btn-secondary text-xs py-1 px-2" title="Modifier">
+                          <Pencil size={12} />
+                        </button>
+                        <button onClick={async () => {
+                          if (!confirm(`Supprimer le contrat de vente ${cv.numero_contrat} ?`)) return
+                          await fetch(`/api/ventes/${cv.id}`, { method: 'DELETE' })
+                          reload()
+                        }} className="btn-danger text-xs py-1 px-2" title="Supprimer">
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -457,6 +475,14 @@ export default function ContratDetailPage() {
           contrat={contrat}
           onClose={() => setModifierLiv(null)}
           onSaved={() => { setModifierLiv(null); reload() }}
+        />
+      )}
+      {modifierVente && (
+        <ModifierVenteModal
+          vente={modifierVente}
+          contrat={contrat}
+          onClose={() => setModifierVente(null)}
+          onSaved={() => { setModifierVente(null); reload() }}
         />
       )}
       {showModifierContrat && (
