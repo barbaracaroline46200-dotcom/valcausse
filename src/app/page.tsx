@@ -154,7 +154,7 @@ export default function DashboardPage() {
                 const isProchain = moisSuivant && moisLiv >= moisSuivant.slice(0, 7)
                 const step1ok = l.agriculteur_contacte && (l.date_souhaitee || l.semaine_souhaitee)
                 const step2ok = step1ok && l.pdf_envoye
-                const step3ok = l.transporteur_contacte && (l.date_prevue || l.semaine_prevue)
+                const step3ok = !!(l.date_prevue || l.semaine_prevue)
                 // Étape active = la première non complète
                 const etapeActive = step3ok ? 0 : step2ok ? 3 : step1ok ? 2 : 1
                 return (
@@ -264,12 +264,7 @@ export default function DashboardPage() {
                           <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${step3ok ? 'bg-green-500 text-white' : etapeActive === 3 ? 'bg-green-500 text-white' : 'bg-green-100 text-green-700'}`}>3</span>
                           <span className={`text-xs font-semibold ${etapeActive === 3 ? 'text-green-700' : 'text-gray-700'}`}>🚛 Transporteur</span>
                         </div>
-                        <label className="flex items-center gap-2 mb-2 cursor-pointer">
-                          <input type="checkbox" checked={!!l.transporteur_contacte}
-                            onChange={() => toggleTransporteurContacte(l.id, l.transporteur_contacte)}
-                            className="w-4 h-4 accent-green-600" />
-                          <span className="text-xs text-gray-600">{l.transporteur_contacte ? '✓ Confirmé' : 'À confirmer'}</span>
-                        </label>
+                        <p className="text-xs text-gray-400 mb-2">Renseigner date <strong>ou</strong> semaine pour valider</p>
                         <div className="space-y-1">
                           <div className="flex items-center gap-1">
                             <span className="text-xs text-gray-400 w-12 shrink-0">Date :</span>

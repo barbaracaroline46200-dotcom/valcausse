@@ -36,7 +36,8 @@ export async function GET() {
       )
     `)
     .eq('type', 'planifiee')
-    .eq('transporteur_contacte', false)
+    .is('date_prevue', null)
+    .is('semaine_prevue', null)
     .lte('mois_prevu', moisFin)
     .order('mois_prevu', { ascending: true })
 
