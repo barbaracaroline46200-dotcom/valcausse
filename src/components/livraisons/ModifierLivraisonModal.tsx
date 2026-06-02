@@ -30,12 +30,20 @@ export default function ModifierLivraisonModal({ livraison, contrat, onClose, on
     contrat_vente_id: livraison.contrat_vente_id ?? '',
     destination_silo: livraison.destination_silo ?? false,
   })
+  const [agriculteurs, setAgriculteurs] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
     fetch('/api/referentiels/transporteurs').then(r => r.json()).then(setTransporteurs)
+    fetch('/api/referentiels/agriculteurs').then(r => r.json()).then(setAgriculteurs)
   }, [])
+
+  function getVilleSilo() {
+    const nomSilo = contrat.famille === 'appro' ? 'Silo Gare' : 'Silo'
+    const silo = agriculteurs.find((a: any) => a.nom?.toLowerCase() === nomSilo.toLowerCase())
+    return silo?.ville_livraison ?? ''
+  }
 
   function f(key: string) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -104,7 +112,11 @@ export default function ModifierLivraisonModal({ livraison, contrat, onClose, on
             <label className="label">Affectation de cette livraison</label>
             <div className="flex gap-3 items-center mb-2">
               <label className="flex items-center gap-2 cursor-pointer text-sm">
-                <input type="checkbox" checked={form.destination_silo} onChange={e => setForm(prev => ({ ...prev, destination_silo: e.target.checked, contrat_vente_id: '' }))} className="w-4 h-4 rounded" />
+                <input type="checkbox" checked={form.destination_silo} onChange={e => {
+                  const checked = e.target.checked
+                  const villeSilo = checked ? getVilleSilo() : ''
+                  setForm(prev => ({ ...prev, destination_silo: checked, contrat_vente_id: '', ville_destination: villeSilo || prev.ville_destination }))
+                }} className="w-4 h-4 rounded" />
                 Livraison vers notre silo (Silo / Silo Gare)
               </label>
             </div>
