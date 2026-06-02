@@ -299,7 +299,7 @@ export default function DashboardPage() {
         title="CMR en attente"
         count={cmr.length}
         color="red"
-        subtitle="Livraisons réalisées depuis > 14 jours sans lettre de voiture"
+        subtitle="Date de livraison dépassée sans lettre de voiture"
       >
         {cmr.length === 0 ? (
           <EmptyState text="Aucun CMR en attente 🎉" />
@@ -314,12 +314,20 @@ export default function DashboardPage() {
             </thead>
             <tbody>
               {cmr.map((l: any) => {
-                const jours = joursDepuis(l.date_reelle)
+                const isRealisee = l.type === 'realisee'
+                const dateRef = isRealisee ? l.date_reelle : l.date_prevue
+                const jours = joursDepuis(dateRef)
+                const dateAffichee = isRealisee
+                  ? formatDate(l.date_reelle)
+                  : l.date_prevue ? formatDate(l.date_prevue) : (l.semaine_prevue ?? '—')
                 return (
-                  <tr key={l.id} className="table-row">
+                  <tr key={l.id} className={`table-row ${!isRealisee ? 'bg-amber-50/40' : ''}`}>
                     <td className="table-cell font-medium">{l.contrat_achat?.produit?.nom ?? '—'}</td>
                     <td className="table-cell">{l.contrat_achat?.transporteur?.nom ?? '—'}</td>
-                    <td className="table-cell">{formatDate(l.date_reelle)}</td>
+                    <td className="table-cell">
+                      <span className={!isRealisee ? 'text-amber-700 font-medium' : ''}>{dateAffichee}</span>
+                      {!isRealisee && <span className="ml-1 text-xs text-amber-600">(à confirmer)</span>}
+                    </td>
                     <td className="table-cell text-sm">
                       {l.contrat_achat?.transporteur?.telephone && (
                         <span className="text-gray-600">📞 {l.contrat_achat.transporteur.telephone}</span>

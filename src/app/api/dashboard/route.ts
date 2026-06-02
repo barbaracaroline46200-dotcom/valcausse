@@ -41,21 +41,42 @@ export async function GET() {
     .lte('mois_prevu', moisFin)
     .order('mois_prevu', { ascending: true })
 
-  // CMR en attente (réalisées depuis > 14j sans lettre de voiture)
+  // CMR en attente :
+  // 1. Réalisées depuis > 14j sans lettre de voiture
+  // 2. Planifiées dont la date_prevue est dépassée (livraison probable, CMR à récupérer)
   const cutoff14 = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-  const { data: cmrEnAttente } = await supabase
+  const today = now.toISOString().split('T')[0]
+
+  const { data: cmrRealisees } = await supabase
     .from('livraisons')
-    .select(`
-      *,
-      contrat_achat:contrats_achat(
-        famille,
-        produit:produits(nom),
-        transporteur:transporteurs(nom,email,telephone)
-      )
-    `)
+    .select(`*, contrat_achat:contrats_achat(famille, produit:produits(nom), transporteur:transporteurs(nom,email,telephone))`)
     .eq('type', 'realisee')
     .is('numero_lettre_voiture', null)
     .lte('date_reelle', cutoff14)
+
+  // Planifiées avec date_prevue dépassée (le transporteur a dû livrer)
+  const { data: cmrPlanifieesDatePassee } = await supabase
+    .from('livraisons')
+    .select(`*, contrat_achat:contrats_achat(famille, produit:produits(nom), transporteur:transporteurs(nom,email,telephone))`)
+    .eq('type', 'planifiee')
+    .not('date_prevue', 'is', null)
+    .lt('date_prevue', today)
+
+  // Planifiées avec semaine_prevue dont le mois est passé (approximation)
+  const debutMoisCourant = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+  const { data: cmrPlanifiesSemainePassee } = await supabase
+    .from('livraisons')
+    .select(`*, contrat_achat:contrats_achat(famille, produit:produits(nom), transporteur:transporteurs(nom,email,telephone))`)
+    .eq('type', 'planifiee')
+    .not('semaine_prevue', 'is', null)
+    .is('date_prevue', null)
+    .lt('mois_prevu', debutMoisCourant)
+
+  const cmrEnAttente = [
+    ...(cmrRealisees ?? []),
+    ...(cmrPlanifieesDatePassee ?? []),
+    ...(cmrPlanifiesSemainePassee ?? []),
+  ]
 
   // Factures clients à récupérer :
   // Contrats de vente dont toutes les livraisons sont réalisées
