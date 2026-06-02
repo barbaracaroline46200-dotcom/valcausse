@@ -1,10 +1,16 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Modal from '@/components/ui/Modal'
+import { Plus, Trash2 } from 'lucide-react'
 
 interface Props {
   onClose: () => void
   onSaved: () => void
+}
+
+interface LivraisonPlanifiee {
+  mois: string
+  quantite: string
 }
 
 export default function NouveauContratModal({ onClose, onSaved }: Props) {
@@ -15,6 +21,7 @@ export default function NouveauContratModal({ onClose, onSaved }: Props) {
     point_chargement: '', ville_chargement: '', date_conclusion: '', date_debut: '', date_fin: '',
     notes: '',
   })
+  const [livraisons, setLivraisons] = useState<LivraisonPlanifiee[]>([])
   const [produits, setProduits] = useState<any[]>([])
   const [fournisseurs, setFournisseurs] = useState<any[]>([])
   const [courtiers, setCourtiers] = useState<any[]>([])
@@ -33,6 +40,18 @@ export default function NouveauContratModal({ onClose, onSaved }: Props) {
 
   const produitsFiltres = produits.filter(p => p.famille === form.famille)
 
+  function addLivraison() {
+    setLivraisons(prev => [...prev, { mois: '', quantite: '' }])
+  }
+
+  function removeLivraison(i: number) {
+    setLivraisons(prev => prev.filter((_, idx) => idx !== i))
+  }
+
+  function updateLivraison(i: number, key: keyof LivraisonPlanifiee, value: string) {
+    setLivraisons(prev => prev.map((l, idx) => idx === i ? { ...l, [key]: value } : l))
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
@@ -46,6 +65,9 @@ export default function NouveauContratModal({ onClose, onSaved }: Props) {
       prix_transport_prevu: parseFloat(form.prix_transport_prevu),
       date_debut: form.date_debut || null,
       date_fin: form.date_fin || null,
+      livraisons_planifiees: livraisons
+        .filter(l => l.mois && l.quantite)
+        .map(l => ({ mois: l.mois + '-01', quantite: parseFloat(l.quantite) })),
     }
     const res = await fetch('/api/contrats', {
       method: 'POST',
@@ -147,6 +169,52 @@ export default function NouveauContratModal({ onClose, onSaved }: Props) {
           <div className="col-span-2">
             <label className="label">Notes</label>
             <textarea className="input" rows={2} value={form.notes} onChange={f('notes')} />
+          </div>
+        </div>
+
+        {/* Livraisons planifiées */}
+        <div className="border-t border-gray-100 pt-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="font-semibold text-sm" style={{ color: '#7B2820' }}>Livraisons planifiées</p>
+              <p className="text-xs text-gray-400">Indiquez les mois prévus — les dates précises viendront plus tard</p>
+            </div>
+            <button type="button" onClick={addLivraison} className="btn-secondary text-xs py-1.5">
+              <Plus size={14} /> Ajouter un mois
+            </button>
+          </div>
+          {livraisons.length === 0 && (
+            <p className="text-sm text-gray-400 text-center py-3 bg-gray-50 rounded-lg">Aucune livraison planifiée — cliquez sur "Ajouter un mois"</p>
+          )}
+          <div className="space-y-2">
+            {livraisons.map((l, i) => (
+              <div key={i} className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2">
+                <div className="flex-1">
+                  <label className="label text-xs mb-0.5">Mois *</label>
+                  <input
+                    type="month"
+                    className="input py-1.5 text-sm"
+                    value={l.mois}
+                    onChange={e => updateLivraison(i, 'mois', e.target.value)}
+                    required={false}
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="label text-xs mb-0.5">Quantité prévue (t)</label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    className="input py-1.5 text-sm"
+                    value={l.quantite}
+                    placeholder="Ex : 200"
+                    onChange={e => updateLivraison(i, 'quantite', e.target.value)}
+                  />
+                </div>
+                <button type="button" onClick={() => removeLivraison(i)} className="mt-4 p-1.5 text-gray-400 hover:text-red-500 transition-colors">
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
           </div>
         </div>
 

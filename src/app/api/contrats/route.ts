@@ -41,7 +41,26 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const body = await req.json()
   const supabase = getServiceClient()
-  const { data, error } = await supabase.from('contrats_achat').insert(body).select().single()
+
+  const { livraisons_planifiees, ...contratBody } = body
+
+  const { data: contrat, error } = await supabase
+    .from('contrats_achat')
+    .insert(contratBody)
+    .select()
+    .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-  return NextResponse.json(data, { status: 201 })
+
+  // Créer les livraisons planifiées si présentes
+  if (livraisons_planifiees?.length > 0) {
+    const livs = livraisons_planifiees.map((l: any) => ({
+      contrat_achat_id: contrat.id,
+      type: 'planifiee',
+      mois_prevu: l.mois,
+      quantite_prevue: l.quantite || 0,
+    }))
+    await supabase.from('livraisons').insert(livs)
+  }
+
+  return NextResponse.json(contrat, { status: 201 })
 }
