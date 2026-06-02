@@ -11,7 +11,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       fournisseur:fournisseurs(*,points_chargement(*)),
       courtier:courtiers(*),
       transporteur:transporteurs(*),
-      livraisons(*),
+      livraisons(id,type,quantite_prevue,quantite_reelle,mois_prevu,date_reelle,contrat_vente_id,destination_silo,transporteur_id,ville_chargement,ville_destination,piece_fournisseur_prefixe,piece_fournisseur_numero,piece_client_prefixe,piece_client_numero,numero_lettre_voiture,numero_mise_a_disposition,montant_transport_reel,transport_facture,transporteur_contacte),
       contrats_vente(*,agriculteur:agriculteurs(*),produit:produits(*),factures_client(*)),
       factures_fournisseur(*)
     `)

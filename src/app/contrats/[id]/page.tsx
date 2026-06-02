@@ -204,8 +204,22 @@ export default function ContratDetailPage() {
                   <td className="table-cell"><BadgeStatut statut={cv.statut} /></td>
                   <td className="table-cell text-xs">
                     {cv.factures_client?.length > 0
-                      ? cv.factures_client.map((f: any) => f.numero_facture_logiciel).join(', ')
-                      : <span className="text-orange-500">À récupérer</span>
+                      ? cv.factures_client.map((f: any) => f.numero_facture_atys ?? f.numero_facture).join(', ')
+                      : (() => {
+                          // Livraisons de ce contrat de vente
+                          const livsCv = (contrat.livraisons ?? []).filter((l: any) => l.contrat_vente_id === cv.id)
+                          if (livsCv.length === 0) return <span className="text-gray-400">—</span>
+                          const toutesRealisees = livsCv.every((l: any) => l.type === 'realisee')
+                          if (!toutesRealisees) return <span className="text-gray-400">En attente fin de livraisons</span>
+                          const derniere = livsCv.map((l: any) => l.date_reelle).filter(Boolean).sort().at(-1)
+                          if (!derniere) return <span className="text-gray-400">—</span>
+                          const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                          if (derniere > cutoff) {
+                            const dispo = new Date(new Date(derniere).getTime() + 30 * 24 * 60 * 60 * 1000)
+                            return <span className="text-gray-400">Disponible le {dispo.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}</span>
+                          }
+                          return <span className="text-orange-500 font-medium">⚠️ À récupérer dans Atys</span>
+                        })()
                     }
                   </td>
                 </tr>

@@ -50,20 +50,54 @@ export async function GET() {
     .is('numero_lettre_voiture', null)
     .lte('date_reelle', cutoff14)
 
-  // Factures clients à récupérer (réalisées > 30j sans facture client)
+  // Factures clients à récupérer :
+  // Contrats de vente dont toutes les livraisons sont réalisées
+  // ET la dernière livraison date de plus de 30 jours
+  // ET pas encore de facture client saisie
   const cutoff30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-  const { data: facturesManquantes } = await supabase
-    .from('livraisons')
+
+  const { data: contratsAvecVentes } = await supabase
+    .from('contrats_achat')
     .select(`
-      *,
-      contrat_achat:contrats_achat(
-        produit:produits(nom),
-        contrats_vente(id,numero_contrat,agriculteur:agriculteurs(nom))
-      )
+      id, numero_contrat,
+      produit:produits(nom),
+      contrats_vente(id, numero_contrat, agriculteur:agriculteurs(nom), factures_client(id)),
+      livraisons(id, type, date_reelle, contrat_vente_id)
     `)
-    .eq('type', 'realisee')
-    .is('facture_fournisseur_id', null)
-    .lte('date_reelle', cutoff30)
+
+  const facturesManquantes: any[] = []
+  for (const ca of (contratsAvecVentes ?? [])) {
+    for (const cv of (ca.contrats_vente ?? [])) {
+      // Livraisons affectées à ce contrat de vente
+      const livsCv = (ca.livraisons ?? []).filter((l: any) => l.contrat_vente_id === cv.id)
+      if (livsCv.length === 0) continue
+      // Toutes réalisées ?
+      const toutesRealisees = livsCv.every((l: any) => l.type === 'realisee')
+      if (!toutesRealisees) continue
+      // Dernière livraison > 30 jours ?
+      const derniere = livsCv
+        .map((l: any) => l.date_reelle)
+        .filter(Boolean)
+        .sort()
+        .at(-1)
+      if (!derniere || derniere > cutoff30) continue
+      // Pas encore de facture client ?
+      if ((cv.factures_client ?? []).length > 0) continue
+      // Nombre de factures attendues = mois distincts de livraison
+      const moisDistincts = new Set(livsCv.map((l: any) => l.date_reelle?.slice(0, 7)).filter(Boolean))
+      facturesManquantes.push({
+        contrat_achat_id: ca.id,
+        contrat_achat_numero: ca.numero_contrat,
+        produit: ca.produit,
+        contrat_vente_id: cv.id,
+        contrat_vente_numero: cv.numero_contrat,
+        agriculteur: cv.agriculteur,
+        derniere_livraison: derniere,
+        nb_factures_attendues: moisDistincts.size,
+        mois_livraison: [...moisDistincts].sort(),
+      })
+    }
+  }
 
   // Contrats en alerte (date_fin < 30j avec reliquat)
   const dans30j = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]

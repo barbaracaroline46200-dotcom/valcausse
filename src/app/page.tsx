@@ -221,7 +221,7 @@ export default function DashboardPage() {
         title="Factures clients à récupérer"
         count={facturesMq.length}
         color="brun"
-        subtitle="Livraisons réalisées depuis > 30 jours sans facture client — aller chercher le numéro dans Atys"
+        subtitle="Contrats de vente entièrement livrés depuis + de 30 jours — récupérer les factures dans Atys"
       >
         {facturesMq.length === 0 ? (
           <EmptyState text="Toutes les factures sont à jour 🎉" />
@@ -229,27 +229,32 @@ export default function DashboardPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
-                {['Agriculteur', 'Produit', 'Date livraison', 'Contrat vente'].map(h => (
+                {['Agriculteur', 'Produit', 'Contrat vente', 'Dernière livraison', 'Factures attendues', 'Mois concernés'].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {facturesMq.map((l: any) => {
-                const cv = l.contrat_achat?.contrats_vente?.[0]
-                return (
-                  <tr key={l.id} className="table-row">
-                    <td className="table-cell font-medium">{cv?.agriculteur?.nom ?? '—'}</td>
-                    <td className="table-cell">{l.contrat_achat?.produit?.nom ?? '—'}</td>
-                    <td className="table-cell">{formatDate(l.date_reelle)}</td>
-                    <td className="table-cell">
-                      {cv ? (
-                        <a href={`/ventes`} className="text-green-700 hover:underline text-sm">{cv.numero_contrat}</a>
-                      ) : '—'}
-                    </td>
-                  </tr>
-                )
-              })}
+              {facturesMq.map((item: any) => (
+                <tr key={item.contrat_vente_id} className="table-row">
+                  <td className="table-cell font-medium">{item.agriculteur?.nom ?? '—'}</td>
+                  <td className="table-cell">{item.produit?.nom ?? '—'}</td>
+                  <td className="table-cell">
+                    <a href={`/contrats/${item.contrat_achat_id}`} className="text-green-700 hover:underline text-sm font-medium">
+                      {item.contrat_vente_numero}
+                    </a>
+                  </td>
+                  <td className="table-cell">{formatDate(item.derniere_livraison)}</td>
+                  <td className="table-cell text-center">
+                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-full text-white text-xs font-bold" style={{ backgroundColor: '#7B2820' }}>
+                      {item.nb_factures_attendues}
+                    </span>
+                  </td>
+                  <td className="table-cell text-sm text-gray-600">
+                    {item.mois_livraison.map((m: string) => formatMois(m + '-01')).join(', ')}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         )}
