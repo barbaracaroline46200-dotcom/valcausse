@@ -11,14 +11,22 @@ interface Props {
 
 export default function AjouterLivraisonModal({ contrat, onClose, onSaved }: Props) {
   const prefixes = getPrefixes(contrat.famille)
-  const agriculteur = contrat.contrats_vente?.[0]?.agriculteur
   const [transporteurs, setTransporteurs] = useState<any[]>([])
+
+  // Adresses d'enlèvement : principale + supplémentaires + déjà utilisées sur les livraisons
+  const adressesChargement = Array.from(new Set(
+    [
+      contrat.ville_chargement,
+      ...(contrat.adresses_chargement_sup ?? []),
+      ...(contrat.livraisons ?? []).map((l: any) => l.ville_chargement),
+    ].filter(Boolean)
+  ))
 
   const [form, setForm] = useState({
     mois_prevu: '',
     quantite_prevue: '',
     ville_chargement: contrat.ville_chargement ?? '',
-    ville_destination: agriculteur?.ville_livraison ?? '',
+    ville_destination: '',
     piece_fournisseur_prefixe: prefixes.fournisseur,
     piece_fournisseur_numero: '',
     piece_client_prefixe: prefixes.client,
@@ -102,7 +110,10 @@ export default function AjouterLivraisonModal({ contrat, onClose, onSaved }: Pro
           </div>
           <div>
             <label className="label">Ville d'enlèvement</label>
-            <input className="input" value={form.ville_chargement} onChange={f('ville_chargement')} />
+            <input className="input" list="adresses-chargement" value={form.ville_chargement} onChange={f('ville_chargement')} placeholder="Saisir ou choisir..." />
+            <datalist id="adresses-chargement">
+              {adressesChargement.map((a: string) => <option key={a} value={a} />)}
+            </datalist>
           </div>
           <div>
             <label className="label">Ville de destination</label>

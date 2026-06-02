@@ -14,6 +14,14 @@ export default function ModifierLivraisonModal({ livraison, contrat, onClose, on
   const prefixes = getPrefixes(contrat.famille)
   const [transporteurs, setTransporteurs] = useState<any[]>([])
 
+  const adressesChargement = Array.from(new Set(
+    [
+      contrat.ville_chargement,
+      ...(contrat.adresses_chargement_sup ?? []),
+      ...(contrat.livraisons ?? []).map((l: any) => l.ville_chargement),
+    ].filter(Boolean)
+  ))
+
   const moisPrevu = livraison.mois_prevu ? livraison.mois_prevu.slice(0, 7) : ''
 
   const [form, setForm] = useState({
@@ -102,7 +110,10 @@ export default function ModifierLivraisonModal({ livraison, contrat, onClose, on
           </div>
           <div>
             <label className="label">Ville d'enlèvement</label>
-            <input className="input" value={form.ville_chargement} onChange={f('ville_chargement')} />
+            <input className="input" list="adresses-chargement-mod" value={form.ville_chargement} onChange={f('ville_chargement')} placeholder="Saisir ou choisir..." />
+            <datalist id="adresses-chargement-mod">
+              {adressesChargement.map((a: string) => <option key={a} value={a} />)}
+            </datalist>
           </div>
           <div>
             <label className="label">Ville de destination</label>

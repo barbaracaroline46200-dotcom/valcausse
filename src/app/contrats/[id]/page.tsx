@@ -11,6 +11,7 @@ import Link from 'next/link'
 import AjouterLivraisonModal from '@/components/livraisons/AjouterLivraisonModal'
 import RealiserLivraisonModal from '@/components/livraisons/RealiserLivraisonModal'
 import ModifierLivraisonModal from '@/components/livraisons/ModifierLivraisonModal'
+import ModifierContratModal from '@/components/contrats/ModifierContratModal'
 import LierVenteModal from '@/components/contrats/LierVenteModal'
 import NouvelleVenteModal from '@/components/contrats/NouvelleVenteModal'
 import { getPrefixes } from '@/lib/prefixes'
@@ -26,6 +27,7 @@ export default function ContratDetailPage() {
   const [showLierVente, setShowLierVente] = useState(false)
   const [showNouvelleVente, setShowNouvelleVente] = useState(false)
   const [modifierLiv, setModifierLiv] = useState<any>(null)
+  const [showModifierContrat, setShowModifierContrat] = useState(false)
 
   async function reload() {
     const data = await fetch(`/api/contrats/${id}`).then(r => r.json())
@@ -88,10 +90,15 @@ export default function ContratDetailPage() {
           <p className="text-gray-500 text-sm mt-1">{contrat.produit?.nom} · {contrat.fournisseur?.nom}</p>
         </div>
         {isAdmin && (
-          <button onClick={toggleStatut} className={contrat.statut === 'en_cours' ? 'btn-primary' : 'btn-secondary'}>
-            <CheckCircle size={16} />
-            {contrat.statut === 'en_cours' ? 'Clôturer' : 'Rouvrir'}
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => setShowModifierContrat(true)} className="btn-secondary">
+              <Edit size={15} /> Modifier
+            </button>
+            <button onClick={toggleStatut} className={contrat.statut === 'en_cours' ? 'btn-primary' : 'btn-secondary'}>
+              <CheckCircle size={16} />
+              {contrat.statut === 'en_cours' ? 'Clôturer' : 'Rouvrir'}
+            </button>
+          </div>
         )}
       </div>
 
@@ -450,6 +457,13 @@ export default function ContratDetailPage() {
           contrat={contrat}
           onClose={() => setModifierLiv(null)}
           onSaved={() => { setModifierLiv(null); reload() }}
+        />
+      )}
+      {showModifierContrat && (
+        <ModifierContratModal
+          contrat={contrat}
+          onClose={() => setShowModifierContrat(false)}
+          onSaved={() => { setShowModifierContrat(false); reload() }}
         />
       )}
       {showLierVente && (
