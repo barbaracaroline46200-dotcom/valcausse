@@ -146,13 +146,13 @@ export default function NouveauContratModal({ onClose, onSaved }: Props) {
             <label className="label">Prix transport prévu (€/t)</label>
             <input type="number" step="0.01" className="input" value={form.prix_transport_prevu} onChange={f('prix_transport_prevu')} />
           </div>
-          <div className="col-span-2">
-            <label className="label">Point de chargement</label>
-            <input className="input" value={form.point_chargement} onChange={f('point_chargement')} placeholder="Adresse complète..." />
-          </div>
           <div>
             <label className="label">Ville de chargement</label>
-            <input className="input" value={form.ville_chargement} onChange={f('ville_chargement')} />
+            <input className="input" value={form.ville_chargement} onChange={f('ville_chargement')} placeholder="Ex : Villefranche-de-Rouergue" />
+          </div>
+          <div>
+            <label className="label">Adresse complète (optionnel)</label>
+            <input className="input" value={form.point_chargement} onChange={f('point_chargement')} placeholder="Lieu-dit, route..." />
           </div>
           <div>
             <label className="label">Date conclusion</label>

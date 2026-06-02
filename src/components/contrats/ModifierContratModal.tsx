@@ -163,10 +163,6 @@ export default function ModifierContratModal({ contrat, onClose, onSaved }: Prop
             <label className="label">Prix transport prévu (€/t)</label>
             <input type="number" step="0.01" className="input" value={form.prix_transport_prevu} onChange={f('prix_transport_prevu')} />
           </div>
-          <div className="col-span-2">
-            <label className="label">Point de chargement (adresse complète)</label>
-            <input className="input" value={form.point_chargement} onChange={f('point_chargement')} placeholder="Adresse complète..." />
-          </div>
           <div>
             <label className="label">Date conclusion</label>
             <input type="date" className="input" value={form.date_conclusion} onChange={f('date_conclusion')} />
@@ -189,12 +185,18 @@ export default function ModifierContratModal({ contrat, onClose, onSaved }: Prop
         {/* Adresses d'enlèvement */}
         <div className="border-t border-gray-100 pt-4">
           <p className="font-semibold text-sm mb-1" style={{ color: '#7B2820' }}>Adresses d'enlèvement</p>
-          <p className="text-xs text-gray-400 mb-3">Plusieurs lieux de chargement possibles — vous pourrez choisir à chaque livraison</p>
+          <p className="text-xs text-gray-400 mb-3">Indiquez un ou plusieurs lieux de chargement — vous choisirez à chaque livraison</p>
 
           {/* Adresse principale */}
-          <div className="mb-2">
-            <label className="label text-xs">Ville principale</label>
-            <input className="input" value={form.ville_chargement} onChange={f('ville_chargement')} placeholder="Ville principale..." />
+          <div className="grid grid-cols-2 gap-3 mb-2">
+            <div>
+              <label className="label text-xs">Ville / lieu (adresse 1)</label>
+              <input className="input" value={form.ville_chargement} onChange={f('ville_chargement')} placeholder="Ex : Villefranche-de-Rouergue" />
+            </div>
+            <div>
+              <label className="label text-xs">Adresse complète (optionnel)</label>
+              <input className="input" value={form.point_chargement} onChange={f('point_chargement')} placeholder="Lieu-dit, route..." />
+            </div>
           </div>
 
           {/* Adresses supplémentaires */}
