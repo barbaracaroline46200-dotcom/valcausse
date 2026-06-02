@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import Sidebar from '@/components/ui/Sidebar'
 import AdminProvider from '@/components/ui/AdminProvider'
+import AuthGate from '@/components/ui/AuthGate'
 
 export const metadata: Metadata = {
   title: 'Valcausse — Gestion des contrats céréales',
@@ -23,12 +24,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="bg-cream">
         <AdminProvider>
-          <div className="flex min-h-screen">
-            <Sidebar />
-            <main className="flex-1 ml-64 p-6 max-w-full overflow-x-hidden">
-              {children}
-            </main>
-          </div>
+          <AuthGate>
+            <div className="flex min-h-screen">
+              <Sidebar />
+              <main className="flex-1 ml-64 p-6 max-w-full overflow-x-hidden">
+                {children}
+              </main>
+            </div>
+          </AuthGate>
         </AdminProvider>
       </body>
     </html>
