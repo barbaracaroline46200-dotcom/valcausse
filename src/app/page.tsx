@@ -381,19 +381,36 @@ export default function DashboardPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
-                {['Statut', 'Produit', 'Enlèvement', 'Destination', 'Tonnes', 'Date confirmée / Semaine', 'CMR', 'Facturé'].map(h => (
+                {['Statut', 'Mois prévu', 'Produit', 'Enlèvement', 'Destination', 'Tonnes', 'Date confirmée / Semaine', 'CMR', 'Facturé'].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {livraisonsTransporteur.map((l: any) => (
-                <tr key={l.id} className={`table-row ${l.type === 'planifiee' ? 'bg-blue-50/50' : ''}`}>
+              {livraisonsTransporteur.map((l: any) => {
+                const moisPrevuDate = l.mois_prevu ? new Date(l.mois_prevu) : null
+                const maintenant = new Date()
+                const debutMoisActuel = new Date(maintenant.getFullYear(), maintenant.getMonth(), 1)
+                const isEnRetard = moisPrevuDate && moisPrevuDate < debutMoisActuel && l.type === 'planifiee'
+                const isOrganisee = l.type === 'planifiee' && (l.transporteur_contacte || l.date_prevue || l.semaine_prevue)
+                return (
+                <tr key={l.id} className={`table-row ${isEnRetard ? 'bg-red-50/50' : l.type === 'planifiee' ? 'bg-amber-50/30' : ''}`}>
                   <td className="table-cell">
-                    {l.type === 'planifiee'
-                      ? <span className="badge-en_cours text-xs">Planifiée</span>
-                      : <span className="badge-clos text-xs">Réalisée</span>
+                    {l.type === 'realisee'
+                      ? <span className="badge-clos text-xs">Réalisée</span>
+                      : isEnRetard
+                        ? <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">⚠️ En retard</span>
+                        : isOrganisee
+                          ? <span className="badge-en_cours text-xs">Planifiée</span>
+                          : <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">À organiser</span>
                     }
+                  </td>
+                  <td className="table-cell text-sm">
+                    {l.mois_prevu ? (
+                      <span className={isEnRetard ? 'text-red-600 font-semibold' : 'text-gray-700'}>
+                        {new Date(l.mois_prevu).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}
+                      </span>
+                    ) : '—'}
                   </td>
                   <td className="table-cell text-sm">{l.contrat_achat?.produit?.nom ?? '—'}</td>
                   <td className="table-cell">{l.ville_chargement ?? l.contrat_achat?.ville_chargement ?? '—'}</td>
@@ -425,7 +442,8 @@ export default function DashboardPage() {
                     }
                   </td>
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
         )}
