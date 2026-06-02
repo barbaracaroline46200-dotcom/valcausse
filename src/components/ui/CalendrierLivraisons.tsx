@@ -121,10 +121,23 @@ export default function CalendrierLivraisons() {
   const semaines: (Date | null)[][] = []
   for (let i = 0; i < cellules.length; i += 7) semaines.push(cellules.slice(i, i + 7))
 
-  // Séparer livraisons par type de positionnement
-  const livsJour = livraisons.filter(l => l.date_prevue || l.date_reelle)
-  const livsSemaine = livraisons.filter(l => !l.date_prevue && !l.date_reelle && l.semaine_prevue)
-  const livsNonFix = livraisons.filter(l => !l.date_prevue && !l.date_reelle && !l.semaine_prevue)
+  // Livraisons en retard = planifiées dont mois_prevu < mois affiché
+  const debutMois = new Date(year, month, 1)
+  const livsEnRetard = livraisons.filter(l => {
+    if (l.type === 'realisee') return false
+    if (!l.mois_prevu) return false
+    return new Date(l.mois_prevu) < debutMois
+  })
+  const livsduMois = livraisons.filter(l => {
+    if (l.type === 'realisee') return true
+    if (!l.mois_prevu) return true
+    return new Date(l.mois_prevu) >= debutMois
+  })
+
+  // Séparer livraisons du mois par type de positionnement
+  const livsJour = livsduMois.filter(l => l.date_prevue || l.date_reelle)
+  const livsSemaine = livsduMois.filter(l => !l.date_prevue && !l.date_reelle && l.semaine_prevue)
+  const livsNonFix = livsduMois.filter(l => !l.date_prevue && !l.date_reelle && !l.semaine_prevue)
 
   function getLivsForDay(day: Date): LivraisonEvent[] {
     return livsJour.filter(l => {
@@ -191,6 +204,12 @@ export default function CalendrierLivraisons() {
           <div className="flex items-center gap-1.5 text-xs text-gray-500">
             <span className="w-3 h-3 rounded-sm inline-block bg-gray-300" />
             Non fixée ({livsNonFix.length})
+          </div>
+        )}
+        {livsEnRetard.length > 0 && (
+          <div className="flex items-center gap-1.5 text-xs text-red-500 font-semibold">
+            <span className="w-3 h-3 rounded-sm inline-block bg-red-200 border border-red-400" />
+            En retard ({livsEnRetard.length})
           </div>
         )}
       </div>
@@ -278,6 +297,31 @@ export default function CalendrierLivraisons() {
               </div>
             )
           })}
+
+          {/* Zone livraisons en retard (prévues mois passés, non réalisées) */}
+          {livsEnRetard.length > 0 && (
+            <div className="mt-3 border-2 border-red-300 rounded-lg p-3 bg-red-50">
+              <p className="text-xs font-semibold text-red-600 mb-2">⚠️ Livraisons en retard — prévues sur des mois passés</p>
+              <div className="flex flex-wrap gap-2">
+                {livsEnRetard.map(l => {
+                  const c = getCouleur(l.produit, l.type)
+                  const tonnes = l.quantite_prevue
+                  const moisLabel = l.mois_prevu ? new Date(l.mois_prevu).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—'
+                  return (
+                    <div key={l.id} className="text-xs rounded-lg px-3 py-1.5 font-medium"
+                         style={{ backgroundColor: c.bg, color: c.text, border: `1px solid ${c.border}` }}>
+                      <span className="font-bold">{l.produit}</span>
+                      <span className="mx-1 opacity-60">·</span>{l.numero_contrat}
+                      <span className="mx-1 opacity-60">·</span>{l.agriculteur}
+                      <span className="mx-1 opacity-60">·</span>{l.transporteur}
+                      <span className="mx-1 opacity-60">·</span><span className="font-bold">{tonnes} t</span>
+                      <span className="ml-2 text-red-500 font-semibold">({moisLabel})</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Zone livraisons non fixées */}
           {livsNonFix.length > 0 && (

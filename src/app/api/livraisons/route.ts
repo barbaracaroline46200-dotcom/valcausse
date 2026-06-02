@@ -33,7 +33,8 @@ export async function GET(req: NextRequest) {
     const d = new Date(mois)
     const debut = new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0]
     const fin = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0]
-    query = query.gte('mois_prevu', debut).lte('mois_prevu', fin)
+    // Livraisons du mois exact (toutes) + livraisons planifiées en retard (mois passés non réalisées)
+    query = query.or(`and(mois_prevu.gte.${debut},mois_prevu.lte.${fin}),and(mois_prevu.lt.${debut},type.eq.planifiee)`)
   }
   if (transporteurContacte === 'false') query = query.eq('transporteur_contacte', false)
   if (sansLettreVoiture === 'true') query = query.is('numero_lettre_voiture', null)
