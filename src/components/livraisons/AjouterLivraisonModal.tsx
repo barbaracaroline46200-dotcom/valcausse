@@ -24,6 +24,7 @@ export default function AjouterLivraisonModal({ contrat, onClose, onSaved }: Pro
     piece_client_prefixe: prefixes.client,
     piece_client_numero: '',
     transporteur_id: '',
+    numero_mise_a_disposition: '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -52,6 +53,7 @@ export default function AjouterLivraisonModal({ contrat, onClose, onSaved }: Pro
       piece_client_prefixe: form.piece_client_prefixe || null,
       piece_client_numero: form.piece_client_numero || null,
       transporteur_id: form.transporteur_id || null,
+      numero_mise_a_disposition: form.numero_mise_a_disposition || null,
     }
     const res = await fetch('/api/livraisons', {
       method: 'POST',
@@ -85,6 +87,12 @@ export default function AjouterLivraisonModal({ contrat, onClose, onSaved }: Pro
             <label className="label">Ville de destination</label>
             <input className="input" value={form.ville_destination} onChange={f('ville_destination')} />
           </div>
+          {contrat.famille === 'appro' && (
+            <div className="col-span-2">
+              <label className="label">N° mise à disposition</label>
+              <input className="input" value={form.numero_mise_a_disposition} onChange={f('numero_mise_a_disposition')} placeholder="Reçu avant chargement..." />
+            </div>
+          )}
           <div className="col-span-2">
             <label className="label">Transporteur pour cette livraison</label>
             <select className="input" value={form.transporteur_id} onChange={f('transporteur_id')}>

@@ -10,7 +10,7 @@ interface Props {
 export default function NouveauContratModal({ onClose, onSaved }: Props) {
   const [form, setForm] = useState({
     numero_contrat: '', famille: 'negoce', produit_id: '', fournisseur_id: '',
-    courtier_id: '', reference_fournisseur: '', numero_mise_a_disposition: '',
+    courtier_id: '', reference_fournisseur: '',
     prix_achat: '', quantite_totale: '', transporteur_id: '', prix_transport_prevu: '0',
     point_chargement: '', ville_chargement: '', date_debut: '', date_fin: '',
     notes: '',
@@ -40,7 +40,6 @@ export default function NouveauContratModal({ onClose, onSaved }: Props) {
     const body = {
       ...form,
       courtier_id: form.courtier_id || null,
-      numero_mise_a_disposition: form.numero_mise_a_disposition || null,
       prix_achat: parseFloat(form.prix_achat),
       quantite_totale: parseFloat(form.quantite_totale),
       prix_transport_prevu: parseFloat(form.prix_transport_prevu),
@@ -105,12 +104,6 @@ export default function NouveauContratModal({ onClose, onSaved }: Props) {
               {courtiers.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
             </select>
           </div>
-          {form.famille === 'appro' && (
-            <div>
-              <label className="label">N° mise à disposition</label>
-              <input className="input" value={form.numero_mise_a_disposition} onChange={f('numero_mise_a_disposition')} />
-            </div>
-          )}
           <div>
             <label className="label">Prix achat (€/t) *</label>
             <input type="number" step="0.01" className="input" value={form.prix_achat} onChange={f('prix_achat')} required />
