@@ -127,7 +127,7 @@ export default function DashboardPage() {
       {/* Calendrier des livraisons */}
       <CalendrierLivraisons />
 
-      {/* Section Livraisons à planifier */}
+      {/* Section Livraisons à organiser — process 3 étapes */}
       <Section
         icon={<Truck size={20} />}
         title="Livraisons à organiser"
@@ -138,54 +138,125 @@ export default function DashboardPage() {
         {planifiees.length === 0 ? (
           <EmptyState text="Aucune livraison en attente 🎉" />
         ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100">
-                {['Mois', 'Produit', 'Fournisseur', 'Destination', 'Ville enlèv.', 'Ville dest.', 'Tonnes', 'Transporteur contacté ?'].map(h => (
-                  <th key={h} className="table-header">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            {/* Légende process */}
+            <div className="flex items-center gap-6 px-5 py-3 bg-gray-50 border-b border-gray-100 text-xs text-gray-500 flex-wrap">
+              <div className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">1</span> Appel agri + date souhaitée</div>
+              <div className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center font-bold text-xs">2</span> PDF envoyé au transporteur</div>
+              <div className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold text-xs">3</span> Transporteur confirmé + date/semaine</div>
+            </div>
+            <div className="divide-y divide-gray-100">
               {planifiees.map((l: any) => {
                 const ca = l.contrat_achat
                 const agri = ca?.contrats_vente?.[0]?.agriculteur
                 const moisLiv = l.mois_prevu?.slice(0, 7) ?? ''
                 const isRetard = moisLiv < moisCourant.slice(0, 7)
                 const isProchain = moisSuivant && moisLiv >= moisSuivant.slice(0, 7)
+                const step1ok = l.agriculteur_contacte && l.date_souhaitee
+                const step3ok = l.transporteur_contacte && (l.date_prevue || l.semaine_prevue)
                 return (
-                  <tr key={l.id} className={`table-row ${isRetard ? 'bg-red-50' : isProchain ? 'bg-blue-50' : ''}`}>
-                    <td className="table-cell">
-                      <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
-                        isRetard ? 'bg-red-100 text-red-700' :
-                        isProchain ? 'bg-blue-100 text-blue-700' :
-                        'bg-orange-100 text-orange-700'
-                      }`}>
-                        {isRetard ? '⚠️ ' : isProchain ? '→ ' : ''}{formatMois(l.mois_prevu)}
-                      </span>
-                    </td>
-                    <td className="table-cell font-medium">{ca?.produit?.nom ?? '—'}</td>
-                    <td className="table-cell">{ca?.fournisseur?.nom ?? '—'}</td>
-                    <td className="table-cell">{agri?.nom ?? '—'}</td>
-                    <td className="table-cell text-gray-500">{l.ville_chargement ?? ca?.ville_chargement ?? '—'}</td>
-                    <td className="table-cell text-gray-500">{l.ville_destination ?? agri?.ville_livraison ?? '—'}</td>
-                    <td className="table-cell font-semibold">{formatTonnes(l.quantite_prevue)}</td>
-                    <td className="table-cell">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={l.transporteur_contacte}
-                          onChange={() => toggleTransporteurContacte(l.id, l.transporteur_contacte)}
-                          className="w-4 h-4 rounded accent-green-600"
-                        />
-                        <span className="text-xs text-gray-500">{l.transporteur_contacte ? 'Oui' : 'Non'}</span>
-                      </label>
-                    </td>
-                  </tr>
+                  <div key={l.id} className={`px-5 py-4 ${isRetard ? 'bg-red-50/40' : isProchain ? 'bg-blue-50/40' : ''}`}>
+                    {/* En-tête ligne */}
+                    <div className="flex items-start justify-between gap-4 mb-3">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          isRetard ? 'bg-red-100 text-red-700' : isProchain ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
+                        }`}>{isRetard ? '⚠️ ' : isProchain ? '→ ' : ''}{formatMois(l.mois_prevu)}</span>
+                        <span className="font-semibold text-gray-800">{ca?.produit?.nom}</span>
+                        <span className="text-gray-500 text-sm">{ca?.fournisseur?.nom}</span>
+                        <span className="text-gray-400">·</span>
+                        <span className="text-sm font-medium" style={{ color: '#7B2820' }}>{formatTonnes(l.quantite_prevue)}</span>
+                        <span className="text-gray-400">·</span>
+                        <span className="text-sm text-gray-600">{agri?.nom ?? '—'}</span>
+                        <span className="text-gray-400">·</span>
+                        <span className="text-sm text-gray-500">{ca?.transporteur?.nom ?? '—'}</span>
+                      </div>
+                      <a href={`/contrats/${ca?.id}`} className="text-xs text-green-700 hover:underline shrink-0">{ca?.numero_contrat}</a>
+                    </div>
+
+                    {/* 3 étapes */}
+                    <div className="grid grid-cols-3 gap-3">
+
+                      {/* Étape 1 : Agri contacté + date souhaitée */}
+                      <div className={`rounded-lg p-3 border ${step1ok ? 'border-green-200 bg-green-50' : 'border-blue-100 bg-blue-50/50'}`}>
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${step1ok ? 'bg-green-500 text-white' : 'bg-blue-100 text-blue-700'}`}>1</span>
+                          <span className="text-xs font-semibold text-gray-700">📞 Agri contacté</span>
+                        </div>
+                        <label className="flex items-center gap-2 mb-2 cursor-pointer">
+                          <input type="checkbox" checked={!!l.agriculteur_contacte}
+                            onChange={async () => {
+                              await fetch(`/api/livraisons/${l.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agriculteur_contacte: !l.agriculteur_contacte }) })
+                              const d = await fetch('/api/dashboard').then(r => r.json()); setData(d)
+                            }}
+                            className="w-4 h-4 accent-blue-600" />
+                          <span className="text-xs text-gray-600">{l.agriculteur_contacte ? '✓ Appelé' : 'À appeler'}</span>
+                        </label>
+                        <div>
+                          <p className="text-xs text-gray-400 mb-1">Date souhaitée par l'agri</p>
+                          <input type="date" defaultValue={l.date_souhaitee ?? ''} className="text-xs border border-gray-200 rounded px-2 py-1 w-full focus:outline-none focus:border-blue-400"
+                            onBlur={async e => {
+                              await fetch(`/api/livraisons/${l.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date_souhaitee: e.target.value || null }) })
+                              const d = await fetch('/api/dashboard').then(r => r.json()); setData(d)
+                            }} />
+                        </div>
+                      </div>
+
+                      {/* Étape 2 : PDF */}
+                      <div className={`rounded-lg p-3 border ${step1ok ? 'border-orange-200 bg-orange-50/50' : 'border-gray-100 bg-gray-50 opacity-60'}`}>
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${step1ok ? 'bg-orange-100 text-orange-700' : 'bg-gray-200 text-gray-500'}`}>2</span>
+                          <span className="text-xs font-semibold text-gray-700">📄 PDF transporteur</span>
+                        </div>
+                        {step1ok ? (
+                          <div className="text-xs text-gray-600">
+                            <p className="text-gray-400 mb-2">Date souhaitée : <strong className="text-gray-700">{l.date_souhaitee ? new Date(l.date_souhaitee).toLocaleDateString('fr-FR') : '—'}</strong></p>
+                            <a href={`/contrats/${ca?.id}`} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-white text-xs font-medium" style={{ backgroundColor: '#7B2820' }}>
+                              📥 Télécharger PDF
+                            </a>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-400">Compléter l'étape 1 d'abord</p>
+                        )}
+                      </div>
+
+                      {/* Étape 3 : Transporteur confirmé + date/semaine */}
+                      <div className={`rounded-lg p-3 border ${step3ok ? 'border-green-200 bg-green-50' : step1ok ? 'border-gray-200 bg-white' : 'border-gray-100 bg-gray-50 opacity-60'}`}>
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${step3ok ? 'bg-green-500 text-white' : 'bg-green-100 text-green-700'}`}>3</span>
+                          <span className="text-xs font-semibold text-gray-700">🚛 Transporteur</span>
+                        </div>
+                        <label className="flex items-center gap-2 mb-2 cursor-pointer">
+                          <input type="checkbox" checked={!!l.transporteur_contacte}
+                            onChange={() => toggleTransporteurContacte(l.id, l.transporteur_contacte)}
+                            className="w-4 h-4 accent-green-600" />
+                          <span className="text-xs text-gray-600">{l.transporteur_contacte ? '✓ Confirmé' : 'À confirmer'}</span>
+                        </label>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-gray-400 w-12 shrink-0">Date :</span>
+                            <input type="date" defaultValue={l.date_prevue ?? ''} className="text-xs border border-gray-200 rounded px-1.5 py-0.5 flex-1 focus:outline-none focus:border-green-400"
+                              onBlur={async e => {
+                                await fetch(`/api/livraisons/${l.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date_prevue: e.target.value || null, semaine_prevue: null }) })
+                                const d = await fetch('/api/dashboard').then(r => r.json()); setData(d)
+                              }} />
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-gray-400 w-12 shrink-0">Semaine :</span>
+                            <input type="text" placeholder="ex: S23" defaultValue={l.semaine_prevue ?? ''} className="text-xs border border-gray-200 rounded px-1.5 py-0.5 flex-1 focus:outline-none focus:border-green-400"
+                              onBlur={async e => {
+                                await fetch(`/api/livraisons/${l.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ semaine_prevue: e.target.value || null, date_prevue: null }) })
+                                const d = await fetch('/api/dashboard').then(r => r.json()); setData(d)
+                              }} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 )
               })}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </Section>
 
