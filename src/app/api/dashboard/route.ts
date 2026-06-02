@@ -12,10 +12,16 @@ export async function GET() {
     .select('id,famille,statut,quantite_totale,produit:produits(nom),livraisons(type,quantite_reelle)')
     .or(`date_debut.gte.${debut},date_fin.lte.${fin}`)
 
-  // Livraisons planifiées ce mois sans transporteur contacté
+  // Livraisons planifiées à traiter :
+  // - tous les mois passés non encore livrés (retard)
+  // - le mois en cours
+  // - à partir du 20 du mois : le mois prochain aussi
   const now = new Date()
-  const moisDebut = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-  const moisFin = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+  const showNextMonth = now.getDate() >= 20
+  const nbMoisSup = showNextMonth ? 2 : 1
+  const moisFin = new Date(now.getFullYear(), now.getMonth() + nbMoisSup, 0).toISOString().split('T')[0]
+  const moisCourant = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+  const moisSuivant = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().split('T')[0]
 
   const { data: livraisonsPlanifiees } = await supabase
     .from('livraisons')
@@ -31,8 +37,8 @@ export async function GET() {
     `)
     .eq('type', 'planifiee')
     .eq('transporteur_contacte', false)
-    .gte('mois_prevu', moisDebut)
     .lte('mois_prevu', moisFin)
+    .order('mois_prevu', { ascending: true })
 
   // CMR en attente (réalisées depuis > 14j sans lettre de voiture)
   const cutoff14 = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
@@ -114,5 +120,7 @@ export async function GET() {
     facturesManquantes: facturesManquantes ?? [],
     contratsAlerte: contratsAlerte ?? [],
     annee: { debut, fin },
+    moisCourant,
+    moisSuivant,
   })
 }

@@ -72,6 +72,8 @@ export default function DashboardPage() {
   const contratsClos = contrats.filter((c: any) => c.statut === 'clos').length
 
   const planifiees = data?.livraisonsPlanifiees ?? []
+  const moisCourant = data?.moisCourant ?? ''
+  const moisSuivant = data?.moisSuivant ?? ''
   const cmr = data?.cmrEnAttente ?? []
   const facturesMq = data?.facturesManquantes ?? []
   const alertes = (data?.contratsAlerte ?? []).filter((c: any) => reliquat(c.quantite_totale, c.livraisons ?? []) > 0)
@@ -124,18 +126,18 @@ export default function DashboardPage() {
       {/* Section Livraisons à planifier */}
       <Section
         icon={<Truck size={20} />}
-        title="Livraisons à planifier ce mois-ci"
+        title="Livraisons à organiser"
         count={planifiees.length}
         color="brun"
-        subtitle="Transporteur non encore contacté"
+        subtitle="Mois passés non livrés + mois en cours + mois prochain (dès le 20)"
       >
         {planifiees.length === 0 ? (
-          <EmptyState text="Aucune livraison en attente ce mois-ci 🎉" />
+          <EmptyState text="Aucune livraison en attente 🎉" />
         ) : (
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
-                {['Produit', 'Fournisseur', 'Destination', 'Ville enlèv.', 'Ville dest.', 'Tonnes', 'Mois', 'Contacté ?'].map(h => (
+                {['Mois', 'Produit', 'Fournisseur', 'Destination', 'Ville enlèv.', 'Ville dest.', 'Tonnes', 'Transporteur contacté ?'].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
@@ -144,15 +146,26 @@ export default function DashboardPage() {
               {planifiees.map((l: any) => {
                 const ca = l.contrat_achat
                 const agri = ca?.contrats_vente?.[0]?.agriculteur
+                const moisLiv = l.mois_prevu?.slice(0, 7) ?? ''
+                const isRetard = moisLiv < moisCourant.slice(0, 7)
+                const isProchain = moisSuivant && moisLiv >= moisSuivant.slice(0, 7)
                 return (
-                  <tr key={l.id} className="table-row">
+                  <tr key={l.id} className={`table-row ${isRetard ? 'bg-red-50' : isProchain ? 'bg-blue-50' : ''}`}>
+                    <td className="table-cell">
+                      <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        isRetard ? 'bg-red-100 text-red-700' :
+                        isProchain ? 'bg-blue-100 text-blue-700' :
+                        'bg-orange-100 text-orange-700'
+                      }`}>
+                        {isRetard ? '⚠️ ' : isProchain ? '→ ' : ''}{formatMois(l.mois_prevu)}
+                      </span>
+                    </td>
                     <td className="table-cell font-medium">{ca?.produit?.nom ?? '—'}</td>
                     <td className="table-cell">{ca?.fournisseur?.nom ?? '—'}</td>
                     <td className="table-cell">{agri?.nom ?? '—'}</td>
                     <td className="table-cell text-gray-500">{l.ville_chargement ?? ca?.ville_chargement ?? '—'}</td>
                     <td className="table-cell text-gray-500">{l.ville_destination ?? agri?.ville_livraison ?? '—'}</td>
                     <td className="table-cell font-semibold">{formatTonnes(l.quantite_prevue)}</td>
-                    <td className="table-cell">{formatMois(l.mois_prevu)}</td>
                     <td className="table-cell">
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
