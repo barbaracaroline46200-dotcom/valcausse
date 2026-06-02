@@ -151,7 +151,7 @@ export default function ContratDetailPage() {
               {formatTonnes(Math.max(0, contrat.quantite_totale - totalVentes))}
             </div>
             <div className={`text-xs font-medium ${totalVentes > contrat.quantite_totale ? 'text-red-600' : 'text-blue-700'}`}>
-              {totalVentes > contrat.quantite_totale ? '⚠ Dépassement ventes' : 'Disponible (non vendu)'}
+              {totalVentes > contrat.quantite_totale ? '⚠ Dépassement ventes' : 'Non réservé par un contrat de vente'}
             </div>
             <div className="text-xs text-gray-400 mt-0.5">Vendu : {formatTonnes(totalVentes)}</div>
           </div>
