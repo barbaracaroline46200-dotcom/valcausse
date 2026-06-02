@@ -47,9 +47,19 @@ export async function GET() {
   const cutoff14 = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   const today = now.toISOString().split('T')[0]
 
+  const cmrSelect = `
+    *,
+    contrat_achat:contrats_achat(
+      id, numero_contrat, famille, prix_transport_prevu,
+      produit:produits(nom),
+      transporteur:transporteurs(id,nom,email,telephone),
+      contrats_vente(id, numero_contrat, quantite, agriculteur:agriculteurs(id,nom,ville_livraison))
+    )
+  `
+
   const { data: cmrRealisees } = await supabase
     .from('livraisons')
-    .select(`*, contrat_achat:contrats_achat(famille, produit:produits(nom), transporteur:transporteurs(nom,email,telephone))`)
+    .select(cmrSelect)
     .eq('type', 'realisee')
     .is('numero_lettre_voiture', null)
     .lte('date_reelle', cutoff14)
@@ -57,7 +67,7 @@ export async function GET() {
   // Planifiées avec date_prevue dépassée (le transporteur a dû livrer)
   const { data: cmrPlanifieesDatePassee } = await supabase
     .from('livraisons')
-    .select(`*, contrat_achat:contrats_achat(famille, produit:produits(nom), transporteur:transporteurs(nom,email,telephone))`)
+    .select(cmrSelect)
     .eq('type', 'planifiee')
     .not('date_prevue', 'is', null)
     .lt('date_prevue', today)
@@ -66,7 +76,7 @@ export async function GET() {
   const debutMoisCourant = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
   const { data: cmrPlanifiesSemainePassee } = await supabase
     .from('livraisons')
-    .select(`*, contrat_achat:contrats_achat(famille, produit:produits(nom), transporteur:transporteurs(nom,email,telephone))`)
+    .select(cmrSelect)
     .eq('type', 'planifiee')
     .not('semaine_prevue', 'is', null)
     .is('date_prevue', null)

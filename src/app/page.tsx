@@ -5,6 +5,7 @@ import { formatDate, formatTonnes, formatMois, getAnneeAgricoleLabel } from '@/l
 import { joursDepuis, quantiteLivree, reliquat } from '@/lib/utils'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import CalendrierLivraisons from '@/components/ui/CalendrierLivraisons'
+import RealiserLivraisonModal from '@/components/livraisons/RealiserLivraisonModal'
 
 export default function DashboardPage() {
   const [data, setData] = useState<any>(null)
@@ -13,6 +14,7 @@ export default function DashboardPage() {
   const [selectedMois, setSelectedMois] = useState('')
   const [transporteurs, setTransporteurs] = useState<any[]>([])
   const [livraisonsTransporteur, setLivraisonsTransporteur] = useState<any[]>([])
+  const [cmrModal, setCmrModal] = useState<any>(null)
 
   useEffect(() => {
     Promise.all([
@@ -307,7 +309,7 @@ export default function DashboardPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
-                {['Produit', 'Transporteur', 'Date livraison', 'Contact transporteur', 'Délai'].map(h => (
+                {['Produit', 'Transporteur', 'Date livraison', 'Contact transporteur', 'Délai', ''].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
@@ -321,12 +323,15 @@ export default function DashboardPage() {
                   ? formatDate(l.date_reelle)
                   : l.date_prevue ? formatDate(l.date_prevue) : (l.semaine_prevue ?? '—')
                 return (
-                  <tr key={l.id} className={`table-row ${!isRealisee ? 'bg-amber-50/40' : ''}`}>
+                  <tr key={l.id}
+                    className={`table-row cursor-pointer hover:bg-red-50 transition-colors ${!isRealisee ? 'bg-amber-50/40' : ''}`}
+                    onClick={() => setCmrModal(l)}
+                    title="Cliquer pour saisir le CMR">
                     <td className="table-cell font-medium">{l.contrat_achat?.produit?.nom ?? '—'}</td>
                     <td className="table-cell">{l.contrat_achat?.transporteur?.nom ?? '—'}</td>
                     <td className="table-cell">
                       <span className={!isRealisee ? 'text-amber-700 font-medium' : ''}>{dateAffichee}</span>
-                      {!isRealisee && <span className="ml-1 text-xs text-amber-600">(à confirmer)</span>}
+                      {!isRealisee && <span className="ml-1 text-xs text-amber-600">(prévue)</span>}
                     </td>
                     <td className="table-cell text-sm">
                       {l.contrat_achat?.transporteur?.telephone && (
@@ -335,6 +340,9 @@ export default function DashboardPage() {
                     </td>
                     <td className="table-cell">
                       <span className="badge-alerte">{jours}j</span>
+                    </td>
+                    <td className="table-cell">
+                      <span className="text-xs text-red-600 font-medium underline">Saisir CMR →</span>
                     </td>
                   </tr>
                 )
@@ -535,6 +543,19 @@ export default function DashboardPage() {
         </Section>
       )}
     </div>
+
+    {cmrModal && (
+      <RealiserLivraisonModal
+        livraison={cmrModal}
+        contrat={cmrModal.contrat_achat}
+        onClose={() => setCmrModal(null)}
+        onSaved={async () => {
+          setCmrModal(null)
+          const d = await fetch('/api/dashboard').then(r => r.json())
+          setData(d)
+        }}
+      />
+    )}
   )
 }
 
