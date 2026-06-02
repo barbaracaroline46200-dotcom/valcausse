@@ -78,6 +78,7 @@ export default function DashboardPage() {
   const moisCourant = data?.moisCourant ?? ''
   const moisSuivant = data?.moisSuivant ?? ''
   const cmr = data?.cmrEnAttente ?? []
+  const aFacturer = data?.livraisonsAFacturer ?? []
   const facturesMq = data?.facturesManquantes ?? []
   const alertes = (data?.contratsAlerte ?? []).filter((c: any) => reliquat(c.quantite_totale, c.livraisons ?? []) > 0)
 
@@ -344,6 +345,59 @@ export default function DashboardPage() {
                     </td>
                     <td className="table-cell">
                       <span className="text-xs text-red-600 font-medium underline">Saisir CMR →</span>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
+      </Section>
+
+      {/* Section Facturation en attente */}
+      <Section
+        icon={<Receipt size={20} />}
+        title="Facturation en attente"
+        count={aFacturer.length}
+        color="blue"
+        subtitle="Livraisons réalisées — transport et/ou fournisseur non encore facturés"
+      >
+        {aFacturer.length === 0 ? (
+          <EmptyState text="Toutes les livraisons sont facturées 🎉" />
+        ) : (
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-100">
+                {['Date', 'Produit', 'Contrat', 'Agriculteur', 'Tonnes', 'Transport facturé', 'Fournisseur facturé'].map(h => (
+                  <th key={h} className="table-header">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {aFacturer.map((l: any) => {
+                const ca = l.contrat_achat
+                const agri = ca?.contrats_vente?.find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur
+                  ?? ca?.contrats_vente?.[0]?.agriculteur
+                return (
+                  <tr key={l.id} className="table-row">
+                    <td className="table-cell text-sm">{formatDate(l.date_reelle)}</td>
+                    <td className="table-cell font-medium">{ca?.produit?.nom ?? '—'}</td>
+                    <td className="table-cell">
+                      <a href={`/contrats/${ca?.id}`} className="text-green-700 hover:underline text-sm">{ca?.numero_contrat}</a>
+                    </td>
+                    <td className="table-cell text-sm">{agri?.nom ?? (l.destination_silo ? 'Silo' : '—')}</td>
+                    <td className="table-cell font-semibold">{formatTonnes(l.quantite_reelle)}</td>
+                    <td className="table-cell text-center">
+                      {l.transport_facture
+                        ? <span className="badge-clos">✓ Facturé</span>
+                        : <span className="badge-alerte">⏳ En attente</span>
+                      }
+                    </td>
+                    <td className="table-cell text-center">
+                      {l.facture_fournisseur_id
+                        ? <span className="badge-clos">✓ Facturé</span>
+                        : <span className="badge-alerte">⏳ En attente</span>
+                      }
                     </td>
                   </tr>
                 )

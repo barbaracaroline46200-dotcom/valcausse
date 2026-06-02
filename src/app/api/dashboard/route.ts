@@ -62,7 +62,6 @@ export async function GET() {
     .select(cmrSelect)
     .eq('type', 'realisee')
     .is('numero_lettre_voiture', null)
-    .lte('date_reelle', cutoff14)
 
   // Planifiées avec date_prevue dépassée (le transporteur a dû livrer)
   const { data: cmrPlanifieesDatePassee } = await supabase
@@ -87,6 +86,24 @@ export async function GET() {
     ...(cmrPlanifieesDatePassee ?? []),
     ...(cmrPlanifiesSemainePassee ?? []),
   ]
+
+  // Facturation en attente : réalisées sans facture transport ou fournisseur
+  const facturationSelect = `
+    *,
+    contrat_achat:contrats_achat(
+      id, numero_contrat, famille,
+      produit:produits(nom),
+      transporteur:transporteurs(nom),
+      fournisseur:fournisseurs(nom),
+      contrats_vente(id, numero_contrat, agriculteur:agriculteurs(nom))
+    )
+  `
+  const { data: livraisonsAFacturer } = await supabase
+    .from('livraisons')
+    .select(facturationSelect)
+    .eq('type', 'realisee')
+    .or('transport_facture.eq.false,facture_fournisseur_id.is.null')
+    .order('date_reelle', { ascending: false })
 
   // Factures clients à récupérer :
   // Contrats de vente dont toutes les livraisons sont réalisées
@@ -149,6 +166,7 @@ export async function GET() {
     contrats: contrats ?? [],
     livraisonsPlanifiees: livraisonsPlanifiees ?? [],
     cmrEnAttente: cmrEnAttente ?? [],
+    livraisonsAFacturer: livraisonsAFacturer ?? [],
     facturesManquantes: facturesManquantes ?? [],
     contratsAlerte: contratsAlerte ?? [],
     annee: { debut, fin },
