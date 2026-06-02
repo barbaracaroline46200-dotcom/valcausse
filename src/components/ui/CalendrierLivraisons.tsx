@@ -126,6 +126,7 @@ export default function CalendrierLivraisons() {
   const livsEnRetard = livraisons.filter(l => {
     if (l.type === 'realisee') return false
     if (!l.mois_prevu) return false
+    if (l.date_prevue || l.semaine_prevue) return false // organisée, pas en retard
     return new Date(l.mois_prevu) < debutMois
   })
   const livsduMois = livraisons.filter(l => {
