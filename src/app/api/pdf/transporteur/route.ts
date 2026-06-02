@@ -77,7 +77,6 @@ export async function GET(req: NextRequest) {
       ? (liv as any).semaine_souhaitee
       : '—'
   row('Période souhaitée (agri)', souhaitAgri)
-  row('Mois de livraison prévu', liv.mois_prevu ? new Date(liv.mois_prevu).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—')
   y -= 5
 
   page.drawLine({ start: { x: 50, y }, end: { x: width - 50, y }, thickness: 0.5, color: rgb(0.9, 0.9, 0.9) })
@@ -129,11 +128,10 @@ export async function GET(req: NextRequest) {
   page.drawLine({ start: { x: 50, y }, end: { x: width - 50, y }, thickness: 1, color: brun })
   y -= 20
 
-  page.drawText('Bon de transport généré automatiquement — Valcausse', {
+  const nomTransporteur = ca?.transporteur?.nom ?? '—'
+  const dateEnvoi = new Date().toLocaleDateString('fr-FR')
+  page.drawText(`Transporteur : ${nomTransporteur} — Envoyé le ${dateEnvoi}`, {
     x: 50, y, font, size: 8, color: gray
-  })
-  page.drawText(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, {
-    x: width - 200, y, font, size: 8, color: gray
   })
 
   const pdfBytes = await pdfDoc.save()
