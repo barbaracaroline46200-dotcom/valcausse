@@ -42,6 +42,13 @@ export default function AjouterLivraisonModal({ contrat, onClose, onSaved }: Pro
 
   const ventesLiees = contrat.contrats_vente ?? []
 
+  function onContratVenteChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const id = e.target.value
+    const cv = ventesLiees.find((v: any) => v.id === id)
+    const villeAgri = cv?.agriculteur?.ville_livraison ?? ''
+    setForm(prev => ({ ...prev, contrat_vente_id: id, ville_destination: villeAgri || prev.ville_destination }))
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
@@ -102,7 +109,7 @@ export default function AjouterLivraisonModal({ contrat, onClose, onSaved }: Pro
               </label>
             </div>
             {!form.destination_silo && (
-              <select className="input" value={form.contrat_vente_id} onChange={f('contrat_vente_id')}>
+              <select className="input" value={form.contrat_vente_id} onChange={onContratVenteChange}>
                 <option value="">— Non affecté à un contrat de vente —</option>
                 {ventesLiees.map((cv: any) => (
                   <option key={cv.id} value={cv.id}>
