@@ -152,7 +152,7 @@ export default function DashboardPage() {
                 const moisLiv = l.mois_prevu?.slice(0, 7) ?? ''
                 const isRetard = moisLiv < moisCourant.slice(0, 7)
                 const isProchain = moisSuivant && moisLiv >= moisSuivant.slice(0, 7)
-                const step1ok = l.agriculteur_contacte && l.date_souhaitee
+                const step1ok = l.agriculteur_contacte && (l.date_souhaitee || l.semaine_souhaitee)
                 const step3ok = l.transporteur_contacte && (l.date_prevue || l.semaine_prevue)
                 return (
                   <div key={l.id} className={`px-5 py-4 ${isRetard ? 'bg-red-50/40' : isProchain ? 'bg-blue-50/40' : ''}`}>
@@ -177,7 +177,7 @@ export default function DashboardPage() {
                     {/* 3 étapes */}
                     <div className="grid grid-cols-3 gap-3">
 
-                      {/* Étape 1 : Agri contacté + date souhaitée */}
+                      {/* Étape 1 : Agri contacté + date ou semaine souhaitée */}
                       <div className={`rounded-lg p-3 border ${step1ok ? 'border-green-200 bg-green-50' : 'border-blue-100 bg-blue-50/50'}`}>
                         <div className="flex items-center gap-1.5 mb-2">
                           <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${step1ok ? 'bg-green-500 text-white' : 'bg-blue-100 text-blue-700'}`}>1</span>
@@ -192,13 +192,24 @@ export default function DashboardPage() {
                             className="w-4 h-4 accent-blue-600" />
                           <span className="text-xs text-gray-600">{l.agriculteur_contacte ? '✓ Appelé' : 'À appeler'}</span>
                         </label>
-                        <div>
-                          <p className="text-xs text-gray-400 mb-1">Date souhaitée par l'agri</p>
-                          <input type="date" defaultValue={l.date_souhaitee ?? ''} className="text-xs border border-gray-200 rounded px-2 py-1 w-full focus:outline-none focus:border-blue-400"
-                            onBlur={async e => {
-                              await fetch(`/api/livraisons/${l.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date_souhaitee: e.target.value || null }) })
-                              const d = await fetch('/api/dashboard').then(r => r.json()); setData(d)
-                            }} />
+                        <p className="text-xs text-gray-400 mb-1">Souhait de l'agri</p>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-gray-400 w-12 shrink-0">Date :</span>
+                            <input type="date" defaultValue={l.date_souhaitee ?? ''} className="text-xs border border-gray-200 rounded px-1.5 py-0.5 flex-1 focus:outline-none focus:border-blue-400"
+                              onBlur={async e => {
+                                await fetch(`/api/livraisons/${l.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date_souhaitee: e.target.value || null, semaine_souhaitee: e.target.value ? null : undefined }) })
+                                const d = await fetch('/api/dashboard').then(r => r.json()); setData(d)
+                              }} />
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-gray-400 w-12 shrink-0">Semaine :</span>
+                            <input type="text" placeholder="ex: S23" defaultValue={l.semaine_souhaitee ?? ''} className="text-xs border border-gray-200 rounded px-1.5 py-0.5 flex-1 focus:outline-none focus:border-blue-400"
+                              onBlur={async e => {
+                                await fetch(`/api/livraisons/${l.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ semaine_souhaitee: e.target.value || null, date_souhaitee: e.target.value ? null : undefined }) })
+                                const d = await fetch('/api/dashboard').then(r => r.json()); setData(d)
+                              }} />
+                          </div>
                         </div>
                       </div>
 
@@ -210,7 +221,7 @@ export default function DashboardPage() {
                         </div>
                         {step1ok ? (
                           <div className="text-xs text-gray-600">
-                            <p className="text-gray-400 mb-2">Date souhaitée : <strong className="text-gray-700">{l.date_souhaitee ? new Date(l.date_souhaitee).toLocaleDateString('fr-FR') : '—'}</strong></p>
+                            <p className="text-gray-400 mb-2">Souhait agri : <strong className="text-gray-700">{l.date_souhaitee ? new Date(l.date_souhaitee).toLocaleDateString('fr-FR') : l.semaine_souhaitee ? l.semaine_souhaitee : '—'}</strong></p>
                             <a href={`/contrats/${ca?.id}`} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-white text-xs font-medium" style={{ backgroundColor: '#7B2820' }}>
                               📥 Télécharger PDF
                             </a>
