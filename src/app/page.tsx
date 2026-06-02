@@ -4,6 +4,7 @@ import { Truck, FileWarning, Receipt, Phone, AlertTriangle, TrendingUp, Loader2 
 import { formatDate, formatTonnes, formatMois, getAnneeAgricoleLabel } from '@/lib/annee-agricole'
 import { joursDepuis, quantiteLivree, reliquat } from '@/lib/utils'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import CalendrierLivraisons from '@/components/ui/CalendrierLivraisons'
 
 export default function DashboardPage() {
   const [data, setData] = useState<any>(null)
@@ -122,6 +123,9 @@ export default function DashboardPage() {
           </ResponsiveContainer>
         </div>
       )}
+
+      {/* Calendrier des livraisons */}
+      <CalendrierLivraisons />
 
       {/* Section Livraisons à planifier */}
       <Section
