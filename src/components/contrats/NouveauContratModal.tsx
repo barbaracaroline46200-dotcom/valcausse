@@ -12,7 +12,7 @@ export default function NouveauContratModal({ onClose, onSaved }: Props) {
     numero_contrat: '', famille: 'negoce', produit_id: '', fournisseur_id: '',
     courtier_id: '', reference_fournisseur: '',
     prix_achat: '', quantite_totale: '', transporteur_id: '', prix_transport_prevu: '0',
-    point_chargement: '', ville_chargement: '', date_debut: '', date_fin: '',
+    point_chargement: '', ville_chargement: '', date_conclusion: '', date_debut: '', date_fin: '',
     notes: '',
   })
   const [produits, setProduits] = useState<any[]>([])
@@ -40,6 +40,7 @@ export default function NouveauContratModal({ onClose, onSaved }: Props) {
     const body = {
       ...form,
       courtier_id: form.courtier_id || null,
+      date_conclusion: form.date_conclusion || null,
       prix_achat: parseFloat(form.prix_achat),
       quantite_totale: parseFloat(form.quantite_totale),
       prix_transport_prevu: parseFloat(form.prix_transport_prevu),
@@ -130,6 +131,10 @@ export default function NouveauContratModal({ onClose, onSaved }: Props) {
           <div>
             <label className="label">Ville de chargement</label>
             <input className="input" value={form.ville_chargement} onChange={f('ville_chargement')} />
+          </div>
+          <div>
+            <label className="label">Date conclusion</label>
+            <input type="date" className="input" value={form.date_conclusion} onChange={f('date_conclusion')} />
           </div>
           <div>
             <label className="label">Date début</label>
