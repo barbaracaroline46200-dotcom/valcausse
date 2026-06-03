@@ -3,7 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, FileText, ShoppingCart, Truck, BookOpen, Search, LogOut, ShieldCheck, Eye
+  LayoutDashboard, FileText, ShoppingCart, Truck, BookOpen, Search, LogOut, ShieldCheck, Eye, BarChart2
 } from 'lucide-react'
 import { useAdmin } from './AdminProvider'
 import { cn } from '@/lib/utils'
@@ -13,6 +13,7 @@ const navItems = [
   { href: '/contrats', label: 'Contrats achat', icon: FileText },
   { href: '/ventes', label: 'Contrats vente', icon: ShoppingCart },
   { href: '/transporteurs/factures', label: 'Transport & Factures', icon: Truck },
+  { href: '/stats', label: 'Statistiques', icon: BarChart2 },
   { href: '/referentiels', label: 'Référentiels', icon: BookOpen, adminOnly: true },
   { href: '/recherche', label: 'Recherche globale', icon: Search },
 ]

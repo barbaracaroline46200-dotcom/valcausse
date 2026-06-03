@@ -416,6 +416,56 @@ export default function ContratDetailPage() {
         )}
       </div>
 
+      {/* Bilan financier */}
+      {(() => {
+        const coutFournisseur = (contrat.factures_fournisseur ?? []).reduce((s: number, f: any) => s + (f.montant_ht ?? 0), 0)
+        const coutTransport = (contrat.livraisons ?? []).filter((l: any) => l.type === 'realisee').reduce((s: number, l: any) => s + (l.montant_transport_reel ?? 0), 0)
+        const caClient = (contrat.contrats_vente ?? []).flatMap((cv: any) => cv.factures_client ?? []).reduce((s: number, f: any) => s + (f.montant_ht ?? 0), 0)
+        const marge = caClient - coutFournisseur - coutTransport
+        const margePct = caClient > 0 ? (marge / caClient) * 100 : null
+        const tonnesRealisees = (contrat.livraisons ?? []).filter((l: any) => l.type === 'realisee').reduce((s: number, l: any) => s + (l.quantite_reelle ?? 0), 0)
+        const margeParTonne = tonnesRealisees > 0 ? marge / tonnesRealisees : null
+        const hasData = coutFournisseur > 0 || coutTransport > 0 || caClient > 0
+        if (!hasData) return null
+        return (
+          <div className="card">
+            <h2 className="font-bold text-gray-800 text-base mb-4">Bilan financier réel</h2>
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+              <div className="bg-green-50 border border-green-100 rounded-xl p-3 text-center">
+                <p className="text-xs text-green-600 font-medium mb-1">CA client</p>
+                <p className="text-lg font-bold text-green-700">{caClient > 0 ? formatEuros(caClient) : <span className="text-gray-300 text-sm">Non facturé</span>}</p>
+              </div>
+              <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-center">
+                <p className="text-xs text-red-600 font-medium mb-1">Coût fournisseur</p>
+                <p className="text-lg font-bold text-red-700">{coutFournisseur > 0 ? formatEuros(coutFournisseur) : <span className="text-gray-300 text-sm">—</span>}</p>
+              </div>
+              <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-center">
+                <p className="text-xs text-amber-600 font-medium mb-1">Coût transport</p>
+                <p className="text-lg font-bold text-amber-700">{coutTransport > 0 ? formatEuros(coutTransport) : <span className="text-gray-300 text-sm">—</span>}</p>
+              </div>
+              <div className={`border rounded-xl p-3 text-center ${caClient === 0 ? 'bg-gray-50 border-gray-100' : marge >= 0 ? 'bg-blue-50 border-blue-100' : 'bg-red-50 border-red-200'}`}>
+                <p className={`text-xs font-medium mb-1 ${caClient === 0 ? 'text-gray-400' : marge >= 0 ? 'text-blue-600' : 'text-red-600'}`}>Marge nette</p>
+                <p className={`text-lg font-bold ${caClient === 0 ? 'text-gray-300' : marge >= 0 ? 'text-blue-700' : 'text-red-600'}`}>
+                  {caClient > 0 ? formatEuros(marge) : '—'}
+                </p>
+                {margePct !== null && caClient > 0 && (
+                  <p className={`text-xs font-semibold mt-0.5 ${marge >= 0 ? 'text-blue-500' : 'text-red-500'}`}>{margePct.toFixed(1)} %</p>
+                )}
+              </div>
+              <div className="bg-purple-50 border border-purple-100 rounded-xl p-3 text-center">
+                <p className="text-xs text-purple-600 font-medium mb-1">Marge / tonne</p>
+                <p className="text-lg font-bold text-purple-700">
+                  {margeParTonne !== null && caClient > 0 ? formatEurosParTonne(margeParTonne) : <span className="text-gray-300 text-sm">—</span>}
+                </p>
+              </div>
+            </div>
+            {caClient === 0 && (coutFournisseur > 0 || coutTransport > 0) && (
+              <p className="text-xs text-amber-600 mt-3">⚠️ Aucune facture client saisie — la marge ne peut pas être calculée.</p>
+            )}
+          </div>
+        )
+      })()}
+
       {/* Factures fournisseur */}
       <div className="card-section">
         <div className="px-5 py-4 border-b border-gray-100">

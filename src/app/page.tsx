@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Truck, FileWarning, Receipt, Phone, AlertTriangle, TrendingUp, Loader2 } from 'lucide-react'
+import { Truck, FileWarning, Receipt, Phone, AlertTriangle, TrendingUp, Loader2, Plus, Trash2, CheckSquare, Square } from 'lucide-react'
 import { formatDate, formatTonnes, formatMois, getAnneeAgricoleLabel } from '@/lib/annee-agricole'
 import { joursDepuis, quantiteLivree, reliquat } from '@/lib/utils'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
@@ -642,6 +642,9 @@ export default function DashboardPage() {
           </table>
         </Section>
       )}
+      {/* Bloc-notes */}
+      <BlocNotes />
+
     </div>
 
     {factureTransportModal && (
@@ -730,6 +733,118 @@ function Section({ icon, title, count, color, subtitle, children }: {
 function EmptyState({ text }: { text: string }) {
   return (
     <div className="px-5 py-8 text-center text-gray-500 text-sm">{text}</div>
+  )
+}
+
+function BlocNotes() {
+  const [notes, setNotes] = useState<any[]>([])
+  const [nouveau, setNouveau] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/notes').then(r => r.json()).then(d => { if (Array.isArray(d)) setNotes(d) })
+  }, [])
+
+  async function ajouter() {
+    if (!nouveau.trim()) return
+    setSaving(true)
+    const res = await fetch('/api/notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contenu: nouveau.trim() }),
+    })
+    const note = await res.json()
+    setNotes(prev => [note, ...prev])
+    setNouveau('')
+    setSaving(false)
+  }
+
+  async function toggleFait(note: any) {
+    const res = await fetch(`/api/notes/${note.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fait: !note.fait }),
+    })
+    const updated = await res.json()
+    setNotes(prev => prev.map(n => n.id === note.id ? updated : n))
+  }
+
+  async function supprimer(id: string) {
+    await fetch(`/api/notes/${id}`, { method: 'DELETE' })
+    setNotes(prev => prev.filter(n => n.id !== id))
+  }
+
+  const actives = notes.filter(n => !n.fait)
+  const faites = notes.filter(n => n.fait)
+
+  return (
+    <div className="card-section overflow-hidden">
+      <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3" style={{ backgroundColor: '#fdf5f3' }}>
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-lg flex-shrink-0" style={{ backgroundColor: '#7B2820' }}>📝</div>
+        <div>
+          <h2 className="font-bold" style={{ color: '#3a1e1a' }}>Notes & rappels</h2>
+          <p className="text-xs" style={{ color: '#7B2820', opacity: 0.7 }}>Mémos, choses importantes, rappels personnels</p>
+        </div>
+      </div>
+      <div className="p-4 space-y-3">
+        {/* Saisie */}
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={nouveau}
+            onChange={e => setNouveau(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && ajouter()}
+            placeholder="Ajouter une note ou un rappel..."
+            className="input flex-1 text-sm"
+          />
+          <button onClick={ajouter} disabled={!nouveau.trim() || saving}
+            className="px-3 py-2 rounded-lg text-white text-sm font-medium disabled:opacity-40 flex items-center gap-1"
+            style={{ backgroundColor: '#7B2820' }}>
+            <Plus size={15} /> Ajouter
+          </button>
+        </div>
+
+        {/* Notes actives */}
+        {actives.length === 0 && faites.length === 0 && (
+          <p className="text-sm text-gray-400 text-center py-4">Aucune note pour l'instant</p>
+        )}
+        <div className="space-y-2">
+          {actives.map(note => (
+            <div key={note.id} className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2.5 group">
+              <button onClick={() => toggleFait(note)} className="mt-0.5 text-amber-400 hover:text-green-500 transition-colors flex-shrink-0">
+                <Square size={16} />
+              </button>
+              <span className="text-sm text-gray-800 flex-1 leading-snug">{note.contenu}</span>
+              <button onClick={() => supprimer(note.id)} className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 hover:text-red-500 flex-shrink-0">
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Notes faites (repliées) */}
+        {faites.length > 0 && (
+          <details className="mt-2">
+            <summary className="text-xs text-gray-400 cursor-pointer hover:text-gray-600 select-none">
+              ✓ {faites.length} note{faites.length > 1 ? 's' : ''} réalisée{faites.length > 1 ? 's' : ''}
+            </summary>
+            <div className="space-y-1.5 mt-2">
+              {faites.map(note => (
+                <div key={note.id} className="flex items-start gap-2 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 group opacity-60">
+                  <button onClick={() => toggleFait(note)} className="mt-0.5 text-green-500 hover:text-gray-400 transition-colors flex-shrink-0">
+                    <CheckSquare size={16} />
+                  </button>
+                  <span className="text-sm text-gray-500 flex-1 line-through leading-snug">{note.contenu}</span>
+                  <button onClick={() => supprimer(note.id)} className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 hover:text-red-500 flex-shrink-0">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+      </div>
+    </div>
   )
 }
 
