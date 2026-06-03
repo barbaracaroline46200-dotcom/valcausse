@@ -640,9 +640,9 @@ export default function DashboardPage() {
       <SaisirFactureTransportModal
         livraison={factureTransportModal}
         onClose={() => setFactureTransportModal(null)}
-        onSaved={async () => {
+        onSaved={() => {
           setFactureTransportModal(null)
-          const d = await fetch('/api/dashboard', { cache: 'no-store' }).then(r => r.json()); setData(d)
+          fetch('/api/dashboard', { cache: 'no-store' }).then(r => r.json()).then(d => setData(d))
         }}
       />
     )}
@@ -650,9 +650,9 @@ export default function DashboardPage() {
       <SaisirFactureFournisseurModal
         livraison={factureFournisseurModal}
         onClose={() => setFactureFournisseurModal(null)}
-        onSaved={async () => {
+        onSaved={() => {
           setFactureFournisseurModal(null)
-          const d = await fetch('/api/dashboard', { cache: 'no-store' }).then(r => r.json()); setData(d)
+          fetch('/api/dashboard', { cache: 'no-store' }).then(r => r.json()).then(d => setData(d))
         }}
       />
     )}
