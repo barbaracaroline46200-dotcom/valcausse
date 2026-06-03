@@ -6,6 +6,8 @@ import { joursDepuis, quantiteLivree, reliquat } from '@/lib/utils'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import CalendrierLivraisons from '@/components/ui/CalendrierLivraisons'
 import RealiserLivraisonModal from '@/components/livraisons/RealiserLivraisonModal'
+import SaisirFactureTransportModal from '@/components/livraisons/SaisirFactureTransportModal'
+import SaisirFactureFournisseurModal from '@/components/livraisons/SaisirFactureFournisseurModal'
 
 export default function DashboardPage() {
   const [data, setData] = useState<any>(null)
@@ -15,6 +17,8 @@ export default function DashboardPage() {
   const [transporteurs, setTransporteurs] = useState<any[]>([])
   const [livraisonsTransporteur, setLivraisonsTransporteur] = useState<any[]>([])
   const [cmrModal, setCmrModal] = useState<any>(null)
+  const [factureTransportModal, setFactureTransportModal] = useState<any>(null)
+  const [factureFournisseurModal, setFactureFournisseurModal] = useState<any>(null)
 
   useEffect(() => {
     Promise.all([
@@ -79,6 +83,7 @@ export default function DashboardPage() {
   const moisSuivant = data?.moisSuivant ?? ''
   const cmr = data?.cmrEnAttente ?? []
   const aFacturer = data?.livraisonsAFacturer ?? []
+  const rfManquants = data?.rfManquants ?? []
   const facturesMq = data?.facturesManquantes ?? []
   const alertes = (data?.contratsAlerte ?? []).filter((c: any) => reliquat(c.quantite_totale, c.livraisons ?? []) > 0)
 
@@ -390,13 +395,13 @@ export default function DashboardPage() {
                     <td className="table-cell text-center">
                       {l.transport_facture
                         ? <span className="badge-clos">✓ Facturé</span>
-                        : <span className="badge-alerte">⏳ En attente</span>
+                        : <button onClick={() => setFactureTransportModal(l)} className="badge-alerte cursor-pointer hover:opacity-80 transition-opacity">⏳ Saisir →</button>
                       }
                     </td>
                     <td className="table-cell text-center">
                       {l.facture_fournisseur_id
                         ? <span className="badge-clos">✓ Facturé</span>
-                        : <span className="badge-alerte">⏳ En attente</span>
+                        : <button onClick={() => setFactureFournisseurModal(l)} className="badge-alerte cursor-pointer hover:opacity-80 transition-opacity">⏳ Saisir →</button>
                       }
                     </td>
                   </tr>
@@ -406,6 +411,46 @@ export default function DashboardPage() {
           </table>
         )}
       </Section>
+
+      {/* Section RF à récupérer */}
+      {rfManquants.length > 0 && (
+        <Section
+          icon={<FileWarning size={20} />}
+          title="RF à récupérer"
+          count={rfManquants.length}
+          color="red"
+          subtitle="Factures fournisseur enregistrées — numéro RF manquant (à recevoir de la comptable)"
+        >
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-100">
+                {['Fournisseur', 'Produit', 'Contrat', 'N° Facture', 'Date', 'Montant HT', 'Saisir RF'].map(h => (
+                  <th key={h} className="table-header">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rfManquants.map((f: any) => (
+                <tr key={f.id} className="table-row">
+                  <td className="table-cell font-medium">{f.contrat_achat?.fournisseur?.nom ?? '—'}</td>
+                  <td className="table-cell">{f.contrat_achat?.produit?.nom ?? '—'}</td>
+                  <td className="table-cell">
+                    <a href={`/contrats/${f.contrat_achat?.id}`} className="text-green-700 hover:underline text-sm">{f.contrat_achat?.numero_contrat}</a>
+                  </td>
+                  <td className="table-cell">{f.numero_facture ?? '—'}</td>
+                  <td className="table-cell">{formatDate(f.date_facture)}</td>
+                  <td className="table-cell">{f.montant_ht ? `${f.montant_ht} €` : '—'}</td>
+                  <td className="table-cell">
+                    <SaisirRFInline factureId={f.id} onSaved={async () => {
+                      const d = await fetch('/api/dashboard').then(r => r.json()); setData(d)
+                    }} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Section>
+      )}
 
       {/* Section Factures clients */}
       <Section
@@ -599,6 +644,26 @@ export default function DashboardPage() {
       )}
     </div>
 
+    {factureTransportModal && (
+      <SaisirFactureTransportModal
+        livraison={factureTransportModal}
+        onClose={() => setFactureTransportModal(null)}
+        onSaved={async () => {
+          setFactureTransportModal(null)
+          const d = await fetch('/api/dashboard').then(r => r.json()); setData(d)
+        }}
+      />
+    )}
+    {factureFournisseurModal && (
+      <SaisirFactureFournisseurModal
+        livraison={factureFournisseurModal}
+        onClose={() => setFactureFournisseurModal(null)}
+        onSaved={async () => {
+          setFactureFournisseurModal(null)
+          const d = await fetch('/api/dashboard').then(r => r.json()); setData(d)
+        }}
+      />
+    )}
     {cmrModal && (
       <RealiserLivraisonModal
         livraison={cmrModal}
@@ -665,6 +730,43 @@ function Section({ icon, title, count, color, subtitle, children }: {
 function EmptyState({ text }: { text: string }) {
   return (
     <div className="px-5 py-8 text-center text-gray-500 text-sm">{text}</div>
+  )
+}
+
+function SaisirRFInline({ factureId, onSaved }: { factureId: string; onSaved: () => void }) {
+  const [rf, setRf] = useState('')
+  const [datePaiement, setDatePaiement] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  async function save() {
+    if (!rf) return
+    setSaving(true)
+    await fetch(`/api/factures/fournisseur/${factureId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ numero_piece_logiciel: rf, date_paiement: datePaiement || null }),
+    })
+    setSaving(false)
+    onSaved()
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <input
+        type="text" value={rf} onChange={e => setRf(e.target.value)}
+        placeholder="N° RF"
+        className="text-xs border border-gray-200 rounded px-1.5 py-0.5 w-20 focus:outline-none focus:border-red-400"
+      />
+      <input
+        type="date" value={datePaiement} onChange={e => setDatePaiement(e.target.value)}
+        title="Date de paiement"
+        className="text-xs border border-gray-200 rounded px-1.5 py-0.5 w-28 focus:outline-none focus:border-red-400"
+      />
+      <button onClick={save} disabled={!rf || saving}
+        className="text-xs px-2 py-0.5 rounded bg-red-600 text-white disabled:opacity-40 hover:bg-red-700">
+        {saving ? '...' : '✓'}
+      </button>
+    </div>
   )
 }
 

@@ -105,6 +105,17 @@ export async function GET() {
     .or('transport_facture.eq.false,facture_fournisseur_id.is.null')
     .order('date_reelle', { ascending: false })
 
+  // RF à récupérer : factures fournisseur sans numéro RF (numero_piece_logiciel null)
+  const { data: rfManquants } = await supabase
+    .from('factures_fournisseur')
+    .select(`
+      *,
+      contrat_achat:contrats_achat(id, numero_contrat, famille, produit:produits(nom), fournisseur:fournisseurs(nom))
+    `)
+    .is('numero_piece_logiciel', null)
+    .not('numero_facture', 'is', null)
+    .order('date_facture', { ascending: false })
+
   // Factures clients à récupérer :
   // Contrats de vente dont toutes les livraisons sont réalisées
   // ET la dernière livraison date de plus de 30 jours
@@ -167,6 +178,7 @@ export async function GET() {
     livraisonsPlanifiees: livraisonsPlanifiees ?? [],
     cmrEnAttente: cmrEnAttente ?? [],
     livraisonsAFacturer: livraisonsAFacturer ?? [],
+    rfManquants: rfManquants ?? [],
     facturesManquantes: facturesManquantes ?? [],
     contratsAlerte: contratsAlerte ?? [],
     annee: { debut, fin },
