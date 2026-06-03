@@ -157,7 +157,8 @@ export default function DashboardPage() {
             <div className="divide-y divide-gray-100">
               {planifiees.map((l: any) => {
                 const ca = l.contrat_achat
-                const agri = ca?.contrats_vente?.[0]?.agriculteur
+                const agri = (ca?.contrats_vente ?? []).find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur
+                  ?? ca?.contrats_vente?.[0]?.agriculteur
                 const moisLiv = l.mois_prevu?.slice(0, 7) ?? ''
                 const isRetard = moisLiv < moisCourant.slice(0, 7)
                 const isProchain = moisSuivant && moisLiv >= moisSuivant.slice(0, 7)

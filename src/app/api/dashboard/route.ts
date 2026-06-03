@@ -32,7 +32,7 @@ export async function GET() {
         produit:produits(nom),
         fournisseur:fournisseurs(nom),
         transporteur:transporteurs(id,nom),
-        contrats_vente(agriculteur:agriculteurs(nom,ville_livraison))
+        contrats_vente(id,agriculteur:agriculteurs(nom,ville_livraison))
       )
     `)
     .eq('type', 'planifiee')
