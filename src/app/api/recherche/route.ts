@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
             piece_fournisseur_prefixe, piece_fournisseur_numero,
             piece_client_prefixe, piece_client_numero, numero_lettre_voiture,
             contrat_achat:contrats_achat(id, numero_contrat, famille, produit:produits(nom), fournisseur:fournisseurs(nom)),
-            contrat_vente:contrats_vente(id, agriculteur:agriculteurs(nom))
+            contrat_vente:contrats_vente(id, numero_contrat, agriculteur:agriculteurs(nom))
           `)
           .eq('quantite_reelle', qNumber)
           .eq('type', 'realisee')
