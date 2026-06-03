@@ -48,7 +48,7 @@ export default function DashboardPage() {
     setData(d)
     setTransporteurs(t)
     setLoading(false)
-    fetch(`/api/agenda?date=${todayStr()}`).then(r => r.json()).then(d => setAgendaToday(Array.isArray(d) ? d : []))
+    fetch(`/api/agenda?lte=${todayStr()}&non_fait=1`).then(r => r.json()).then(d => setAgendaToday(Array.isArray(d) ? d : []))
   }, [])
 
   // Chargement initial
@@ -62,7 +62,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!loading) {
       fetch('/api/dashboard').then(r => r.json()).then(d => setData(d))
-      fetch(`/api/agenda?date=${todayStr()}`).then(r => r.json()).then(d => setAgendaToday(Array.isArray(d) ? d : []))
+      fetch(`/api/agenda?lte=${todayStr()}&non_fait=1`).then(r => r.json()).then(d => setAgendaToday(Array.isArray(d) ? d : []))
     }
   }, [pathname])
 
@@ -71,7 +71,7 @@ export default function DashboardPage() {
     function onVisible() {
       if (document.visibilityState === 'visible') {
         fetch('/api/dashboard').then(r => r.json()).then(d => setData(d))
-        fetch(`/api/agenda?date=${todayStr()}`).then(r => r.json()).then(d => setAgendaToday(Array.isArray(d) ? d : []))
+        fetch(`/api/agenda?lte=${todayStr()}&non_fait=1`).then(r => r.json()).then(d => setAgendaToday(Array.isArray(d) ? d : []))
       }
     }
     document.addEventListener('visibilitychange', onVisible)
@@ -152,7 +152,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2">
               <CalendarDays size={18} style={{ color: '#C8941A' }} />
               <span className="font-bold text-sm" style={{ color: '#7B2820' }}>
-                Agenda du jour — {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                À faire — {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
               </span>
             </div>
             <Link href="/agenda" className="text-xs font-medium hover:underline" style={{ color: '#C8941A' }}>
@@ -169,7 +169,7 @@ export default function DashboardPage() {
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ fait: !note.fait }),
                     })
-                    fetch(`/api/agenda?date=${todayStr()}`).then(r => r.json()).then(d => setAgendaToday(Array.isArray(d) ? d : []))
+                    fetch(`/api/agenda?lte=${todayStr()}&non_fait=1`).then(r => r.json()).then(d => setAgendaToday(Array.isArray(d) ? d : []))
                   }}
                   className="mt-0.5 flex-shrink-0"
                 >
@@ -178,8 +178,15 @@ export default function DashboardPage() {
                     : <Circle size={18} style={{ color: '#C8941A' }} />
                   }
                 </button>
-                <div className="min-w-0">
-                  <p className={`text-sm font-semibold ${note.fait ? 'line-through text-gray-400' : 'text-gray-800'}`}>{note.titre}</p>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className={`text-sm font-semibold ${note.fait ? 'line-through text-gray-400' : 'text-gray-800'}`}>{note.titre}</p>
+                    {note.date_note !== todayStr() && (
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-medium flex-shrink-0">
+                        {formatDate(note.date_note)}
+                      </span>
+                    )}
+                  </div>
                   {note.contenu && <p className={`text-xs mt-0.5 ${note.fait ? 'text-gray-300' : 'text-gray-500'}`}>{note.contenu}</p>}
                 </div>
               </div>
@@ -279,7 +286,7 @@ export default function DashboardPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
-                {['Produit', 'Transporteur', 'Date livraison', 'Contact transporteur', 'Délai', ''].map(h => (
+                {['Produit', 'Agriculteur', 'Transporteur', 'Date livraison', 'Contact', 'Délai', ''].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
@@ -292,12 +299,15 @@ export default function DashboardPage() {
                 const dateAffichee = isRealisee
                   ? formatDate(l.date_reelle)
                   : l.date_prevue ? formatDate(l.date_prevue) : (l.semaine_prevue ?? '—')
+                const agri = l.contrat_achat?.contrats_vente?.find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur
+                  ?? l.contrat_achat?.contrats_vente?.[0]?.agriculteur
                 return (
                   <tr key={l.id}
                     className={`table-row cursor-pointer hover:bg-red-50 transition-colors ${!isRealisee ? 'bg-amber-50/40' : ''}`}
                     onClick={() => setCmrModal(l)}
                     title="Cliquer pour saisir le CMR">
                     <td className="table-cell font-medium">{l.contrat_achat?.produit?.nom ?? '—'}</td>
+                    <td className="table-cell text-sm">{agri?.nom ?? '—'}</td>
                     <td className="table-cell">{l.contrat_achat?.transporteur?.nom ?? '—'}</td>
                     <td className="table-cell">
                       <span className={!isRealisee ? 'text-amber-700 font-medium' : ''}>{dateAffichee}</span>
@@ -312,7 +322,10 @@ export default function DashboardPage() {
                       <span className="badge-alerte">{jours}j</span>
                     </td>
                     <td className="table-cell">
-                      <span className="text-xs text-red-600 font-medium underline">Saisir CMR →</span>
+                      {isRealisee
+                        ? <span className="text-xs text-orange-600 font-medium underline">N° CMR manquant →</span>
+                        : <span className="text-xs text-red-600 font-medium underline">Saisir CMR →</span>
+                      }
                     </td>
                   </tr>
                 )

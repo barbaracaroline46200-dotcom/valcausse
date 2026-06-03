@@ -16,6 +16,15 @@ export async function GET(req: NextRequest) {
     query = query.eq('date_note', date)
   }
 
+  const lte = searchParams.get('lte') // date max (inclus)
+  const nonFaitSeulement = searchParams.get('non_fait') === '1'
+  if (lte) {
+    query = query.lte('date_note', lte)
+  }
+  if (nonFaitSeulement) {
+    query = query.eq('fait', false)
+  }
+
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
