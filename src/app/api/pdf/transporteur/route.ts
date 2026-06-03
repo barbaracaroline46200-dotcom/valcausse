@@ -99,24 +99,22 @@ export async function GET(req: NextRequest) {
   page.drawLine({ start: { x: 50, y }, end: { x: width - 50, y }, thickness: 0.5, color: rgb(0.9, 0.9, 0.9) })
   y -= 15
 
-  // Chargement
-  page.drawText('ADRESSE D\'ENLÈVEMENT', { x: 50, y, font: fontBold, size: 10, color: brun })
+  // Lieu d'enlèvement (texte libre multiligne)
+  page.drawText('LIEU D\'ENLÈVEMENT', { x: 50, y, font: fontBold, size: 10, color: brun })
   y -= 18
-  const adresseEnlevement = liv.ville_chargement || ca?.point_chargement || ca?.fournisseur?.adresse || '—'
-  const lines = adresseEnlevement.split('\n')
-  lines.forEach((line: string) => {
+  const lieuEnlevement = liv.ville_chargement || ca?.ville_chargement || '—'
+  const lieuLines = lieuEnlevement.split('\n').flatMap((line: string) => {
+    // Couper les lignes trop longues (> ~60 chars)
+    const maxLen = 60
+    if (line.length <= maxLen) return [line]
+    const chunks: string[] = []
+    for (let i = 0; i < line.length; i += maxLen) chunks.push(line.slice(i, i + maxLen))
+    return chunks
+  })
+  lieuLines.forEach((line: string) => {
     page.drawText(line, { x: 220, y, font, size: 10, color: black })
     y -= 16
   })
-  if (ca?.point_chargement && liv.ville_chargement) {
-    page.drawText(ca.point_chargement, { x: 220, y, font, size: 10, color: gray })
-    y -= 16
-  }
-  if (ca?.contact_enlevement) {
-    page.drawText('Contact RDV', { x: 50, y, font, size: 10, color: gray })
-    page.drawText(ca.contact_enlevement, { x: 220, y, font: fontBold, size: 10, color: brun })
-    y -= 20
-  }
   y -= 5
 
   page.drawLine({ start: { x: 50, y }, end: { x: width - 50, y }, thickness: 0.5, color: rgb(0.9, 0.9, 0.9) })

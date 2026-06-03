@@ -215,23 +215,12 @@ export default function ModifierContratModal({ contrat, onClose, onSaved }: Prop
         {/* Adresses d'enlèvement */}
         <div className="border-t border-gray-100 pt-4">
           <p className="font-semibold text-sm mb-1" style={{ color: '#7B2820' }}>Adresses d'enlèvement</p>
-          <p className="text-xs text-gray-400 mb-3">Indiquez un ou plusieurs lieux de chargement — vous choisirez à chaque livraison</p>
+          <p className="text-xs text-gray-400 mb-3">Lieu(x), instructions, contact RDV — texte libre, apparaît dans le PDF transporteur</p>
 
           {/* Adresse principale */}
-          <div className="grid grid-cols-2 gap-3 mb-2">
-            <div>
-              <label className="label text-xs">Ville / lieu (adresse 1)</label>
-              <input className="input" value={form.ville_chargement} onChange={f('ville_chargement')} placeholder="Ex : Villefranche-de-Rouergue" />
-            </div>
-            <div>
-              <label className="label text-xs">Adresse complète (optionnel)</label>
-              <input className="input" value={form.point_chargement} onChange={f('point_chargement')} placeholder="Lieu-dit, route..." />
-            </div>
-          </div>
-
           <div className="mb-3">
-            <label className="label text-xs">Contact pour prise de RDV enlèvement <span className="text-gray-400 font-normal">(email ou téléphone — apparaît dans le PDF transporteur)</span></label>
-            <input className="input" value={form.contact_enlevement} onChange={f('contact_enlevement')} placeholder="Ex : 06 12 34 56 78 ou contact@fournisseur.fr" />
+            <label className="label text-xs">Lieu d'enlèvement + contact RDV</label>
+            <textarea className="input" rows={3} value={form.ville_chargement} onChange={e => setForm(prev => ({ ...prev, ville_chargement: e.target.value }))} placeholder={"Ex : RETERRE (23) et/ou MARCILLAT EN COMBRAILLE (03)\nRDV par mail : cereale@andrevillemont.com"} />
           </div>
 
           {/* Adresses supplémentaires */}
