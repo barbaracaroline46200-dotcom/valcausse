@@ -3,6 +3,7 @@ import { getServiceClient } from '@/lib/supabase'
 import { getAnneeAgricoleISO } from '@/lib/annee-agricole'
 
 export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
 
 export async function GET() {
   const supabase = getServiceClient()
