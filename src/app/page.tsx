@@ -33,11 +33,17 @@ export default function DashboardPage() {
   const [factureFournisseurModal, setFactureFournisseurModal] = useState<any>(null)
   const [facturesClientModal, setFacturesClientModal] = useState<any>(null)
   const [agendaToday, setAgendaToday] = useState<any[]>([])
+  const [toast, setToast] = useState('')
+
+  function showToast(msg: string) {
+    setToast(msg)
+    setTimeout(() => setToast(''), 3000)
+  }
 
   const reloadData = useCallback(async () => {
     const [d, t] = await Promise.all([
-      fetch('/api/dashboard').then(r => r.json()),
-      fetch('/api/referentiels/transporteurs').then(r => r.json()),
+      fetch('/api/dashboard', { cache: 'no-store' }).then(r => r.json()),
+      fetch('/api/referentiels/transporteurs', { cache: 'no-store' }).then(r => r.json()),
     ])
     setData(d)
     setTransporteurs(t)
@@ -128,6 +134,11 @@ export default function DashboardPage() {
 
   return (
     <>
+    {toast && (
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl shadow-lg text-white text-sm font-semibold flex items-center gap-2 animate-fade-in" style={{ backgroundColor: '#15803d' }}>
+        ✓ {toast}
+      </div>
+    )}
     <div className="space-y-8 pb-10">
       <div>
         <h1 className="text-2xl font-bold" style={{ color: '#7B2820' }}>Tableau de bord</h1>
@@ -608,6 +619,7 @@ export default function DashboardPage() {
         onClose={() => setFactureTransportModal(null)}
         onSaved={() => {
           setFactureTransportModal(null)
+          showToast('Facture transport enregistrée')
           reloadData()
         }}
       />
@@ -618,6 +630,7 @@ export default function DashboardPage() {
         onClose={() => setFactureFournisseurModal(null)}
         onSaved={() => {
           setFactureFournisseurModal(null)
+          showToast('Facture fournisseur enregistrée')
           reloadData()
         }}
       />
@@ -631,9 +644,13 @@ export default function DashboardPage() {
           factures_client: facturesClientModal.factures_client ?? [],
         }}
         contratAchatId={facturesClientModal.contrat_achat_id}
-        onClose={() => setFacturesClientModal(null)}
+        onClose={() => {
+          setFacturesClientModal(null)
+          reloadData()
+        }}
         onSaved={() => {
           setFacturesClientModal(null)
+          showToast('Contrat de vente clos')
           reloadData()
         }}
       />
@@ -645,6 +662,7 @@ export default function DashboardPage() {
         onClose={() => setCmrModal(null)}
         onSaved={() => {
           setCmrModal(null)
+          showToast('Livraison enregistrée')
           reloadData()
         }}
       />

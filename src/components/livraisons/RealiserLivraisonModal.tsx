@@ -16,16 +16,16 @@ export default function RealiserLivraisonModal({ livraison, contrat, onClose, on
   const [transporteurs, setTransporteurs] = useState<any[]>([])
 
   const [form, setForm] = useState({
-    date_reelle: '',
-    quantite_reelle: String(livraison.quantite_prevue ?? ''),
-    numero_lettre_voiture: '',
+    date_reelle: livraison.date_reelle ?? '',
+    quantite_reelle: String(livraison.quantite_reelle ?? livraison.quantite_prevue ?? ''),
+    numero_lettre_voiture: livraison.numero_lettre_voiture ?? '',
     ville_chargement: livraison.ville_chargement ?? contrat.ville_chargement ?? '',
     ville_destination: livraison.ville_destination ?? '',
     piece_fournisseur_prefixe: livraison.piece_fournisseur_prefixe ?? prefixes.fournisseur,
     piece_fournisseur_numero: livraison.piece_fournisseur_numero ?? '',
     piece_client_prefixe: livraison.piece_client_prefixe ?? prefixes.client,
     piece_client_numero: livraison.piece_client_numero ?? '',
-    montant_transport_reel: '',
+    montant_transport_reel: livraison.montant_transport_reel ? String(livraison.montant_transport_reel) : '',
     transporteur_id: livraison.transporteur_id ?? '',
     numero_mise_a_disposition: livraison.numero_mise_a_disposition ?? '',
     contrat_vente_id: livraison.contrat_vente_id ?? '',
