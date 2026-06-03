@@ -622,9 +622,9 @@ export default function DashboardPage() {
         livraison={cmrModal}
         contrat={cmrModal.contrat_achat}
         onClose={() => setCmrModal(null)}
-        onSaved={async () => {
+        onSaved={() => {
           setCmrModal(null)
-          fetch('/api/dashboard').then(r => r.json()).then(d => setData(d))
+          reloadData()
         }}
       />
     )}
