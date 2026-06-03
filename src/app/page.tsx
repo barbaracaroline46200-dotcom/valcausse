@@ -1,5 +1,6 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
+import { usePathname } from 'next/navigation'
 import { Truck, FileWarning, Receipt, Phone, AlertTriangle, TrendingUp, Loader2, Plus, Trash2, CheckSquare, Square, CalendarDays, CheckCircle2, Circle } from 'lucide-react'
 import { formatDate, formatTonnes, formatMois, getAnneeAgricoleLabel } from '@/lib/annee-agricole'
 import { joursDepuis, quantiteLivree, reliquat } from '@/lib/utils'
@@ -18,6 +19,7 @@ function todayStr() {
 
 export default function DashboardPage() {
   const { isAdmin } = useAdmin()
+  const pathname = usePathname()
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [selectedTransporteur, setSelectedTransporteur] = useState('')
@@ -29,29 +31,42 @@ export default function DashboardPage() {
   const [factureFournisseurModal, setFactureFournisseurModal] = useState<any>(null)
   const [agendaToday, setAgendaToday] = useState<any[]>([])
 
-  useEffect(() => {
-    Promise.all([
+  const reloadData = useCallback(async () => {
+    const [d, t] = await Promise.all([
       fetch('/api/dashboard').then(r => r.json()),
       fetch('/api/referentiels/transporteurs').then(r => r.json()),
-    ]).then(([d, t]) => {
-      setData(d)
-      setTransporteurs(t)
-      setLoading(false)
-    })
+    ])
+    setData(d)
+    setTransporteurs(t)
+    setLoading(false)
+    fetch(`/api/agenda?date=${todayStr()}`).then(r => r.json()).then(d => setAgendaToday(Array.isArray(d) ? d : []))
+  }, [])
+
+  // Chargement initial
+  useEffect(() => {
     const now = new Date()
     setSelectedMois(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
+    reloadData()
+  }, [])
 
-    // Charger les notes agenda du jour
-    fetch(`/api/agenda?date=${todayStr()}`).then(r => r.json()).then(d => setAgendaToday(Array.isArray(d) ? d : []))
+  // Rechargement à chaque fois qu'on revient sur le dashboard (navigation SPA)
+  useEffect(() => {
+    if (!loading) {
+      fetch('/api/dashboard').then(r => r.json()).then(d => setData(d))
+      fetch(`/api/agenda?date=${todayStr()}`).then(r => r.json()).then(d => setAgendaToday(Array.isArray(d) ? d : []))
+    }
+  }, [pathname])
 
-    function reloadDashboard() {
+  // Rechargement si l'onglet redevient visible
+  useEffect(() => {
+    function onVisible() {
       if (document.visibilityState === 'visible') {
         fetch('/api/dashboard').then(r => r.json()).then(d => setData(d))
         fetch(`/api/agenda?date=${todayStr()}`).then(r => r.json()).then(d => setAgendaToday(Array.isArray(d) ? d : []))
       }
     }
-    document.addEventListener('visibilitychange', reloadDashboard)
-    return () => document.removeEventListener('visibilitychange', reloadDashboard)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
   }, [])
 
   useEffect(() => {
