@@ -1,8 +1,9 @@
 'use client'
 import { useState, useCallback } from 'react'
-import { Search, Loader2, FileText, ShoppingCart, Truck, Package, Users, Wheat } from 'lucide-react'
-import Link from 'next/link'
+import { Search, Loader2, FileText, ShoppingCart, Truck, Package, Users, Wheat, Scale } from 'lucide-react'
+import { formatTonnes, formatDate } from '@/lib/annee-agricole'
 import { BadgeFamille } from '@/components/ui/Badge'
+import Link from 'next/link'
 
 export default function RecherchePage() {
   const [q, setQ] = useState('')
@@ -26,7 +27,8 @@ export default function RecherchePage() {
 
   const total = results
     ? (results.contrats?.length ?? 0) + (results.ventes?.length ?? 0) + (results.livraisons?.length ?? 0) +
-      (results.fournisseurs?.length ?? 0) + (results.agriculteurs?.length ?? 0) + (results.transporteurs?.length ?? 0)
+      (results.fournisseurs?.length ?? 0) + (results.agriculteurs?.length ?? 0) + (results.transporteurs?.length ?? 0) +
+      (results.livraisonsParPoids?.length ?? 0)
     : 0
 
   return (
@@ -36,7 +38,7 @@ export default function RecherchePage() {
           <Search size={24} style={{ color: '#C8941A' }} />
           Recherche globale
         </h1>
-        <p className="text-gray-500 text-sm mt-0.5">Contrats, pièces, factures, noms, villes…</p>
+        <p className="text-gray-500 text-sm mt-0.5">Contrats, pièces, noms, villes… ou un poids en tonnes (ex&nbsp;: 27.92)</p>
       </div>
 
       <div className="relative">
@@ -61,6 +63,39 @@ export default function RecherchePage() {
 
       {results && total > 0 && (
         <div className="space-y-5">
+          {results.livraisonsParPoids?.length > 0 && (
+            <ResultGroup title="Livraisons par poids réalisé" icon={<Scale size={16} />} count={results.livraisonsParPoids.length}>
+              {results.livraisonsParPoids.map((l: any) => (
+                <ResultItem key={l.id} href={`/contrats/${l.contrat_achat_id}`}>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-blue-700">{formatTonnes(l.quantite_reelle)}</span>
+                    {l.contrat_achat && (
+                      <>
+                        <span className="font-semibold text-green-700">{l.contrat_achat.numero_contrat}</span>
+                        <BadgeFamille famille={l.contrat_achat.famille} />
+                      </>
+                    )}
+                    {l.piece_fournisseur_numero && (
+                      <span className="badge-appro text-xs">{l.piece_fournisseur_prefixe} {l.piece_fournisseur_numero}</span>
+                    )}
+                    {l.piece_client_numero && (
+                      <span className="badge-negoce text-xs">{l.piece_client_prefixe} {l.piece_client_numero}</span>
+                    )}
+                    {l.numero_lettre_voiture && (
+                      <span className="badge-clos text-xs">CMR {l.numero_lettre_voiture}</span>
+                    )}
+                  </div>
+                  <span className="text-gray-500 text-sm">
+                    {l.contrat_achat ? `${l.contrat_achat.produit?.nom} · ${l.contrat_achat.fournisseur?.nom}` : ''}
+                    {l.date_reelle ? ` · ${formatDate(l.date_reelle)}` : ''}
+                    {l.ville_chargement ? ` · ${l.ville_chargement}` : ''}
+                    {l.ville_destination ? ` → ${l.ville_destination}` : ''}
+                  </span>
+                </ResultItem>
+              ))}
+            </ResultGroup>
+          )}
+
           {results.contrats?.length > 0 && (
             <ResultGroup title="Contrats d'achat" icon={<FileText size={16} />} count={results.contrats.length}>
               {results.contrats.map((c: any) => (

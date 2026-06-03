@@ -9,7 +9,12 @@ export async function GET(req: NextRequest) {
   const supabase = getServiceClient()
   const like = `%${q}%`
 
-  const [contrats, ventes, livraisons, fournisseurs, agriculteurs, transporteurs] = await Promise.all([
+  // Détection d'une recherche par poids (ex: "27.92", "27,92", "28")
+  const qNormalized = q.replace(',', '.')
+  const qNumber = parseFloat(qNormalized)
+  const isWeightSearch = !isNaN(qNumber) && qNumber > 0
+
+  const [contrats, ventes, livraisons, fournisseurs, agriculteurs, transporteurs, livraisonsParPoids] = await Promise.all([
     supabase
       .from('contrats_achat')
       .select('id,numero_contrat,famille,produit:produits(nom),fournisseur:fournisseurs(nom)')
@@ -45,6 +50,24 @@ export async function GET(req: NextRequest) {
       .select('id,nom')
       .ilike('nom', like)
       .limit(10),
+
+    // Recherche par poids : livraisons réalisées avec quantite_reelle ≈ valeur saisie (±0.5t)
+    isWeightSearch
+      ? supabase
+          .from('livraisons')
+          .select(`
+            id, contrat_achat_id, quantite_reelle, quantite_prevue, type,
+            date_reelle, mois_prevu, ville_chargement, ville_destination,
+            piece_fournisseur_prefixe, piece_fournisseur_numero,
+            piece_client_prefixe, piece_client_numero, numero_lettre_voiture,
+            contrat_achat:contrats_achat(id, numero_contrat, famille, produit:produits(nom), fournisseur:fournisseurs(nom))
+          `)
+          .gte('quantite_reelle', qNumber - 0.5)
+          .lte('quantite_reelle', qNumber + 0.5)
+          .eq('type', 'realisee')
+          .order('date_reelle', { ascending: false })
+          .limit(15)
+      : Promise.resolve({ data: [] }),
   ])
 
   return NextResponse.json({
@@ -54,5 +77,6 @@ export async function GET(req: NextRequest) {
     fournisseurs: fournisseurs.data ?? [],
     agriculteurs: agriculteurs.data ?? [],
     transporteurs: transporteurs.data ?? [],
+    livraisonsParPoids: livraisonsParPoids.data ?? [],
   })
 }
