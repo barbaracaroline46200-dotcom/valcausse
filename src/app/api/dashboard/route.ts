@@ -63,28 +63,25 @@ export async function GET() {
     .eq('type', 'realisee')
     .is('numero_lettre_voiture', null)
 
-  // Planifiées avec date_prevue dépassée (le transporteur a dû livrer)
-  const { data: cmrPlanifieesDatePassee } = await supabase
+  // Planifiées avec date_prevue renseignée (transporteur confirmé, en attente de CMR)
+  const { data: cmrPlanifieesAvecDate } = await supabase
     .from('livraisons')
     .select(cmrSelect)
     .eq('type', 'planifiee')
     .not('date_prevue', 'is', null)
-    .lt('date_prevue', today)
 
-  // Planifiées avec semaine_prevue dont le mois est passé (approximation)
-  const debutMoisCourant = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-  const { data: cmrPlanifiesSemainePassee } = await supabase
+  // Planifiées avec semaine_prevue renseignée (transporteur confirmé, en attente de CMR)
+  const { data: cmrPlanifieesAvecSemaine } = await supabase
     .from('livraisons')
     .select(cmrSelect)
     .eq('type', 'planifiee')
     .not('semaine_prevue', 'is', null)
     .is('date_prevue', null)
-    .lt('mois_prevu', debutMoisCourant)
 
   const cmrEnAttente = [
     ...(cmrRealisees ?? []),
-    ...(cmrPlanifieesDatePassee ?? []),
-    ...(cmrPlanifiesSemainePassee ?? []),
+    ...(cmrPlanifieesAvecDate ?? []),
+    ...(cmrPlanifieesAvecSemaine ?? []),
   ]
 
   // Facturation en attente : réalisées sans facture transport ou fournisseur
