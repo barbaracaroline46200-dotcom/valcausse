@@ -163,7 +163,7 @@ export default function DashboardPage() {
                 const isRetard = moisLiv < moisCourant.slice(0, 7)
                 const isProchain = moisSuivant && moisLiv >= moisSuivant.slice(0, 7)
                 const step1ok = !!(l.date_souhaitee || l.semaine_souhaitee)
-                const step2ok = step1ok && l.pdf_envoye
+                const step2ok = step1ok && !!l.pdf_envoye
                 const step3ok = !!(l.date_prevue || l.semaine_prevue)
                 // Étape active = la première non complète
                 const etapeActive = step3ok ? 0 : step2ok ? 3 : step1ok ? 2 : 1
@@ -236,19 +236,16 @@ export default function DashboardPage() {
                             <a
                               href={`/api/pdf/transporteur?livraison_id=${l.id}`}
                               target="_blank" rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-white text-xs font-medium"
-                              style={{ backgroundColor: '#7B2820' }}>
-                              📥 Télécharger PDF
-                            </a>
-                            <label className="flex items-center gap-2 cursor-pointer pt-1">
-                              <input type="checkbox" checked={!!l.pdf_envoye}
-                                onChange={async () => {
-                                  await fetch(`/api/livraisons/${l.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pdf_envoye: !l.pdf_envoye }) })
+                              onClick={async () => {
+                                if (!l.pdf_envoye) {
+                                  await fetch(`/api/livraisons/${l.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pdf_envoye: true }) })
                                   const d = await fetch('/api/dashboard').then(r => r.json()); setData(d)
-                                }}
-                                className="w-4 h-4 accent-orange-500" />
-                              <span className="text-gray-600">{l.pdf_envoye ? '✓ PDF envoyé' : 'Marquer comme envoyé'}</span>
-                            </label>
+                                }
+                              }}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-white text-xs font-medium"
+                              style={{ backgroundColor: l.pdf_envoye ? '#16a34a' : '#7B2820' }}>
+                              {l.pdf_envoye ? '✓ PDF envoyé' : '📥 Télécharger PDF'}
+                            </a>
                           </div>
                         ) : (
                           <p className="text-xs text-gray-400">Compléter l'étape 1 d'abord</p>
@@ -259,7 +256,7 @@ export default function DashboardPage() {
                       <div className={`rounded-lg p-3 border-2 transition-all ${
                         step3ok ? 'border-green-200 bg-green-50' :
                         etapeActive === 3 ? 'border-green-400 bg-green-50 shadow-sm' :
-                        step2ok ? 'border-green-100 bg-green-50/30' : 'border-gray-100 bg-gray-50 opacity-50'
+                        step1ok ? 'border-green-100 bg-green-50/30' : 'border-gray-100 bg-gray-50 opacity-50'
                       }`}>
                         <div className="flex items-center gap-1.5 mb-2">
                           <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${step3ok ? 'bg-green-500 text-white' : etapeActive === 3 ? 'bg-green-500 text-white' : 'bg-green-100 text-green-700'}`}>3</span>
