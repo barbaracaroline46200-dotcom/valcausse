@@ -363,6 +363,16 @@ export default function DashboardPage() {
                         </div>
                         {step1ok ? (
                           <>
+                            {/* Case à cocher principale */}
+                            <label className="flex items-center gap-2 cursor-pointer mb-2">
+                              <input
+                                type="checkbox"
+                                checked={!!l.transporteur_contacte}
+                                onChange={() => patchLiv({ transporteur_contacte: !l.transporteur_contacte })}
+                                className="w-4 h-4 rounded accent-green-600"
+                              />
+                              <span className={`text-xs font-medium ${l.transporteur_contacte ? 'text-green-700 line-through' : 'text-gray-700'}`}>Transporteur confirmé ✓</span>
+                            </label>
                             <p className="text-xs text-gray-400 mb-1">Date <strong>ou</strong> semaine confirmée :</p>
                             <div className="space-y-1">
                               <div className="flex items-center gap-1">
