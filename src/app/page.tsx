@@ -41,9 +41,10 @@ export default function DashboardPage() {
   }
 
   const reloadData = useCallback(async () => {
+    const ts = Date.now()
     const [d, t] = await Promise.all([
-      fetch('/api/dashboard', { cache: 'no-store' }).then(r => r.json()),
-      fetch('/api/referentiels/transporteurs', { cache: 'no-store' }).then(r => r.json()),
+      fetch(`/api/dashboard?t=${ts}`, { cache: 'no-store' }).then(r => r.json()),
+      fetch(`/api/referentiels/transporteurs?t=${ts}`, { cache: 'no-store' }).then(r => r.json()),
     ])
     setData(d)
     setTransporteurs(t)
