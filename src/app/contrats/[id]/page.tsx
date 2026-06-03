@@ -57,6 +57,12 @@ export default function ContratDetailPage() {
     reload()
   }
 
+  async function supprimerFactureFournisseur(factureId: string) {
+    if (!confirm('Supprimer cette facture fournisseur ?')) return
+    await fetch(`/api/factures/fournisseur/${factureId}`, { method: 'DELETE' })
+    reload()
+  }
+
   async function toggleTransporteurContacte(livId: string, current: boolean) {
     await fetch(`/api/livraisons/${livId}`, {
       method: 'PATCH',
@@ -510,7 +516,7 @@ export default function ContratDetailPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50">
-                {['N° Facture', 'N° Pièce Atys', 'Montant HT', 'Montant TTC', 'Mode paiement', 'Date paiement'].map(h => (
+                {['N° Facture', 'N° Pièce Atys', 'Montant HT', 'Montant TTC', 'Mode paiement', 'Date paiement', ''].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
@@ -531,6 +537,13 @@ export default function ContratDetailPage() {
                   <td className="table-cell font-semibold">{formatEuros(f.montant_ttc)}</td>
                   <td className="table-cell">{f.mode_paiement ?? '—'}</td>
                   <td className="table-cell">{formatDate(f.date_paiement)}</td>
+                  <td className="table-cell">
+                    {isAdmin && (
+                      <button onClick={() => supprimerFactureFournisseur(f.id)} className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded" title="Supprimer cette facture">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
