@@ -126,24 +126,37 @@ export default function RecherchePage() {
 
           {results.livraisons?.length > 0 && (
             <ResultGroup title="Livraisons / Pièces" icon={<Truck size={16} />} count={results.livraisons.length}>
-              {results.livraisons.map((l: any) => (
-                <ResultItem key={l.id} href={`/contrats/${l.contrat_achat_id}`}>
-                  <div className="flex flex-wrap gap-2">
-                    {l.piece_fournisseur_numero && (
-                      <span className="badge-appro">{l.piece_fournisseur_prefixe} {l.piece_fournisseur_numero}</span>
-                    )}
-                    {l.piece_client_numero && (
-                      <span className="badge-negoce">{l.piece_client_prefixe} {l.piece_client_numero}</span>
-                    )}
-                    {l.numero_lettre_voiture && (
-                      <span className="badge-clos">CMR {l.numero_lettre_voiture}</span>
-                    )}
-                  </div>
-                  <span className="text-gray-500 text-sm">
-                    {l.ville_chargement && `${l.ville_chargement} → `}{l.ville_destination}
-                  </span>
-                </ResultItem>
-              ))}
+              {results.livraisons.map((l: any) => {
+                const ca = l.contrat_achat ?? null
+                const cv = l.contrat_vente ?? null
+                const details = [
+                  ca?.numero_contrat,
+                  ca?.produit?.nom,
+                  ca?.fournisseur?.nom,
+                  cv?.agriculteur?.nom,
+                  l.ville_chargement && l.ville_destination ? `${l.ville_chargement} → ${l.ville_destination}` : (l.ville_chargement || l.ville_destination),
+                  l.date_reelle ? formatDate(l.date_reelle) : null,
+                ].filter(Boolean).join(' · ')
+                return (
+                  <ResultItem key={l.id} href={`/contrats/${l.contrat_achat_id}`}>
+                    <div className="flex flex-wrap gap-2 items-center">
+                      {l.piece_fournisseur_numero && (
+                        <span className="badge-appro">{l.piece_fournisseur_prefixe} {l.piece_fournisseur_numero}</span>
+                      )}
+                      {l.piece_client_numero && (
+                        <span className="badge-negoce">{l.piece_client_prefixe} {l.piece_client_numero}</span>
+                      )}
+                      {l.numero_lettre_voiture && (
+                        <span className="badge-clos">CMR {l.numero_lettre_voiture}</span>
+                      )}
+                      {l.numero_mise_a_disposition && (
+                        <span className="badge-en_cours">{l.numero_mise_a_disposition}</span>
+                      )}
+                    </div>
+                    {details && <span className="text-gray-500 text-sm">{details}</span>}
+                  </ResultItem>
+                )
+              })}
             </ResultGroup>
           )}
 
