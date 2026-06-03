@@ -203,14 +203,14 @@ export default function ContratDetailPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50">
-                {['N° Contrat', 'Agriculteur', 'Produit', 'Quantité', 'Prix vente', 'Statut', 'Facture client', ''].map(h => (
+                {['N° Contrat', 'Agriculteur', 'Produit', 'Quantité', 'Prix vente', 'Début', 'Fin', 'Statut', 'Facture client', ''].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {(contrat.contrats_vente ?? []).length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-6 text-center text-gray-400 text-sm">Aucun contrat de vente lié</td></tr>
+                <tr><td colSpan={9} className="px-4 py-6 text-center text-gray-400 text-sm">Aucun contrat de vente lié</td></tr>
               )}
               {(contrat.contrats_vente ?? []).map((cv: any) => (
                 <tr key={cv.id} className="table-row">
@@ -219,6 +219,8 @@ export default function ContratDetailPage() {
                   <td className="table-cell">{cv.produit?.nom ?? '—'}</td>
                   <td className="table-cell font-semibold">{formatTonnes(cv.quantite)}</td>
                   <td className="table-cell">{formatEurosParTonne(cv.prix_vente)}</td>
+                  <td className="table-cell text-sm">{cv.date_debut ? formatDate(cv.date_debut) : <span className="text-gray-300">—</span>}</td>
+                  <td className="table-cell text-sm">{cv.date_fin ? formatDate(cv.date_fin) : <span className="text-gray-300">—</span>}</td>
                   <td className="table-cell"><BadgeStatut statut={cv.statut} /></td>
                   <td className="table-cell text-xs">
                     {cv.factures_client?.length > 0

@@ -9,7 +9,7 @@ interface Props {
 
 export default function NouvelleVenteSiloModal({ onClose, onSaved }: Props) {
   const [form, setForm] = useState({
-    numero_contrat: '', produit_id: '', agriculteur_id: '', prix_vente: '', quantite: '', notes: '',
+    numero_contrat: '', produit_id: '', agriculteur_id: '', prix_vente: '', quantite: '', notes: '', date_debut: '', date_fin: '',
   })
   const [produits, setProduits] = useState<any[]>([])
   const [agriculteurs, setAgriculteurs] = useState<any[]>([])
@@ -39,6 +39,8 @@ export default function NouvelleVenteSiloModal({ onClose, onSaved }: Props) {
       prix_vente: parseFloat(form.prix_vente),
       quantite: parseFloat(form.quantite),
       notes: form.notes || null,
+      date_debut: form.date_debut || null,
+      date_fin: form.date_fin || null,
     }
     const res = await fetch('/api/ventes', {
       method: 'POST',
@@ -82,6 +84,14 @@ export default function NouvelleVenteSiloModal({ onClose, onSaved }: Props) {
           <div>
             <label className="label">Quantité (t) *</label>
             <input type="number" step="0.001" className="input" value={form.quantite} onChange={f('quantite')} required />
+          </div>
+          <div>
+            <label className="label">Date début contrat</label>
+            <input type="date" className="input" value={form.date_debut} onChange={f('date_debut')} />
+          </div>
+          <div>
+            <label className="label">Date fin contrat</label>
+            <input type="date" className="input" value={form.date_fin} onChange={f('date_fin')} />
           </div>
           <div className="col-span-2">
             <label className="label">Notes</label>

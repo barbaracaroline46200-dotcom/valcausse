@@ -66,6 +66,8 @@ export default function VenteDetailPage() {
             { label: 'Produit', value: vente.produit?.nom ?? '—' },
             { label: 'Quantité', value: formatTonnes(vente.quantite) },
             { label: 'Prix vente', value: formatEurosParTonne(vente.prix_vente) },
+            ...(vente.date_debut ? [{ label: 'Date début', value: formatDate(vente.date_debut) }] : []),
+            ...(vente.date_fin ? [{ label: 'Date fin', value: formatDate(vente.date_fin) }] : []),
           ].map(({ label, value }) => (
             <div key={label} className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs text-gray-400 mb-0.5">{label}</p>
@@ -180,6 +182,8 @@ function EditVenteModal({ vente, onClose, onSaved }: { vente: any; onClose: () =
     quantite: String(vente.quantite ?? ''),
     statut: vente.statut ?? 'en_cours',
     notes: vente.notes ?? '',
+    date_debut: vente.date_debut ?? '',
+    date_fin: vente.date_fin ?? '',
   })
   const [agriculteurs, setAgriculteurs] = useState<any[]>([])
   const [agriculteurId, setAgriculteurId] = useState(vente.agriculteur_id ?? '')
@@ -203,6 +207,8 @@ function EditVenteModal({ vente, onClose, onSaved }: { vente: any; onClose: () =
         quantite: parseFloat(form.quantite),
         statut: form.statut,
         notes: form.notes || null,
+        date_debut: form.date_debut || null,
+        date_fin: form.date_fin || null,
       }),
     })
     if (res.ok) { onSaved() } else { const d = await res.json(); setError(d.error ?? 'Erreur') }
@@ -239,6 +245,14 @@ function EditVenteModal({ vente, onClose, onSaved }: { vente: any; onClose: () =
               <option value="clos">Clos</option>
               <option value="annule">Annulé</option>
             </select>
+          </div>
+          <div>
+            <label className="label">Date début contrat</label>
+            <input type="date" className="input" value={form.date_debut} onChange={e => setForm(p => ({ ...p, date_debut: e.target.value }))} />
+          </div>
+          <div>
+            <label className="label">Date fin contrat</label>
+            <input type="date" className="input" value={form.date_fin} onChange={e => setForm(p => ({ ...p, date_fin: e.target.value }))} />
           </div>
           <div className="col-span-2">
             <label className="label">Notes</label>
