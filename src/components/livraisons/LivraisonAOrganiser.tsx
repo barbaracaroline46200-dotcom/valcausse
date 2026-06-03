@@ -1,15 +1,18 @@
 'use client'
 import { useState } from 'react'
+import { Trash2 } from 'lucide-react'
 import { formatTonnes, formatMois } from '@/lib/annee-agricole'
 
 interface Props {
   livraison: any
   moisCourant: string
   moisSuivant: string
+  isAdmin?: boolean
   onConfirme: () => void  // appelé quand transporteur_contacte → reload dashboard
+  onDelete?: () => void
 }
 
-export default function LivraisonAOrganiser({ livraison: l, moisCourant, moisSuivant, onConfirme }: Props) {
+export default function LivraisonAOrganiser({ livraison: l, moisCourant, moisSuivant, isAdmin, onConfirme, onDelete }: Props) {
   // État local propre à cette livraison — initialisé depuis le serveur, géré localement
   const [agri, setAgri] = useState(!!l.agriculteur_contacte)
   const [pdf, setPdf] = useState(!!l.pdf_envoye)
@@ -99,7 +102,14 @@ export default function LivraisonAOrganiser({ livraison: l, moisCourant, moisSui
           <span className="text-gray-400">·</span>
           <span className="text-sm text-gray-500">{ca?.transporteur?.nom ?? '—'}</span>
         </div>
-        <a href={`/contrats/${ca?.id}`} className="text-xs text-green-700 hover:underline shrink-0">{ca?.numero_contrat}</a>
+        <div className="flex items-center gap-2 shrink-0">
+          <a href={`/contrats/${ca?.id}`} className="text-xs text-green-700 hover:underline">{ca?.numero_contrat}</a>
+          {isAdmin && onDelete && (
+            <button onClick={onDelete} className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded" title="Supprimer la livraison">
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 3 étapes */}

@@ -86,6 +86,13 @@ export default function DashboardPage() {
       .then(setLivraisonsTransporteur)
   }, [selectedTransporteur, selectedMois])
 
+  async function deleteLivraison(livraisonId: string) {
+    if (!window.confirm('Supprimer cette livraison ? Cette action est irréversible.')) return
+    await fetch(`/api/livraisons/${livraisonId}`, { method: 'DELETE' })
+    await reloadData()
+    showToast('Livraison supprimée')
+  }
+
   async function toggleTransporteurContacte(livraisonId: string, current: boolean) {
     await fetch(`/api/livraisons/${livraisonId}`, {
       method: 'PATCH',
@@ -262,10 +269,9 @@ export default function DashboardPage() {
                   livraison={l}
                   moisCourant={moisCourant}
                   moisSuivant={moisSuivant}
-                  onConfirme={async () => {
-                    const d = await fetch('/api/dashboard').then(r => r.json())
-                    setData(d)
-                  }}
+                  isAdmin={isAdmin}
+                  onConfirme={async () => { await reloadData() }}
+                  onDelete={() => deleteLivraison(l.id)}
                 />
               ))}
             </div>
@@ -287,7 +293,7 @@ export default function DashboardPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
-                {['Produit', 'Agriculteur', 'Transporteur', 'Date livraison', 'Contact', 'Délai', ''].map(h => (
+                {['Produit', 'Agriculteur', 'Transporteur', 'Date livraison', 'Contact', 'Délai', '', ''].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
@@ -328,6 +334,13 @@ export default function DashboardPage() {
                         : <span className="text-xs text-red-600 font-medium underline">Saisir CMR →</span>
                       }
                     </td>
+                    {isAdmin && (
+                      <td className="table-cell" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => deleteLivraison(l.id)} className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded" title="Supprimer la livraison">
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 )
               })}
@@ -350,7 +363,7 @@ export default function DashboardPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
-                {['Date', 'Produit', 'Contrat', 'Agriculteur', 'Tonnes', 'Transport facturé', 'Fournisseur facturé'].map(h => (
+                {['Date', 'Produit', 'Contrat', 'Agriculteur', 'Tonnes', 'Transport facturé', 'Fournisseur facturé', ''].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
@@ -381,6 +394,13 @@ export default function DashboardPage() {
                         : <button onClick={() => setFactureFournisseurModal(l)} className="badge-alerte cursor-pointer hover:opacity-80 transition-opacity">⏳ Saisir →</button>
                       }
                     </td>
+                    {isAdmin && (
+                      <td className="table-cell text-center">
+                        <button onClick={() => deleteLivraison(l.id)} className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded" title="Supprimer la livraison">
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 )
               })}
