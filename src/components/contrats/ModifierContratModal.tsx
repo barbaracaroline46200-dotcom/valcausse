@@ -23,6 +23,7 @@ export default function ModifierContratModal({ contrat, onClose, onSaved }: Prop
     prix_transport_prevu: String(contrat.prix_transport_prevu ?? '0'),
     point_chargement: contrat.point_chargement ?? '',
     ville_chargement: contrat.ville_chargement ?? '',
+    contact_enlevement: contrat.contact_enlevement ?? '',
     date_conclusion: contrat.date_conclusion ?? '',
     date_debut: contrat.date_debut ?? '',
     date_fin: contrat.date_fin ?? '',
@@ -226,6 +227,11 @@ export default function ModifierContratModal({ contrat, onClose, onSaved }: Prop
               <label className="label text-xs">Adresse complète (optionnel)</label>
               <input className="input" value={form.point_chargement} onChange={f('point_chargement')} placeholder="Lieu-dit, route..." />
             </div>
+          </div>
+
+          <div className="mb-3">
+            <label className="label text-xs">Contact pour prise de RDV enlèvement <span className="text-gray-400 font-normal">(email ou téléphone — apparaît dans le PDF transporteur)</span></label>
+            <input className="input" value={form.contact_enlevement} onChange={f('contact_enlevement')} placeholder="Ex : 06 12 34 56 78 ou contact@fournisseur.fr" />
           </div>
 
           {/* Adresses supplémentaires */}

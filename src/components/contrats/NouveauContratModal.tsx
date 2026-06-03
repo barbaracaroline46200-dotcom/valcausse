@@ -20,7 +20,7 @@ export default function NouveauContratModal({ onClose, onSaved }: Props) {
     numero_contrat: '', famille: 'negoce', produit_id: '', fournisseur_id: '',
     courtier_id: '', reference_fournisseur: '',
     prix_achat: '', quantite_totale: '', transporteur_id: '', prix_transport_prevu: '0',
-    point_chargement: '', ville_chargement: '', date_conclusion: '', date_debut: '', date_fin: '',
+    point_chargement: '', ville_chargement: '', contact_enlevement: '', date_conclusion: '', date_debut: '', date_fin: '',
     notes: '', base_prix: '', mbm_autorise: false,
   })
   const [livraisons, setLivraisons] = useState<LivraisonPlanifiee[]>([])
@@ -174,6 +174,10 @@ export default function NouveauContratModal({ onClose, onSaved }: Props) {
           <div>
             <label className="label">Adresse complète (optionnel)</label>
             <input className="input" value={form.point_chargement} onChange={f('point_chargement')} placeholder="Lieu-dit, route..." />
+          </div>
+          <div className="col-span-2">
+            <label className="label">Contact pour prise de RDV enlèvement <span className="text-gray-400 font-normal">(email ou téléphone — apparaît dans le PDF transporteur)</span></label>
+            <input className="input" value={form.contact_enlevement} onChange={f('contact_enlevement')} placeholder="Ex : 06 12 34 56 78 ou contact@fournisseur.fr" />
           </div>
           <div>
             <label className="label">Date conclusion</label>
