@@ -137,13 +137,12 @@ export async function GET() {
   const facturesManquantes: any[] = []
   for (const ca of (contratsAvecVentes ?? [])) {
     for (const cv of (ca.contrats_vente ?? [])) {
-      // Livraisons affectées à ce contrat de vente
-      const livsCv = (ca.livraisons ?? []).filter((l: any) => l.contrat_vente_id === cv.id)
+      // Livraisons réalisées affectées à ce contrat de vente
+      const livsCv = (ca.livraisons ?? []).filter(
+        (l: any) => l.contrat_vente_id === cv.id && l.type === 'realisee'
+      )
       if (livsCv.length === 0) continue
-      // Toutes réalisées ?
-      const toutesRealisees = livsCv.every((l: any) => l.type === 'realisee')
-      if (!toutesRealisees) continue
-      // Dernière livraison > 30 jours ?
+      // Dernière livraison réalisée > 30 jours ?
       const derniere = livsCv
         .map((l: any) => l.date_reelle)
         .filter(Boolean)
