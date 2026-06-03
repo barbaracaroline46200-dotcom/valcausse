@@ -62,8 +62,7 @@ export async function GET(req: NextRequest) {
             piece_client_prefixe, piece_client_numero, numero_lettre_voiture,
             contrat_achat:contrats_achat(id, numero_contrat, famille, produit:produits(nom), fournisseur:fournisseurs(nom))
           `)
-          .gte('quantite_reelle', qNumber - 0.5)
-          .lte('quantite_reelle', qNumber + 0.5)
+          .eq('quantite_reelle', qNumber)
           .eq('type', 'realisee')
           .order('date_reelle', { ascending: false })
           .limit(15)
