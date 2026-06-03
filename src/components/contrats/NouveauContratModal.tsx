@@ -8,6 +8,8 @@ interface Props {
   onSaved: () => void
 }
 
+const TONNES_PAR_LIVRAISON = 30
+
 interface LivraisonPlanifiee {
   mois: string
   quantite: string
