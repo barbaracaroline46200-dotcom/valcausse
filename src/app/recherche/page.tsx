@@ -87,6 +87,7 @@ export default function RecherchePage() {
                   </div>
                   <span className="text-gray-500 text-sm">
                     {l.contrat_achat ? `${l.contrat_achat.produit?.nom} · ${l.contrat_achat.fournisseur?.nom}` : ''}
+                    {l.contrat_vente?.agriculteur?.nom ? ` · 🌾 ${l.contrat_vente.agriculteur.nom}` : ''}
                     {l.date_reelle ? ` · ${formatDate(l.date_reelle)}` : ''}
                     {l.ville_chargement ? ` · ${l.ville_chargement}` : ''}
                     {l.ville_destination ? ` → ${l.ville_destination}` : ''}

@@ -56,11 +56,12 @@ export async function GET(req: NextRequest) {
       ? supabase
           .from('livraisons')
           .select(`
-            id, contrat_achat_id, quantite_reelle, quantite_prevue, type,
+            id, contrat_achat_id, contrat_vente_id, quantite_reelle, quantite_prevue, type,
             date_reelle, mois_prevu, ville_chargement, ville_destination,
             piece_fournisseur_prefixe, piece_fournisseur_numero,
             piece_client_prefixe, piece_client_numero, numero_lettre_voiture,
-            contrat_achat:contrats_achat(id, numero_contrat, famille, produit:produits(nom), fournisseur:fournisseurs(nom))
+            contrat_achat:contrats_achat(id, numero_contrat, famille, produit:produits(nom), fournisseur:fournisseurs(nom)),
+            contrat_vente:contrats_vente(id, agriculteur:agriculteurs(nom))
           `)
           .eq('quantite_reelle', qNumber)
           .eq('type', 'realisee')
