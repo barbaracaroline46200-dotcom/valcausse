@@ -11,6 +11,7 @@ import Link from 'next/link'
 import AjouterLivraisonModal from '@/components/livraisons/AjouterLivraisonModal'
 import RealiserLivraisonModal from '@/components/livraisons/RealiserLivraisonModal'
 import ModifierLivraisonModal from '@/components/livraisons/ModifierLivraisonModal'
+import ModifierLivraisonRealiseeModal from '@/components/livraisons/ModifierLivraisonRealiseeModal'
 import ModifierContratModal from '@/components/contrats/ModifierContratModal'
 import ModifierVenteModal from '@/components/contrats/ModifierVenteModal'
 import LierVenteModal from '@/components/contrats/LierVenteModal'
@@ -28,6 +29,7 @@ export default function ContratDetailPage() {
   const [showLierVente, setShowLierVente] = useState(false)
   const [showNouvelleVente, setShowNouvelleVente] = useState(false)
   const [modifierLiv, setModifierLiv] = useState<any>(null)
+  const [modifierLivRealisee, setModifierLivRealisee] = useState<any>(null)
   const [showModifierContrat, setShowModifierContrat] = useState(false)
   const [modifierVente, setModifierVente] = useState<any>(null)
 
@@ -384,7 +386,7 @@ export default function ContratDetailPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50/50">
-                    {['Date réelle', 'Tonnes réelles', 'Ville enlèv.', 'Ville dest.', 'CMR', 'Pièce fourn.', 'Pièce client', 'Transport prévu', 'Transport réel', 'Écart', 'Facturé'].map(h => (
+                    {['Date réelle', 'Tonnes réelles', 'Ville enlèv.', 'Ville dest.', 'CMR', 'Pièce fourn.', 'Pièce client', 'Transport prévu', 'Transport réel', 'Écart', 'Facturé', ''].map(h => (
                       <th key={h} className="table-header">{h}</th>
                     ))}
                   </tr>
@@ -427,6 +429,13 @@ export default function ContratDetailPage() {
                           {l.transport_facture
                             ? <span className="badge-clos text-xs">✓</span>
                             : <span className="badge-en_cours text-xs">Non</span>}
+                        </td>
+                        <td className="table-cell">
+                          {isAdmin && (
+                            <button onClick={() => setModifierLivRealisee(l)} className="btn-secondary text-xs py-1 px-2">
+                              <Pencil size={11} />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     )
@@ -551,6 +560,14 @@ export default function ContratDetailPage() {
           contrat={contrat}
           onClose={() => setModifierLiv(null)}
           onSaved={() => { setModifierLiv(null); reload() }}
+        />
+      )}
+      {modifierLivRealisee && (
+        <ModifierLivraisonRealiseeModal
+          livraison={modifierLivRealisee}
+          contrat={contrat}
+          onClose={() => setModifierLivRealisee(null)}
+          onSaved={() => { setModifierLivRealisee(null); reload() }}
         />
       )}
       {modifierVente && (

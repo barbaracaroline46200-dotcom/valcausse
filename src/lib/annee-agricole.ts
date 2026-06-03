@@ -40,7 +40,7 @@ export function formatDate(dateStr?: string | null): string {
 
 export function formatTonnes(n?: number | null): string {
   if (n == null) return '—'
-  return n.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 3 }) + ' t'
+  return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' t'
 }
 
 export function formatEuros(n?: number | null): string {
