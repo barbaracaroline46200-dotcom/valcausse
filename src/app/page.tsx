@@ -10,6 +10,7 @@ import LivraisonAOrganiser from '@/components/livraisons/LivraisonAOrganiser'
 import RealiserLivraisonModal from '@/components/livraisons/RealiserLivraisonModal'
 import SaisirFactureTransportModal from '@/components/livraisons/SaisirFactureTransportModal'
 import SaisirFactureFournisseurModal from '@/components/livraisons/SaisirFactureFournisseurModal'
+import GererFacturesClientModal from '@/components/livraisons/GererFacturesClientModal'
 import { useAdmin } from '@/components/ui/AdminProvider'
 import Link from 'next/link'
 
@@ -30,6 +31,7 @@ export default function DashboardPage() {
   const [cmrModal, setCmrModal] = useState<any>(null)
   const [factureTransportModal, setFactureTransportModal] = useState<any>(null)
   const [factureFournisseurModal, setFactureFournisseurModal] = useState<any>(null)
+  const [facturesClientModal, setFacturesClientModal] = useState<any>(null)
   const [agendaToday, setAgendaToday] = useState<any[]>([])
 
   const reloadData = useCallback(async () => {
@@ -416,7 +418,7 @@ export default function DashboardPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
-                {['Agriculteur', 'Produit', 'Contrat vente', 'Dernière livraison', 'Factures attendues', 'Mois concernés'].map(h => (
+                {['Agriculteur', 'Produit', 'Contrat vente', 'Dernière livraison', 'Mois concernés', ''].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
@@ -432,13 +434,16 @@ export default function DashboardPage() {
                     </a>
                   </td>
                   <td className="table-cell">{formatDate(item.derniere_livraison)}</td>
-                  <td className="table-cell text-center">
-                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-full text-white text-xs font-bold" style={{ backgroundColor: '#7B2820' }}>
-                      {item.nb_factures_attendues}
-                    </span>
-                  </td>
                   <td className="table-cell text-sm text-gray-600">
                     {item.mois_livraison.map((m: string) => formatMois(m + '-01')).join(', ')}
+                  </td>
+                  <td className="table-cell text-center">
+                    <button
+                      onClick={() => setFacturesClientModal(item)}
+                      className="badge-alerte cursor-pointer hover:opacity-80 transition-opacity"
+                    >
+                      ⏳ Saisir factures →
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -613,6 +618,22 @@ export default function DashboardPage() {
         onClose={() => setFactureFournisseurModal(null)}
         onSaved={() => {
           setFactureFournisseurModal(null)
+          reloadData()
+        }}
+      />
+    )}
+    {facturesClientModal && (
+      <GererFacturesClientModal
+        contratVente={{
+          id: facturesClientModal.contrat_vente_id,
+          numero_contrat: facturesClientModal.contrat_vente_numero,
+          agriculteur: facturesClientModal.agriculteur,
+          factures_client: facturesClientModal.factures_client ?? [],
+        }}
+        contratAchatId={facturesClientModal.contrat_achat_id}
+        onClose={() => setFacturesClientModal(null)}
+        onSaved={() => {
+          setFacturesClientModal(null)
           reloadData()
         }}
       />

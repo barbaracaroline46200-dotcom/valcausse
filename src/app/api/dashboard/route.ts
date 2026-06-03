@@ -130,13 +130,15 @@ export async function GET() {
     .select(`
       id, numero_contrat,
       produit:produits(nom),
-      contrats_vente(id, numero_contrat, agriculteur:agriculteurs(nom), factures_client(id)),
+      contrats_vente(id, numero_contrat, statut, agriculteur:agriculteurs(nom), factures_client(id,numero_facture_logiciel,montant_ht,montant_ttc,mode_paiement,date_paiement,created_at)),
       livraisons(id, type, date_reelle, contrat_vente_id)
     `)
 
   const facturesManquantes: any[] = []
   for (const ca of (contratsAvecVentes ?? [])) {
     for (const cv of (ca.contrats_vente ?? [])) {
+      // Contrat déjà clos → plus besoin
+      if (cv.statut === 'clos') continue
       // Livraisons réalisées affectées à ce contrat de vente
       const livsCv = (ca.livraisons ?? []).filter(
         (l: any) => l.contrat_vente_id === cv.id && l.type === 'realisee'
@@ -149,9 +151,7 @@ export async function GET() {
         .sort()
         .at(-1)
       if (!derniere || derniere > cutoff30) continue
-      // Pas encore de facture client ?
-      if ((cv.factures_client ?? []).length > 0) continue
-      // Nombre de factures attendues = mois distincts de livraison
+      // Mois distincts de livraison
       const moisDistincts = new Set(livsCv.map((l: any) => l.date_reelle?.slice(0, 7)).filter(Boolean))
       facturesManquantes.push({
         contrat_achat_id: ca.id,
@@ -160,6 +160,7 @@ export async function GET() {
         contrat_vente_id: cv.id,
         contrat_vente_numero: cv.numero_contrat,
         agriculteur: cv.agriculteur,
+        factures_client: cv.factures_client ?? [],
         derniere_livraison: derniere,
         nb_factures_attendues: moisDistincts.size,
         mois_livraison: [...moisDistincts].sort(),
