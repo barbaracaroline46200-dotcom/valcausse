@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Loader2, ArrowLeft, AlertTriangle, Plus, FileDown, Edit, CheckCircle, Pencil, Trash2 } from 'lucide-react'
+import { Loader2, ArrowLeft, AlertTriangle, Plus, FileDown, Edit, CheckCircle, Pencil, Trash2, Link2Off } from 'lucide-react'
 import { BadgeFamille, BadgeStatut } from '@/components/ui/Badge'
 import ProgressBar from '@/components/ui/ProgressBar'
 import { formatDate, formatTonnes, formatEurosParTonne, formatEuros } from '@/lib/annee-agricole'
@@ -236,6 +236,21 @@ export default function ContratDetailPage() {
                       <div className="flex gap-1">
                         <button onClick={() => setModifierVente(cv)} className="btn-secondary text-xs py-1 px-2" title="Modifier">
                           <Pencil size={12} />
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`Délier "${cv.numero_contrat}" de ce contrat d'achat ?\nLe contrat de vente sera conservé mais sans contrat d'achat associé.`)) return
+                            await fetch(`/api/ventes/${cv.id}`, {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ contrat_achat_id: null }),
+                            })
+                            reload()
+                          }}
+                          className="btn-secondary text-xs py-1 px-2 text-orange-600 hover:bg-orange-50"
+                          title="Délier ce contrat de vente"
+                        >
+                          <Link2Off size={12} />
                         </button>
                         <button onClick={async () => {
                           if (!confirm(`Supprimer le contrat de vente ${cv.numero_contrat} ?`)) return
