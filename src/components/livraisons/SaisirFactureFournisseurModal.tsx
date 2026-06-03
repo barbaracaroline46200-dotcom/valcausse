@@ -65,11 +65,18 @@ export default function SaisirFactureFournisseurModal({ livraison, onClose, onSa
     const facture = await res.json()
 
     // Lier la facture à la livraison
-    await fetch(`/api/livraisons/${livraison.id}`, {
+    const patchRes = await fetch(`/api/livraisons/${livraison.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ facture_fournisseur_id: facture.id }),
     })
+
+    if (!patchRes.ok) {
+      const d = await patchRes.json()
+      setError(d.error ?? 'Facture créée mais liaison à la livraison échouée')
+      setSaving(false)
+      return
+    }
 
     onSaved()
     setSaving(false)

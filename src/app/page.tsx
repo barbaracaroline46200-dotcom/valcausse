@@ -650,7 +650,7 @@ export default function DashboardPage() {
         onClose={() => setFactureTransportModal(null)}
         onSaved={async () => {
           setFactureTransportModal(null)
-          const d = await fetch('/api/dashboard').then(r => r.json()); setData(d)
+          const d = await fetch('/api/dashboard', { cache: 'no-store' }).then(r => r.json()); setData(d)
         }}
       />
     )}
@@ -660,7 +660,7 @@ export default function DashboardPage() {
         onClose={() => setFactureFournisseurModal(null)}
         onSaved={async () => {
           setFactureFournisseurModal(null)
-          const d = await fetch('/api/dashboard').then(r => r.json()); setData(d)
+          const d = await fetch('/api/dashboard', { cache: 'no-store' }).then(r => r.json()); setData(d)
         }}
       />
     )}
