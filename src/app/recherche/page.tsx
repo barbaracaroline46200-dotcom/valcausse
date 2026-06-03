@@ -65,35 +65,37 @@ export default function RecherchePage() {
         <div className="space-y-5">
           {results.livraisonsParPoids?.length > 0 && (
             <ResultGroup title="Livraisons par poids réalisé" icon={<Scale size={16} />} count={results.livraisonsParPoids.length}>
-              {results.livraisonsParPoids.map((l: any) => (
-                <ResultItem key={l.id} href={`/contrats/${l.contrat_achat_id}`}>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-blue-700">{formatTonnes(l.quantite_reelle)}</span>
-                    {l.contrat_achat && (
-                      <>
-                        <span className="font-semibold text-green-700">{l.contrat_achat.numero_contrat}</span>
-                        <BadgeFamille famille={l.contrat_achat.famille} />
-                      </>
-                    )}
-                    {l.piece_fournisseur_numero && (
-                      <span className="badge-appro text-xs">{l.piece_fournisseur_prefixe} {l.piece_fournisseur_numero}</span>
-                    )}
-                    {l.piece_client_numero && (
-                      <span className="badge-negoce text-xs">{l.piece_client_prefixe} {l.piece_client_numero}</span>
-                    )}
-                    {l.numero_lettre_voiture && (
-                      <span className="badge-clos text-xs">CMR {l.numero_lettre_voiture}</span>
-                    )}
-                  </div>
-                  <span className="text-gray-500 text-sm">
-                    {l.contrat_achat ? `${l.contrat_achat.produit?.nom} · ${l.contrat_achat.fournisseur?.nom}` : ''}
-                    {l.contrat_vente?.agriculteur?.nom ? ` · 🌾 ${l.contrat_vente.agriculteur.nom}${l.contrat_vente.numero_contrat ? ` (${l.contrat_vente.numero_contrat})` : ''}` : ''}
-                    {l.date_reelle ? ` · ${formatDate(l.date_reelle)}` : ''}
-                    {l.ville_chargement ? ` · ${l.ville_chargement}` : ''}
-                    {l.ville_destination ? ` → ${l.ville_destination}` : ''}
-                  </span>
-                </ResultItem>
-              ))}
+              {(results.livraisonsParPoids ?? []).map((l: any) => {
+                const ca = l.contrat_achat ?? null
+                const cv = l.contrat_vente ?? null
+                return (
+                  <ResultItem key={l.id} href={ca ? `/contrats/${ca.id}` : `/contrats/${l.contrat_achat_id}`}>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-blue-700">{formatTonnes(l.quantite_reelle)}</span>
+                      {ca?.numero_contrat && <span className="font-semibold text-green-700">{ca.numero_contrat}</span>}
+                      {ca?.famille && <BadgeFamille famille={ca.famille} />}
+                      {l.piece_fournisseur_numero && (
+                        <span className="badge-appro text-xs">{l.piece_fournisseur_prefixe} {l.piece_fournisseur_numero}</span>
+                      )}
+                      {l.piece_client_numero && (
+                        <span className="badge-negoce text-xs">{l.piece_client_prefixe} {l.piece_client_numero}</span>
+                      )}
+                      {l.numero_lettre_voiture && (
+                        <span className="badge-clos text-xs">CMR {l.numero_lettre_voiture}</span>
+                      )}
+                    </div>
+                    <span className="text-gray-500 text-sm">
+                      {[
+                        ca?.produit?.nom,
+                        ca?.fournisseur?.nom,
+                        cv?.agriculteur?.nom ? `🌾 ${cv.agriculteur.nom}${cv.numero_contrat ? ` (${cv.numero_contrat})` : ''}` : null,
+                        l.date_reelle ? formatDate(l.date_reelle) : null,
+                        l.ville_chargement && l.ville_destination ? `${l.ville_chargement} → ${l.ville_destination}` : (l.ville_destination ?? l.ville_chargement ?? null),
+                      ].filter(Boolean).join(' · ')}
+                    </span>
+                  </ResultItem>
+                )
+              })}
             </ResultGroup>
           )}
 
