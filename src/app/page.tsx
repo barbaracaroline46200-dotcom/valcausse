@@ -663,8 +663,7 @@ export default function DashboardPage() {
         onClose={() => setCmrModal(null)}
         onSaved={async () => {
           setCmrModal(null)
-          const d = await fetch('/api/dashboard').then(r => r.json())
-          setData(d)
+          fetch('/api/dashboard').then(r => r.json()).then(d => setData(d))
         }}
       />
     )}

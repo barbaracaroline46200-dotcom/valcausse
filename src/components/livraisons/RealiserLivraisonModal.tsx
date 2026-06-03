@@ -76,8 +76,8 @@ export default function RealiserLivraisonModal({ livraison, contrat, onClose, on
       let msg = 'Erreur lors de l\'enregistrement'
       try { const d = await res.json(); msg = d.error ?? msg } catch {}
       setError(msg)
-      setSaving(false)
     }
+    setSaving(false)
   }
 
   const prevu = livraison.quantite_prevue ? livraison.quantite_prevue * contrat.prix_transport_prevu : null
