@@ -45,7 +45,9 @@ export default function RealiserLivraisonModal({ livraison, contrat, onClose, on
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
+    if (!form.date_reelle) { setError('La date réelle est obligatoire'); return }
     setSaving(true)
+    setError('')
     const body = {
       type: 'realisee',
       date_reelle: form.date_reelle,
@@ -68,11 +70,14 @@ export default function RealiserLivraisonModal({ livraison, contrat, onClose, on
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
-    if (res.ok) { onSaved() } else {
-      const d = await res.json()
-      setError(d.error ?? 'Erreur')
+    if (res.ok) {
+      onSaved()
+    } else {
+      let msg = 'Erreur lors de l\'enregistrement'
+      try { const d = await res.json(); msg = d.error ?? msg } catch {}
+      setError(msg)
+      setSaving(false)
     }
-    setSaving(false)
   }
 
   const prevu = livraison.quantite_prevue ? livraison.quantite_prevue * contrat.prix_transport_prevu : null
@@ -88,7 +93,7 @@ export default function RealiserLivraisonModal({ livraison, contrat, onClose, on
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="label">Date réelle *</label>
-            <input type="date" className="input" value={form.date_reelle} onChange={f('date_reelle')} required />
+            <input type="date" className={`input ${!form.date_reelle ? 'border-red-300 bg-red-50' : ''}`} value={form.date_reelle} onChange={f('date_reelle')} required />
           </div>
           <div>
             <label className="label">Quantité réelle (t) *</label>
