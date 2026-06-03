@@ -37,12 +37,13 @@ export async function GET() {
       )
     `)
     .eq('type', 'planifiee')
-    .eq('transporteur_contacte', false)
     .order('mois_prevu', { ascending: true })
 
-  // Filtrer en JS pour la fenêtre temporelle (évite les problèmes de filtre PostgREST sur les dates)
+  // Filtrer en JS (les filtres PostgREST sur booléens et dates sont peu fiables sur Vercel)
   const livraisonsPlanifiees = (livraisonsPlanifieesRaw ?? []).filter(
-    (l: any) => l.mois_prevu && l.mois_prevu.slice(0, 10) <= moisFin
+    (l: any) =>
+      !l.transporteur_contacte &&                        // pas encore confirmé
+      l.mois_prevu && l.mois_prevu.slice(0, 10) <= moisFin  // dans la fenêtre temporelle
   )
 
   // CMR en attente :
@@ -67,12 +68,12 @@ export async function GET() {
     .eq('type', 'realisee')
     .is('numero_lettre_voiture', null)
 
-  // Planifiées avec transporteur_contacte = true → en attente de CMR
-  const { data: cmrPlanifiees } = await supabase
+  // Planifiées → filtrage JS (les filtres PostgREST booléens sont peu fiables sur Vercel)
+  const { data: cmrPlanifieesAll } = await supabase
     .from('livraisons')
     .select(cmrSelect)
     .eq('type', 'planifiee')
-    .eq('transporteur_contacte', true)
+  const cmrPlanifiees = (cmrPlanifieesAll ?? []).filter((l: any) => !!l.transporteur_contacte)
 
   // Dédoublonnage par id
   const cmrMap = new Map<string, any>()
