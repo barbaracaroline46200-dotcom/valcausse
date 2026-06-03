@@ -603,7 +603,7 @@ export default function DashboardPage() {
         onClose={() => setFactureTransportModal(null)}
         onSaved={() => {
           setFactureTransportModal(null)
-          fetch('/api/dashboard', { cache: 'no-store' }).then(r => r.json()).then(d => setData(d))
+          reloadData()
         }}
       />
     )}
@@ -613,7 +613,7 @@ export default function DashboardPage() {
         onClose={() => setFactureFournisseurModal(null)}
         onSaved={() => {
           setFactureFournisseurModal(null)
-          fetch('/api/dashboard', { cache: 'no-store' }).then(r => r.json()).then(d => setData(d))
+          reloadData()
         }}
       />
     )}

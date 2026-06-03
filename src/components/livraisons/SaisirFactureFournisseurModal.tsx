@@ -125,9 +125,8 @@ export default function SaisirFactureFournisseurModal({ livraison, onClose, onSa
             <select className="input" value={form.mode_paiement} onChange={f('mode_paiement')}>
               <option value="">— Non défini —</option>
               <option value="virement">Virement</option>
-              <option value="cheque">Chèque</option>
               <option value="prelevement">Prélèvement</option>
-              <option value="especes">Espèces</option>
+              <option value="lcr">LCR</option>
             </select>
           </div>
           <div>

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { getAnneeAgricoleISO } from '@/lib/annee-agricole'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   const supabase = getServiceClient()
   const { debut, fin } = getAnneeAgricoleISO()
