@@ -243,26 +243,34 @@ export default function DashboardPage() {
                 const isProchain = moisSuivant && moisLiv >= moisSuivant.slice(0, 7)
                 const step1ok = !!(l.agriculteur_contacte || l.date_souhaitee || l.semaine_souhaitee)
                 const step2ok = step1ok && !!l.pdf_envoye
-                const step3ok = !!(l.date_prevue || l.semaine_prevue)
+                const step3ok = !!l.transporteur_contacte
                 // Étape active = la première non complète
                 const etapeActive = step3ok ? 0 : step2ok ? 3 : step1ok ? 2 : 1
 
-                // Mise à jour optimiste : on met à jour l'état local IMMÉDIATEMENT,
-                // puis on envoie le PATCH en arrière-plan (pas besoin de recharger tout le dashboard)
+                // Mise à jour optimiste pour étapes 1 et 2 (pas de changement de liste)
                 function patchLiv(patch: object) {
-                  // 1. Mise à jour optimiste immédiate dans le state local
                   setData((prev: any) => ({
                     ...prev,
                     livraisonsPlanifiees: prev.livraisonsPlanifiees.map((liv: any) =>
                       liv.id === l.id ? { ...liv, ...patch } : liv
                     )
                   }))
-                  // 2. Sync serveur en arrière-plan
                   fetch(`/api/livraisons/${l.id}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(patch),
                   })
+                }
+
+                // Quand transporteur confirmé → PATCH + reload complet (la fiche passe en CMR)
+                async function confirmerTransporteur(valeur: boolean) {
+                  await fetch(`/api/livraisons/${l.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ transporteur_contacte: valeur }),
+                  })
+                  const d = await fetch('/api/dashboard').then(r => r.json())
+                  setData(d)
                 }
                 return (
                   <div key={l.id} className={`px-5 py-4 ${isRetard ? 'bg-red-50/40' : isProchain ? 'bg-blue-50/40' : ''}`}>
@@ -383,10 +391,12 @@ export default function DashboardPage() {
                               <input
                                 type="checkbox"
                                 checked={!!l.transporteur_contacte}
-                                onChange={() => patchLiv({ transporteur_contacte: !l.transporteur_contacte })}
+                                onChange={() => confirmerTransporteur(!l.transporteur_contacte)}
                                 className="w-4 h-4 rounded accent-green-600"
                               />
-                              <span className={`text-xs font-medium ${l.transporteur_contacte ? 'text-green-700 line-through' : 'text-gray-700'}`}>Transporteur confirmé ✓</span>
+                              <span className={`text-xs font-medium ${l.transporteur_contacte ? 'text-green-700' : 'text-gray-700'}`}>
+                                {l.transporteur_contacte ? '✓ Confirmé → passe en CMR' : 'Transporteur confirmé'}
+                              </span>
                             </label>
                             <p className="text-xs text-gray-400 mb-1">Date <strong>ou</strong> semaine confirmée :</p>
                             <div className="space-y-1">

@@ -23,6 +23,7 @@ export async function GET() {
   const moisCourant = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
   const moisSuivant = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().split('T')[0]
 
+  // "À organiser" = planifiées NON encore confirmées par le transporteur, dans la fenêtre temporelle
   const { data: livraisonsPlanifieesRaw } = await supabase
     .from('livraisons')
     .select(`
@@ -36,11 +37,10 @@ export async function GET() {
       )
     `)
     .eq('type', 'planifiee')
-    .is('date_prevue', null)
-    .is('semaine_prevue', null)
+    .eq('transporteur_contacte', false)
     .order('mois_prevu', { ascending: true })
 
-  // Filtrer en JS pour éviter les problèmes de filtre PostgREST sur les dates
+  // Filtrer en JS pour la fenêtre temporelle (évite les problèmes de filtre PostgREST sur les dates)
   const livraisonsPlanifiees = (livraisonsPlanifieesRaw ?? []).filter(
     (l: any) => l.mois_prevu && l.mois_prevu.slice(0, 10) <= moisFin
   )
@@ -67,26 +67,19 @@ export async function GET() {
     .eq('type', 'realisee')
     .is('numero_lettre_voiture', null)
 
-  // Planifiées avec date_prevue renseignée (transporteur confirmé, en attente de CMR)
-  const { data: cmrPlanifieesAvecDate } = await supabase
+  // Planifiées avec transporteur_contacte = true → en attente de CMR
+  const { data: cmrPlanifiees } = await supabase
     .from('livraisons')
     .select(cmrSelect)
     .eq('type', 'planifiee')
-    .not('date_prevue', 'is', null)
+    .eq('transporteur_contacte', true)
 
-  // Planifiées avec semaine_prevue renseignée (transporteur confirmé, en attente de CMR)
-  const { data: cmrPlanifieesAvecSemaine } = await supabase
-    .from('livraisons')
-    .select(cmrSelect)
-    .eq('type', 'planifiee')
-    .not('semaine_prevue', 'is', null)
-    .is('date_prevue', null)
-
-  const cmrEnAttente = [
-    ...(cmrRealisees ?? []),
-    ...(cmrPlanifieesAvecDate ?? []),
-    ...(cmrPlanifieesAvecSemaine ?? []),
-  ]
+  // Dédoublonnage par id
+  const cmrMap = new Map<string, any>()
+  for (const l of [...(cmrRealisees ?? []), ...(cmrPlanifiees ?? [])]) {
+    cmrMap.set(l.id, l)
+  }
+  const cmrEnAttente = Array.from(cmrMap.values())
 
   // Facturation en attente : réalisées sans facture transport ou fournisseur
   const facturationSelect = `
