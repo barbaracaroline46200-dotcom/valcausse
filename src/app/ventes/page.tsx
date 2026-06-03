@@ -80,7 +80,9 @@ export default function VentesPage() {
               )}
               {filtered.map(v => (
                 <tr key={v.id} className="table-row">
-                  <td className="table-cell font-semibold text-green-700">{v.numero_contrat}</td>
+                  <td className="table-cell font-semibold">
+                    <Link href={`/ventes/${v.id}`} className="text-green-700 hover:underline">{v.numero_contrat}</Link>
+                  </td>
                   <td className="table-cell font-medium">{v.agriculteur?.nom ?? '—'}</td>
                   <td className="table-cell">{v.produit?.nom ?? '—'}</td>
                   <td className="table-cell">
