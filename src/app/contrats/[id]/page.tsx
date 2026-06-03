@@ -137,6 +137,7 @@ export default function ContratDetailPage() {
               ['Date fin', formatDate(contrat.date_fin)],
               ...(contrat.courtier ? [['Courtier', `${contrat.courtier.nom}${contrat.courtier.numero_courtier ? ` (n° ${contrat.courtier.numero_courtier})` : ''}`]] : []),
               ...(contrat.famille === 'appro' && contrat.numero_mise_a_disposition ? [['N° mise à disposition', contrat.numero_mise_a_disposition]] : []),
+              ...(contrat.famille === 'negoce' && contrat.base_prix ? [['Base prix', contrat.base_prix.replace('juillet_', 'Base Juillet ')]] : []),
             ].filter(([, v]) => v).map(([label, value]) => (
               <div key={label as string}>
                 <dt className="text-gray-500 font-medium">{label}</dt>
@@ -144,6 +145,14 @@ export default function ContratDetailPage() {
               </div>
             ))}
           </dl>
+          {contrat.famille === 'negoce' && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${contrat.mbm_autorise ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-100 border-gray-200 text-gray-500'}`}>
+                <span className={`w-2 h-2 rounded-full ${contrat.mbm_autorise ? 'bg-green-500' : 'bg-gray-400'}`} />
+                MBM {contrat.mbm_autorise ? 'autorisées' : 'non autorisées'}
+              </span>
+            </div>
+          )}
           {contrat.notes && (
             <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600 border border-gray-100">
               {contrat.notes}

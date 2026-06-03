@@ -27,6 +27,8 @@ export default function ModifierContratModal({ contrat, onClose, onSaved }: Prop
     date_debut: contrat.date_debut ?? '',
     date_fin: contrat.date_fin ?? '',
     notes: contrat.notes ?? '',
+    base_prix: contrat.base_prix ?? '',
+    mbm_autorise: contrat.mbm_autorise ?? false,
   })
 
   // Adresses d'enlèvement multiples
@@ -86,8 +88,9 @@ export default function ModifierContratModal({ contrat, onClose, onSaved }: Prop
       prix_transport_prevu: parseFloat(form.prix_transport_prevu),
       date_debut: form.date_debut || null,
       date_fin: form.date_fin || null,
-      // On stocke les adresses supplémentaires dans notes_adresses_chargement (JSON)
       adresses_chargement_sup: adressesSup,
+      base_prix: form.famille === 'negoce' ? (form.base_prix || null) : null,
+      mbm_autorise: form.famille === 'negoce' ? form.mbm_autorise : false,
     }
     const res = await fetch(`/api/contrats/${contrat.id}`, {
       method: 'PATCH',
@@ -176,6 +179,32 @@ export default function ModifierContratModal({ contrat, onClose, onSaved }: Prop
             <label className="label">Date fin</label>
             <input type="date" className="input" value={form.date_fin} onChange={f('date_fin')} />
           </div>
+          {form.famille === 'negoce' && (
+            <>
+              <div>
+                <label className="label">Base prix</label>
+                <select className="input" value={form.base_prix} onChange={f('base_prix')}>
+                  <option value="">— Non défini —</option>
+                  <option value="juillet_2025">Base Juillet 2025</option>
+                  <option value="juillet_2026">Base Juillet 2026</option>
+                  <option value="juillet_2027">Base Juillet 2027</option>
+                  <option value="juillet_2028">Base Juillet 2028</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-3 pt-5">
+                <input
+                  type="checkbox"
+                  id="mbm_autorise_modifier"
+                  checked={form.mbm_autorise}
+                  onChange={e => setForm(prev => ({ ...prev, mbm_autorise: e.target.checked }))}
+                  className="w-4 h-4 rounded accent-green-600"
+                />
+                <label htmlFor="mbm_autorise_modifier" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
+                  MBM autorisées <span className="text-xs text-gray-400 font-normal">(majorations applicables)</span>
+                </label>
+              </div>
+            </>
+          )}
           <div className="col-span-2">
             <label className="label">Notes</label>
             <textarea className="input" rows={2} value={form.notes} onChange={f('notes')} />

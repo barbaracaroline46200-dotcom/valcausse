@@ -19,7 +19,7 @@ export default function NouveauContratModal({ onClose, onSaved }: Props) {
     courtier_id: '', reference_fournisseur: '',
     prix_achat: '', quantite_totale: '', transporteur_id: '', prix_transport_prevu: '0',
     point_chargement: '', ville_chargement: '', date_conclusion: '', date_debut: '', date_fin: '',
-    notes: '',
+    notes: '', base_prix: '', mbm_autorise: false,
   })
   const [livraisons, setLivraisons] = useState<LivraisonPlanifiee[]>([])
   const [produits, setProduits] = useState<any[]>([])
@@ -73,6 +73,8 @@ export default function NouveauContratModal({ onClose, onSaved }: Props) {
       prix_transport_prevu: parseFloat(form.prix_transport_prevu),
       date_debut: form.date_debut || null,
       date_fin: form.date_fin || null,
+      base_prix: form.famille === 'negoce' ? (form.base_prix || null) : null,
+      mbm_autorise: form.famille === 'negoce' ? form.mbm_autorise : false,
       livraisons_planifiees: livraisons
         .filter(l => l.mois && l.quantite)
         .map(l => ({ mois: l.mois + '-01', quantite: parseFloat(l.quantite) })),
@@ -183,6 +185,32 @@ export default function NouveauContratModal({ onClose, onSaved }: Props) {
             <label className="label">Date fin</label>
             <input type="date" className="input" value={form.date_fin} onChange={f('date_fin')} />
           </div>
+          {form.famille === 'negoce' && (
+            <>
+              <div>
+                <label className="label">Base prix</label>
+                <select className="input" value={form.base_prix} onChange={f('base_prix')}>
+                  <option value="">— Non défini —</option>
+                  <option value="juillet_2025">Base Juillet 2025</option>
+                  <option value="juillet_2026">Base Juillet 2026</option>
+                  <option value="juillet_2027">Base Juillet 2027</option>
+                  <option value="juillet_2028">Base Juillet 2028</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-3 pt-5">
+                <input
+                  type="checkbox"
+                  id="mbm_autorise_nouveau"
+                  checked={form.mbm_autorise}
+                  onChange={e => setForm(prev => ({ ...prev, mbm_autorise: e.target.checked }))}
+                  className="w-4 h-4 rounded accent-green-600"
+                />
+                <label htmlFor="mbm_autorise_nouveau" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
+                  MBM autorisées <span className="text-xs text-gray-400 font-normal">(majorations applicables)</span>
+                </label>
+              </div>
+            </>
+          )}
           <div className="col-span-2">
             <label className="label">Notes</label>
             <textarea className="input" rows={2} value={form.notes} onChange={f('notes')} />
