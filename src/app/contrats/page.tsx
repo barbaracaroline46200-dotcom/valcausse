@@ -24,6 +24,8 @@ export default function ContratsPage() {
   const [filtProduit, setFiltProduit] = useState('')
   const [filtFournisseur, setFiltFournisseur] = useState('')
   const [filtTransporteur, setFiltTransporteur] = useState('')
+  const [filtAgriculteur, setFiltAgriculteur] = useState('')
+  const [agriculteurs, setAgriculteurs] = useState<any[]>([])
 
   useEffect(() => {
     Promise.all([
@@ -31,11 +33,13 @@ export default function ContratsPage() {
       fetch('/api/referentiels/produits').then(r => r.json()),
       fetch('/api/referentiels/fournisseurs').then(r => r.json()),
       fetch('/api/referentiels/transporteurs').then(r => r.json()),
-    ]).then(([c, p, f, t]) => {
+      fetch('/api/referentiels/agriculteurs').then(r => r.json()),
+    ]).then(([c, p, f, t, a]) => {
       setContrats(c)
       setProduits(p)
       setFournisseurs(f)
       setTransporteurs(t)
+      setAgriculteurs(a)
       setLoading(false)
     })
   }, [])
@@ -51,9 +55,13 @@ export default function ContratsPage() {
       if (filtProduit && c.produit_id !== filtProduit) return false
       if (filtFournisseur && c.fournisseur_id !== filtFournisseur) return false
       if (filtTransporteur && c.transporteur_id !== filtTransporteur) return false
+      if (filtAgriculteur) {
+        const agriIds = (c.contrats_vente ?? []).map((cv: any) => cv.agriculteur_id)
+        if (!agriIds.includes(filtAgriculteur)) return false
+      }
       return true
     })
-  }, [contrats, filtFamille, filtStatut, filtProduit, filtFournisseur, filtTransporteur])
+  }, [contrats, filtFamille, filtStatut, filtProduit, filtFournisseur, filtTransporteur, filtAgriculteur])
 
   const filters = [
     { key: 'famille', label: 'Famille', options: [{ value: 'negoce', label: 'Négoce' }, { value: 'appro', label: 'Appro' }], value: filtFamille, onChange: setFiltFamille },
@@ -61,10 +69,11 @@ export default function ContratsPage() {
     { key: 'produit', label: 'Produit', options: produits.map(p => ({ value: p.id, label: p.nom })), value: filtProduit, onChange: setFiltProduit },
     { key: 'fournisseur', label: 'Fournisseur', options: fournisseurs.map(f => ({ value: f.id, label: f.nom })), value: filtFournisseur, onChange: setFiltFournisseur },
     { key: 'transporteur', label: 'Transporteur', options: transporteurs.map(t => ({ value: t.id, label: t.nom })), value: filtTransporteur, onChange: setFiltTransporteur },
+    { key: 'agriculteur', label: 'Agriculteur', options: agriculteurs.map(a => ({ value: a.id, label: a.nom })), value: filtAgriculteur, onChange: setFiltAgriculteur },
   ]
 
   function resetFilters() {
-    setFiltFamille(''); setFiltStatut(''); setFiltProduit(''); setFiltFournisseur(''); setFiltTransporteur('')
+    setFiltFamille(''); setFiltStatut(''); setFiltProduit(''); setFiltFournisseur(''); setFiltTransporteur(''); setFiltAgriculteur('')
   }
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-green-600" size={32} /></div>
@@ -93,19 +102,21 @@ export default function ContratsPage() {
           <table className="w-full">
             <thead className="bg-gray-50/50">
               <tr>
-                {['N° Contrat', 'Famille', 'Produit', 'Fournisseur', 'Total', 'Livré', 'Reliquat', 'Prix achat', 'Date fin', 'Statut', ''].map(h => (
+                {['N° Contrat', 'Famille', 'Produit', 'Fournisseur', 'Total', 'Livré', 'Reliquat à livrer', 'Non réservé', 'Prix achat', 'Date fin', 'Statut', ''].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={11} className="px-4 py-10 text-center text-gray-400">Aucun contrat trouvé</td></tr>
+                <tr><td colSpan={12} className="px-4 py-10 text-center text-gray-400">Aucun contrat trouvé</td></tr>
               )}
               {filtered.map(c => {
                 const livre = quantiteLivree(c.livraisons ?? [])
                 const rel = reliquat(c.quantite_totale, c.livraisons ?? [])
                 const depasse = c.date_fin && new Date(c.date_fin) < new Date() && c.statut === 'en_cours' && rel > 0
+                const totalVendu = (c.contrats_vente ?? []).reduce((s: number, cv: any) => s + (cv.quantite ?? 0), 0)
+                const nonReserve = Math.max(0, c.quantite_totale - totalVendu)
                 return (
                   <tr key={c.id} className="table-row">
                     <td className="table-cell">
@@ -128,6 +139,12 @@ export default function ContratsPage() {
                         {formatTonnes(rel)}
                       </span>
                       {depasse && <span className="ml-1">⚠️</span>}
+                    </td>
+                    <td className="table-cell">
+                      {nonReserve > 0
+                        ? <span className="font-bold text-sm text-blue-600">{formatTonnes(nonReserve)}</span>
+                        : <span className="text-xs text-green-600 font-medium">✓ Complet</span>
+                      }
                     </td>
                     <td className="table-cell">{formatEurosParTonne(c.prix_achat)}</td>
                     <td className="table-cell">
