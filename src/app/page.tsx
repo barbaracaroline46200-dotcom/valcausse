@@ -61,19 +61,13 @@ export default function DashboardPage() {
 
   // Rechargement à chaque fois qu'on revient sur le dashboard (navigation SPA)
   useEffect(() => {
-    if (!loading) {
-      fetch('/api/dashboard').then(r => r.json()).then(d => setData(d))
-      fetch(`/api/agenda?lte=${todayStr()}&non_fait=1`).then(r => r.json()).then(d => setAgendaToday(Array.isArray(d) ? d : []))
-    }
+    if (!loading) reloadData()
   }, [pathname])
 
   // Rechargement si l'onglet redevient visible
   useEffect(() => {
     function onVisible() {
-      if (document.visibilityState === 'visible') {
-        fetch('/api/dashboard').then(r => r.json()).then(d => setData(d))
-        fetch(`/api/agenda?lte=${todayStr()}&non_fait=1`).then(r => r.json()).then(d => setAgendaToday(Array.isArray(d) ? d : []))
-      }
+      if (document.visibilityState === 'visible') reloadData()
     }
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
@@ -99,8 +93,7 @@ export default function DashboardPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ transporteur_contacte: !current }),
     })
-    const d = await fetch('/api/dashboard').then(r => r.json())
-    setData(d)
+    await reloadData()
   }
 
   if (loading) return (
@@ -438,9 +431,7 @@ export default function DashboardPage() {
                   <td className="table-cell">{formatDate(f.date_facture)}</td>
                   <td className="table-cell">{f.montant_ht ? `${f.montant_ht} €` : '—'}</td>
                   <td className="table-cell">
-                    <SaisirRFInline factureId={f.id} onSaved={async () => {
-                      const d = await fetch('/api/dashboard').then(r => r.json()); setData(d)
-                    }} />
+                    <SaisirRFInline factureId={f.id} onSaved={reloadData} />
                   </td>
                 </tr>
               ))}

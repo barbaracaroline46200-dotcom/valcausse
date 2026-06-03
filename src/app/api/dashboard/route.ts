@@ -187,5 +187,10 @@ export async function GET() {
     annee: { debut, fin },
     moisCourant,
     moisSuivant,
+  }, {
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      'Pragma': 'no-cache',
+    }
   })
 }
