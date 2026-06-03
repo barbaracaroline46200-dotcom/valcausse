@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Truck, FileWarning, Receipt, Phone, AlertTriangle, TrendingUp, Loader2, Plus, Trash2, CheckSquare, Square } from 'lucide-react'
+import { Truck, FileWarning, Receipt, Phone, AlertTriangle, TrendingUp, Loader2, Plus, Trash2, CheckSquare, Square, CalendarDays, CheckCircle2, Circle } from 'lucide-react'
 import { formatDate, formatTonnes, formatMois, getAnneeAgricoleLabel } from '@/lib/annee-agricole'
 import { joursDepuis, quantiteLivree, reliquat } from '@/lib/utils'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
@@ -8,8 +8,16 @@ import CalendrierLivraisons from '@/components/ui/CalendrierLivraisons'
 import RealiserLivraisonModal from '@/components/livraisons/RealiserLivraisonModal'
 import SaisirFactureTransportModal from '@/components/livraisons/SaisirFactureTransportModal'
 import SaisirFactureFournisseurModal from '@/components/livraisons/SaisirFactureFournisseurModal'
+import { useAdmin } from '@/components/ui/AdminProvider'
+import Link from 'next/link'
+
+function todayStr() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 export default function DashboardPage() {
+  const { isAdmin } = useAdmin()
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [selectedTransporteur, setSelectedTransporteur] = useState('')
@@ -19,6 +27,7 @@ export default function DashboardPage() {
   const [cmrModal, setCmrModal] = useState<any>(null)
   const [factureTransportModal, setFactureTransportModal] = useState<any>(null)
   const [factureFournisseurModal, setFactureFournisseurModal] = useState<any>(null)
+  const [agendaToday, setAgendaToday] = useState<any[]>([])
 
   useEffect(() => {
     Promise.all([
@@ -31,6 +40,18 @@ export default function DashboardPage() {
     })
     const now = new Date()
     setSelectedMois(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
+
+    // Charger les notes agenda du jour
+    fetch(`/api/agenda?date=${todayStr()}`).then(r => r.json()).then(d => setAgendaToday(Array.isArray(d) ? d : []))
+
+    function reloadDashboard() {
+      if (document.visibilityState === 'visible') {
+        fetch('/api/dashboard').then(r => r.json()).then(d => setData(d))
+        fetch(`/api/agenda?date=${todayStr()}`).then(r => r.json()).then(d => setAgendaToday(Array.isArray(d) ? d : []))
+      }
+    }
+    document.addEventListener('visibilitychange', reloadDashboard)
+    return () => document.removeEventListener('visibilitychange', reloadDashboard)
   }, [])
 
   useEffect(() => {
@@ -94,6 +115,49 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold" style={{ color: '#7B2820' }}>Tableau de bord</h1>
         <p className="text-gray-500 text-sm mt-0.5">Année agricole {getAnneeAgricoleLabel()} · {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
       </div>
+
+      {/* Bloc Agenda du jour — admin uniquement */}
+      {isAdmin && (agendaToday.length > 0) && (
+        <div className="rounded-xl border-2 p-4" style={{ borderColor: '#C8941A', backgroundColor: '#fffdf5' }}>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <CalendarDays size={18} style={{ color: '#C8941A' }} />
+              <span className="font-bold text-sm" style={{ color: '#7B2820' }}>
+                Agenda du jour — {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </span>
+            </div>
+            <Link href="/agenda" className="text-xs font-medium hover:underline" style={{ color: '#C8941A' }}>
+              Voir l'agenda →
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {agendaToday.map((note: any) => (
+              <div key={note.id} className="flex items-start gap-2.5">
+                <button
+                  onClick={async () => {
+                    await fetch(`/api/agenda/${note.id}`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ fait: !note.fait }),
+                    })
+                    fetch(`/api/agenda?date=${todayStr()}`).then(r => r.json()).then(d => setAgendaToday(Array.isArray(d) ? d : []))
+                  }}
+                  className="mt-0.5 flex-shrink-0"
+                >
+                  {note.fait
+                    ? <CheckCircle2 size={18} className="text-green-500" />
+                    : <Circle size={18} style={{ color: '#C8941A' }} />
+                  }
+                </button>
+                <div className="min-w-0">
+                  <p className={`text-sm font-semibold ${note.fait ? 'line-through text-gray-400' : 'text-gray-800'}`}>{note.titre}</p>
+                  {note.contenu && <p className={`text-xs mt-0.5 ${note.fait ? 'text-gray-300' : 'text-gray-500'}`}>{note.contenu}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Résumé année — cartes aux couleurs Valcausse */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

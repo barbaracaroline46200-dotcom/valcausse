@@ -23,7 +23,7 @@ export async function GET() {
   const moisCourant = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
   const moisSuivant = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().split('T')[0]
 
-  const { data: livraisonsPlanifiees } = await supabase
+  const { data: livraisonsPlanifieesRaw } = await supabase
     .from('livraisons')
     .select(`
       *,
@@ -38,8 +38,12 @@ export async function GET() {
     .eq('type', 'planifiee')
     .is('date_prevue', null)
     .is('semaine_prevue', null)
-    .lte('mois_prevu', moisFin)
     .order('mois_prevu', { ascending: true })
+
+  // Filtrer en JS pour éviter les problèmes de filtre PostgREST sur les dates
+  const livraisonsPlanifiees = (livraisonsPlanifieesRaw ?? []).filter(
+    (l: any) => l.mois_prevu && l.mois_prevu.slice(0, 10) <= moisFin
+  )
 
   // CMR en attente :
   // 1. Réalisées depuis > 14j sans lettre de voiture
@@ -172,7 +176,7 @@ export async function GET() {
 
   return NextResponse.json({
     contrats: contrats ?? [],
-    livraisonsPlanifiees: livraisonsPlanifiees ?? [],
+    livraisonsPlanifiees: livraisonsPlanifiees,
     cmrEnAttente: cmrEnAttente ?? [],
     livraisonsAFacturer: livraisonsAFacturer ?? [],
     rfManquants: rfManquants ?? [],
