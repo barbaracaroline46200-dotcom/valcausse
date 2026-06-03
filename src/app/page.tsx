@@ -6,6 +6,7 @@ import { formatDate, formatTonnes, formatMois, getAnneeAgricoleLabel } from '@/l
 import { joursDepuis, quantiteLivree, reliquat } from '@/lib/utils'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import CalendrierLivraisons from '@/components/ui/CalendrierLivraisons'
+import LivraisonAOrganiser from '@/components/livraisons/LivraisonAOrganiser'
 import RealiserLivraisonModal from '@/components/livraisons/RealiserLivraisonModal'
 import SaisirFactureTransportModal from '@/components/livraisons/SaisirFactureTransportModal'
 import SaisirFactureFournisseurModal from '@/components/livraisons/SaisirFactureFournisseurModal'
@@ -234,202 +235,18 @@ export default function DashboardPage() {
               <div className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold text-xs">3</span> Transporteur confirmé + date/semaine</div>
             </div>
             <div className="divide-y divide-gray-100">
-              {planifiees.map((l: any) => {
-                const ca = l.contrat_achat
-                const agri = (ca?.contrats_vente ?? []).find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur
-                  ?? ca?.contrats_vente?.[0]?.agriculteur
-                const moisLiv = l.mois_prevu?.slice(0, 7) ?? ''
-                const isRetard = moisLiv < moisCourant.slice(0, 7)
-                const isProchain = moisSuivant && moisLiv >= moisSuivant.slice(0, 7)
-                const step1ok = !!(l.agriculteur_contacte || l.date_souhaitee || l.semaine_souhaitee)
-                const step2ok = step1ok && !!l.pdf_envoye
-                const step3ok = !!l.transporteur_contacte
-                // Étape active = la première non complète
-                const etapeActive = step3ok ? 0 : step2ok ? 3 : step1ok ? 2 : 1
-
-                // Mise à jour optimiste pour étapes 1 et 2 (pas de changement de liste)
-                function patchLiv(patch: object) {
-                  setData((prev: any) => ({
-                    ...prev,
-                    livraisonsPlanifiees: prev.livraisonsPlanifiees.map((liv: any) =>
-                      liv.id === l.id ? { ...liv, ...patch } : liv
-                    )
-                  }))
-                  fetch(`/api/livraisons/${l.id}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(patch),
-                  })
-                }
-
-                // Quand transporteur confirmé → PATCH + reload complet (la fiche passe en CMR)
-                async function confirmerTransporteur(valeur: boolean) {
-                  await fetch(`/api/livraisons/${l.id}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ transporteur_contacte: valeur }),
-                  })
-                  const d = await fetch('/api/dashboard').then(r => r.json())
-                  setData(d)
-                }
-                return (
-                  <div key={l.id} className={`px-5 py-4 ${isRetard ? 'bg-red-50/40' : isProchain ? 'bg-blue-50/40' : ''}`}>
-                    {/* En-tête ligne */}
-                    <div className="flex items-start justify-between gap-4 mb-3">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
-                          isRetard ? 'bg-red-100 text-red-700' : isProchain ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
-                        }`}>{isRetard ? '⚠️ ' : isProchain ? '→ ' : ''}{formatMois(l.mois_prevu)}</span>
-                        <span className="font-semibold text-gray-800">{ca?.produit?.nom}</span>
-                        <span className="text-gray-500 text-sm">{ca?.fournisseur?.nom}</span>
-                        <span className="text-gray-400">·</span>
-                        <span className="text-sm font-medium" style={{ color: '#7B2820' }}>{formatTonnes(l.quantite_prevue)}</span>
-                        <span className="text-gray-400">·</span>
-                        <span className="text-sm text-gray-600">{agri?.nom ?? '—'}</span>
-                        <span className="text-gray-400">·</span>
-                        <span className="text-sm text-gray-500">{ca?.transporteur?.nom ?? '—'}</span>
-                      </div>
-                      <a href={`/contrats/${ca?.id}`} className="text-xs text-green-700 hover:underline shrink-0">{ca?.numero_contrat}</a>
-                    </div>
-
-                    {/* 3 étapes */}
-                    <div className={`grid grid-cols-3 gap-3 ${step3ok ? 'opacity-50' : ''}`}>
-
-                      {/* Étape 1 — Agri contacté */}
-                      <div className={`rounded-lg p-3 border-2 transition-all ${
-                        step1ok ? 'border-green-200 bg-green-50' :
-                        etapeActive === 1 ? 'border-blue-400 bg-blue-50 shadow-sm' : 'border-gray-100 bg-gray-50'
-                      }`}>
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${step1ok ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'}`}>1</span>
-                          <span className="text-xs font-semibold text-blue-700">📞 Agri contacté</span>
-                        </div>
-                        {/* Case à cocher principale */}
-                        <label className="flex items-center gap-2 cursor-pointer mb-2">
-                          <input
-                            type="checkbox"
-                            checked={!!l.agriculteur_contacte}
-                            onChange={() => patchLiv({ agriculteur_contacte: !l.agriculteur_contacte })}
-                            className="w-4 h-4 rounded accent-blue-600"
-                          />
-                          <span className={`text-xs font-medium ${l.agriculteur_contacte ? 'text-green-700 line-through' : 'text-gray-700'}`}>Agri contacté ✓</span>
-                        </label>
-                        <p className="text-xs text-gray-400 mb-1">Date ou semaine souhaitée :</p>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs text-gray-400 w-12 shrink-0">Date :</span>
-                            <input type="date" defaultValue={l.date_souhaitee ?? ''} className="text-xs border border-gray-200 rounded px-1.5 py-0.5 flex-1 focus:outline-none focus:border-blue-400"
-                              onBlur={e => {
-                                if (e.target.value !== (l.date_souhaitee ?? ''))
-                                  patchLiv({ date_souhaitee: e.target.value || null, semaine_souhaitee: e.target.value ? null : undefined, agriculteur_contacte: !!e.target.value || !!l.agriculteur_contacte })
-                              }} />
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs text-gray-400 w-12 shrink-0">Semaine :</span>
-                            <input type="text" placeholder="ex: S23" defaultValue={l.semaine_souhaitee ?? ''} className="text-xs border border-gray-200 rounded px-1.5 py-0.5 flex-1 focus:outline-none focus:border-blue-400"
-                              onBlur={e => {
-                                if (e.target.value !== (l.semaine_souhaitee ?? ''))
-                                  patchLiv({ semaine_souhaitee: e.target.value || null, date_souhaitee: e.target.value ? null : undefined, agriculteur_contacte: !!e.target.value || !!l.agriculteur_contacte })
-                              }} />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Étape 2 : PDF */}
-                      <div className={`rounded-lg p-3 border-2 transition-all ${
-                        step2ok ? 'border-green-200 bg-green-50' :
-                        etapeActive === 2 ? 'border-orange-400 bg-orange-50 shadow-sm' :
-                        step1ok ? 'border-orange-100 bg-orange-50/30' : 'border-gray-100 bg-gray-50 opacity-50'
-                      }`}>
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${step2ok ? 'bg-green-500 text-white' : etapeActive === 2 ? 'bg-orange-500 text-white' : 'bg-orange-100 text-orange-600'}`}>2</span>
-                          <span className={`text-xs font-semibold ${etapeActive === 2 ? 'text-orange-700' : 'text-gray-700'}`}>📄 PDF transporteur</span>
-                        </div>
-                        {step1ok ? (
-                          <div className="text-xs text-gray-600 space-y-2">
-                            <p className="text-gray-400">Souhait agri : <strong className="text-gray-700">{l.date_souhaitee ? new Date(l.date_souhaitee).toLocaleDateString('fr-FR') : l.semaine_souhaitee ?? '—'}</strong></p>
-                            <a
-                              href={`/api/pdf/transporteur?livraison_id=${l.id}`}
-                              target="_blank" rel="noopener noreferrer"
-                              onClick={async () => {
-                                if (!l.pdf_envoye) await patchLiv({ pdf_envoye: true })
-                              }}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-white text-xs font-medium"
-                              style={{ backgroundColor: l.pdf_envoye ? '#16a34a' : '#7B2820' }}>
-                              {l.pdf_envoye ? '✓ PDF envoyé' : '📥 Télécharger PDF'}
-                            </a>
-                            {/* Case à cocher manuelle si PDF déjà envoyé par email */}
-                            <label className="flex items-center gap-2 cursor-pointer mt-1">
-                              <input
-                                type="checkbox"
-                                checked={!!l.pdf_envoye}
-                                onChange={() => patchLiv({ pdf_envoye: !l.pdf_envoye })}
-                                className="w-4 h-4 rounded accent-orange-600"
-                              />
-                              <span className="text-xs text-gray-500">Demande envoyée ✓</span>
-                            </label>
-                          </div>
-                        ) : (
-                          <p className="text-xs text-gray-400">Compléter l'étape 1 d'abord</p>
-                        )}
-                      </div>
-
-                      {/* Étape 3 : Transporteur confirmé + date/semaine */}
-                      <div className={`rounded-lg p-3 border-2 transition-all ${
-                        step3ok ? 'border-green-200 bg-green-50' :
-                        etapeActive === 3 ? 'border-green-400 bg-green-50 shadow-sm' :
-                        step1ok ? 'border-green-100 bg-green-50/30' : 'border-gray-100 bg-gray-50 opacity-50'
-                      }`}>
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${step3ok ? 'bg-green-500 text-white' : etapeActive === 3 ? 'bg-green-500 text-white' : 'bg-green-100 text-green-700'}`}>3</span>
-                          <span className={`text-xs font-semibold ${etapeActive === 3 ? 'text-green-700' : 'text-gray-700'}`}>🚛 Transporteur confirmé</span>
-                        </div>
-                        {step1ok ? (
-                          <>
-                            {/* Case à cocher principale */}
-                            <label className="flex items-center gap-2 cursor-pointer mb-2">
-                              <input
-                                type="checkbox"
-                                checked={!!l.transporteur_contacte}
-                                onChange={() => confirmerTransporteur(!l.transporteur_contacte)}
-                                className="w-4 h-4 rounded accent-green-600"
-                              />
-                              <span className={`text-xs font-medium ${l.transporteur_contacte ? 'text-green-700' : 'text-gray-700'}`}>
-                                {l.transporteur_contacte ? '✓ Confirmé → passe en CMR' : 'Transporteur confirmé'}
-                              </span>
-                            </label>
-                            <p className="text-xs text-gray-400 mb-1">Date <strong>ou</strong> semaine confirmée :</p>
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-1">
-                                <span className="text-xs text-gray-400 w-12 shrink-0">Date :</span>
-                                <input type="date" defaultValue={l.date_prevue ?? ''} className="text-xs border border-gray-200 rounded px-1.5 py-0.5 flex-1 focus:outline-none focus:border-green-400"
-                                  onBlur={async e => {
-                                    if (e.target.value !== (l.date_prevue ?? '')) {
-                                      await fetch(`/api/livraisons/${l.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date_prevue: e.target.value || null, semaine_prevue: null }) })
-                                      const d = await fetch('/api/dashboard').then(r => r.json()); setData(d)
-                                    }
-                                  }} />
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <span className="text-xs text-gray-400 w-12 shrink-0">Semaine :</span>
-                                <input type="text" placeholder="ex: S23" defaultValue={l.semaine_prevue ?? ''} className="text-xs border border-gray-200 rounded px-1.5 py-0.5 flex-1 focus:outline-none focus:border-green-400"
-                                  onBlur={async e => {
-                                    if (e.target.value !== (l.semaine_prevue ?? '')) {
-                                      await fetch(`/api/livraisons/${l.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ semaine_prevue: e.target.value || null, date_prevue: null }) })
-                                      const d = await fetch('/api/dashboard').then(r => r.json()); setData(d)
-                                    }
-                                  }} />
-                              </div>
-                            </div>
-                          </>
-                        ) : (
-                          <p className="text-xs text-gray-400">Compléter l'étape 1 d'abord</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
+              {planifiees.map((l: any) => (
+                <LivraisonAOrganiser
+                  key={l.id}
+                  livraison={l}
+                  moisCourant={moisCourant}
+                  moisSuivant={moisSuivant}
+                  onConfirme={async () => {
+                    const d = await fetch('/api/dashboard').then(r => r.json())
+                    setData(d)
+                  }}
+                />
+              ))}
             </div>
           </>
         )}
