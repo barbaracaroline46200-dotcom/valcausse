@@ -40,8 +40,16 @@ export default function NouveauContratModal({ onClose, onSaved }: Props) {
 
   const produitsFiltres = produits.filter(p => p.famille === form.famille)
 
+  function genererLivraisons(quantiteTotale: string) {
+    const qt = parseFloat(quantiteTotale)
+    if (!qt || qt <= 0) return
+    const nb = Math.ceil(qt / TONNES_PAR_LIVRAISON)
+    const qtParLiv = (qt / nb).toFixed(3)
+    setLivraisons(Array.from({ length: nb }, () => ({ mois: '', quantite: qtParLiv })))
+  }
+
   function addLivraison() {
-    setLivraisons(prev => [...prev, { mois: '', quantite: '' }])
+    setLivraisons(prev => [...prev, { mois: '', quantite: '30' }])
   }
 
   function removeLivraison(i: number) {
@@ -133,7 +141,16 @@ export default function NouveauContratModal({ onClose, onSaved }: Props) {
           </div>
           <div>
             <label className="label">Quantité totale (t) *</label>
-            <input type="number" step="0.001" className="input" value={form.quantite_totale} onChange={f('quantite_totale')} required />
+            <input type="number" step="0.001" className="input" value={form.quantite_totale}
+              onChange={e => {
+                setForm(prev => ({ ...prev, quantite_totale: e.target.value }))
+                genererLivraisons(e.target.value)
+              }} required />
+            {form.quantite_totale && parseFloat(form.quantite_totale) > 0 && (
+              <p className="text-xs text-gray-400 mt-1">
+                → {Math.ceil(parseFloat(form.quantite_totale) / TONNES_PAR_LIVRAISON)} livraison(s) de {TONNES_PAR_LIVRAISON}t générées automatiquement
+              </p>
+            )}
           </div>
           <div>
             <label className="label">Transporteur *</label>
@@ -177,14 +194,18 @@ export default function NouveauContratModal({ onClose, onSaved }: Props) {
           <div className="flex items-center justify-between mb-3">
             <div>
               <p className="font-semibold text-sm" style={{ color: '#7B2820' }}>Livraisons planifiées</p>
-              <p className="text-xs text-gray-400">Indiquez les mois prévus — les dates précises viendront plus tard</p>
+              <p className="text-xs text-gray-400">
+                {livraisons.length > 0
+                  ? `${livraisons.length} livraison(s) générée(s) automatiquement — renseignez le mois pour chacune`
+                  : 'Renseignez la quantité totale pour générer automatiquement'}
+              </p>
             </div>
             <button type="button" onClick={addLivraison} className="btn-secondary text-xs py-1.5">
-              <Plus size={14} /> Ajouter un mois
+              <Plus size={14} /> Ajouter
             </button>
           </div>
           {livraisons.length === 0 && (
-            <p className="text-sm text-gray-400 text-center py-3 bg-gray-50 rounded-lg">Aucune livraison planifiée — cliquez sur "Ajouter un mois"</p>
+            <p className="text-sm text-gray-400 text-center py-3 bg-gray-50 rounded-lg">Les livraisons apparaîtront ici dès que vous renseignez la quantité totale</p>
           )}
           <div className="space-y-2">
             {livraisons.map((l, i) => (
