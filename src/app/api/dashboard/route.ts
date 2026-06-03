@@ -62,25 +62,30 @@ export async function GET() {
     )
   `
 
-  const { data: cmrRealisees } = await supabase
+  // Tous les filtres critiques sont faits en JS — les filtres PostgREST sont peu fiables sur Vercel
+  // (is.null, eq.false, eq.true, lte.date sont tous ignorés silencieusement)
+  const { data: toutesLivraisons } = await supabase
     .from('livraisons')
     .select(cmrSelect)
-    .eq('type', 'realisee')
-    .is('numero_lettre_voiture', null)
+    .order('date_reelle', { ascending: true })
 
-  // Planifiées → filtrage JS (les filtres PostgREST booléens sont peu fiables sur Vercel)
-  const { data: cmrPlanifieesAll } = await supabase
-    .from('livraisons')
-    .select(cmrSelect)
-    .eq('type', 'planifiee')
-  const cmrPlanifiees = (cmrPlanifieesAll ?? []).filter((l: any) => !!l.transporteur_contacte)
+  const cmrRealisees = (toutesLivraisons ?? []).filter(
+    (l: any) => l.type === 'realisee' && !l.numero_lettre_voiture
+  )
+  const cmrPlanifiees = (toutesLivraisons ?? []).filter(
+    (l: any) => l.type === 'planifiee' && !!l.transporteur_contacte
+  )
 
-  // Dédoublonnage par id
+  // Fusion + dédoublonnage + tri : plus vieille date en premier
   const cmrMap = new Map<string, any>()
-  for (const l of [...(cmrRealisees ?? []), ...(cmrPlanifiees ?? [])]) {
+  for (const l of [...cmrRealisees, ...cmrPlanifiees]) {
     cmrMap.set(l.id, l)
   }
-  const cmrEnAttente = Array.from(cmrMap.values())
+  const cmrEnAttente = Array.from(cmrMap.values()).sort((a, b) => {
+    const da = a.date_prevue || a.date_souhaitee || a.date_reelle || a.mois_prevu || ''
+    const db = b.date_prevue || b.date_souhaitee || b.date_reelle || b.mois_prevu || ''
+    return da < db ? -1 : da > db ? 1 : 0
+  })
 
   // Facturation en attente : réalisées sans facture transport ou fournisseur
   const facturationSelect = `
@@ -93,12 +98,13 @@ export async function GET() {
       contrats_vente(id, numero_contrat, agriculteur:agriculteurs(nom))
     )
   `
-  const { data: livraisonsAFacturer } = await supabase
+  const { data: livraisonsAFacturerRaw } = await supabase
     .from('livraisons')
     .select(facturationSelect)
-    .eq('type', 'realisee')
-    .or('transport_facture.eq.false,facture_fournisseur_id.is.null')
     .order('date_reelle', { ascending: false })
+  const livraisonsAFacturer = (livraisonsAFacturerRaw ?? []).filter(
+    (l: any) => l.type === 'realisee' && (!l.transport_facture || !l.facture_fournisseur_id)
+  )
 
   // RF à récupérer : factures fournisseur sans numéro RF (numero_piece_logiciel null)
   const { data: rfManquants } = await supabase
