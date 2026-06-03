@@ -162,7 +162,7 @@ export default function DashboardPage() {
                 const moisLiv = l.mois_prevu?.slice(0, 7) ?? ''
                 const isRetard = moisLiv < moisCourant.slice(0, 7)
                 const isProchain = moisSuivant && moisLiv >= moisSuivant.slice(0, 7)
-                const step1ok = l.agriculteur_contacte && (l.date_souhaitee || l.semaine_souhaitee)
+                const step1ok = !!(l.date_souhaitee || l.semaine_souhaitee)
                 const step2ok = step1ok && l.pdf_envoye
                 const step3ok = !!(l.date_prevue || l.semaine_prevue)
                 // Étape active = la première non complète
@@ -199,22 +199,13 @@ export default function DashboardPage() {
                           <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${step1ok ? 'bg-green-500 text-white' : etapeActive === 1 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-500'}`}>1</span>
                           <span className={`text-xs font-semibold ${etapeActive === 1 ? 'text-blue-700' : 'text-gray-700'}`}>📞 Agri contacté</span>
                         </div>
-                        <label className="flex items-center gap-2 mb-2 cursor-pointer">
-                          <input type="checkbox" checked={!!l.agriculteur_contacte}
-                            onChange={async () => {
-                              await fetch(`/api/livraisons/${l.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agriculteur_contacte: !l.agriculteur_contacte }) })
-                              const d = await fetch('/api/dashboard').then(r => r.json()); setData(d)
-                            }}
-                            className="w-4 h-4 accent-blue-600" />
-                          <span className="text-xs text-gray-600">{l.agriculteur_contacte ? '✓ Appelé' : 'À appeler'}</span>
-                        </label>
-                        <p className="text-xs text-gray-400 mb-1">Souhait de l'agri</p>
+                        <p className="text-xs text-gray-400 mb-1">Date ou semaine souhaitée par l'agri</p>
                         <div className="space-y-1">
                           <div className="flex items-center gap-1">
                             <span className="text-xs text-gray-400 w-12 shrink-0">Date :</span>
                             <input type="date" defaultValue={l.date_souhaitee ?? ''} className="text-xs border border-gray-200 rounded px-1.5 py-0.5 flex-1 focus:outline-none focus:border-blue-400"
                               onBlur={async e => {
-                                await fetch(`/api/livraisons/${l.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date_souhaitee: e.target.value || null, semaine_souhaitee: e.target.value ? null : undefined }) })
+                                await fetch(`/api/livraisons/${l.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date_souhaitee: e.target.value || null, semaine_souhaitee: e.target.value ? null : undefined, agriculteur_contacte: !!e.target.value }) })
                                 const d = await fetch('/api/dashboard').then(r => r.json()); setData(d)
                               }} />
                           </div>
@@ -222,7 +213,7 @@ export default function DashboardPage() {
                             <span className="text-xs text-gray-400 w-12 shrink-0">Semaine :</span>
                             <input type="text" placeholder="ex: S23" defaultValue={l.semaine_souhaitee ?? ''} className="text-xs border border-gray-200 rounded px-1.5 py-0.5 flex-1 focus:outline-none focus:border-blue-400"
                               onBlur={async e => {
-                                await fetch(`/api/livraisons/${l.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ semaine_souhaitee: e.target.value || null, date_souhaitee: e.target.value ? null : undefined }) })
+                                await fetch(`/api/livraisons/${l.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ semaine_souhaitee: e.target.value || null, date_souhaitee: e.target.value ? null : undefined, agriculteur_contacte: !!e.target.value }) })
                                 const d = await fetch('/api/dashboard').then(r => r.json()); setData(d)
                               }} />
                           </div>
