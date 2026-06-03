@@ -232,13 +232,22 @@ export default function DashboardPage() {
                 // Étape active = la première non complète
                 const etapeActive = step3ok ? 0 : step2ok ? 3 : step1ok ? 2 : 1
 
-                async function reloadDash() {
-                  const d = await fetch('/api/dashboard').then(r => r.json())
-                  setData(d)
-                }
-                async function patchLiv(patch: object) {
-                  await fetch(`/api/livraisons/${l.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) })
-                  await reloadDash()
+                // Mise à jour optimiste : on met à jour l'état local IMMÉDIATEMENT,
+                // puis on envoie le PATCH en arrière-plan (pas besoin de recharger tout le dashboard)
+                function patchLiv(patch: object) {
+                  // 1. Mise à jour optimiste immédiate dans le state local
+                  setData((prev: any) => ({
+                    ...prev,
+                    livraisonsPlanifiees: prev.livraisonsPlanifiees.map((liv: any) =>
+                      liv.id === l.id ? { ...liv, ...patch } : liv
+                    )
+                  }))
+                  // 2. Sync serveur en arrière-plan
+                  fetch(`/api/livraisons/${l.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(patch),
+                  })
                 }
                 return (
                   <div key={l.id} className={`px-5 py-4 ${isRetard ? 'bg-red-50/40' : isProchain ? 'bg-blue-50/40' : ''}`}>
@@ -287,17 +296,17 @@ export default function DashboardPage() {
                           <div className="flex items-center gap-1">
                             <span className="text-xs text-gray-400 w-12 shrink-0">Date :</span>
                             <input type="date" defaultValue={l.date_souhaitee ?? ''} className="text-xs border border-gray-200 rounded px-1.5 py-0.5 flex-1 focus:outline-none focus:border-blue-400"
-                              onBlur={async e => {
+                              onBlur={e => {
                                 if (e.target.value !== (l.date_souhaitee ?? ''))
-                                  await patchLiv({ date_souhaitee: e.target.value || null, semaine_souhaitee: e.target.value ? null : undefined, agriculteur_contacte: !!e.target.value || !!l.agriculteur_contacte })
+                                  patchLiv({ date_souhaitee: e.target.value || null, semaine_souhaitee: e.target.value ? null : undefined, agriculteur_contacte: !!e.target.value || !!l.agriculteur_contacte })
                               }} />
                           </div>
                           <div className="flex items-center gap-1">
                             <span className="text-xs text-gray-400 w-12 shrink-0">Semaine :</span>
                             <input type="text" placeholder="ex: S23" defaultValue={l.semaine_souhaitee ?? ''} className="text-xs border border-gray-200 rounded px-1.5 py-0.5 flex-1 focus:outline-none focus:border-blue-400"
-                              onBlur={async e => {
+                              onBlur={e => {
                                 if (e.target.value !== (l.semaine_souhaitee ?? ''))
-                                  await patchLiv({ semaine_souhaitee: e.target.value || null, date_souhaitee: e.target.value ? null : undefined, agriculteur_contacte: !!e.target.value || !!l.agriculteur_contacte })
+                                  patchLiv({ semaine_souhaitee: e.target.value || null, date_souhaitee: e.target.value ? null : undefined, agriculteur_contacte: !!e.target.value || !!l.agriculteur_contacte })
                               }} />
                           </div>
                         </div>
@@ -360,16 +369,20 @@ export default function DashboardPage() {
                                 <span className="text-xs text-gray-400 w-12 shrink-0">Date :</span>
                                 <input type="date" defaultValue={l.date_prevue ?? ''} className="text-xs border border-gray-200 rounded px-1.5 py-0.5 flex-1 focus:outline-none focus:border-green-400"
                                   onBlur={async e => {
-                                    if (e.target.value !== (l.date_prevue ?? ''))
-                                      await patchLiv({ date_prevue: e.target.value || null, semaine_prevue: null })
+                                    if (e.target.value !== (l.date_prevue ?? '')) {
+                                      await fetch(`/api/livraisons/${l.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date_prevue: e.target.value || null, semaine_prevue: null }) })
+                                      const d = await fetch('/api/dashboard').then(r => r.json()); setData(d)
+                                    }
                                   }} />
                               </div>
                               <div className="flex items-center gap-1">
                                 <span className="text-xs text-gray-400 w-12 shrink-0">Semaine :</span>
                                 <input type="text" placeholder="ex: S23" defaultValue={l.semaine_prevue ?? ''} className="text-xs border border-gray-200 rounded px-1.5 py-0.5 flex-1 focus:outline-none focus:border-green-400"
                                   onBlur={async e => {
-                                    if (e.target.value !== (l.semaine_prevue ?? ''))
-                                      await patchLiv({ semaine_prevue: e.target.value || null, date_prevue: null })
+                                    if (e.target.value !== (l.semaine_prevue ?? '')) {
+                                      await fetch(`/api/livraisons/${l.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ semaine_prevue: e.target.value || null, date_prevue: null }) })
+                                      const d = await fetch('/api/dashboard').then(r => r.json()); setData(d)
+                                    }
                                   }} />
                               </div>
                             </div>
