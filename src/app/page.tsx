@@ -121,7 +121,6 @@ export default function DashboardPage() {
     if (res.ok) {
       removeLivraisonLocalement(livraisonId)
       showToast('Livraison supprimée')
-      reloadData() // sync arrière-plan
     } else {
       showToast('Erreur : impossible de supprimer')
     }
@@ -476,7 +475,6 @@ export default function DashboardPage() {
                         if (!prev) return prev
                         return { ...prev, rfManquants: (prev.rfManquants ?? []).filter((r: any) => r.id !== f.id) }
                       })
-                      reloadData()
                     }} />
                   </td>
                 </tr>
@@ -693,7 +691,6 @@ export default function DashboardPage() {
           setFactureTransportModal(null)
           showToast('Facture transport enregistrée')
           updateFacturationLocalement(id, { transport_facture: true })
-          reloadData()
         }}
       />
     )}
@@ -706,7 +703,6 @@ export default function DashboardPage() {
           setFactureFournisseurModal(null)
           showToast('Facture fournisseur enregistrée')
           updateFacturationLocalement(id, { facture_fournisseur_id: 'done' })
-          reloadData()
         }}
       />
     )}
@@ -719,15 +715,11 @@ export default function DashboardPage() {
           factures_client: facturesClientModal.factures_client ?? [],
         }}
         contratAchatId={facturesClientModal.contrat_achat_id}
-        onClose={() => {
-          setFacturesClientModal(null)
-          reloadData()
-        }}
+        onClose={() => setFacturesClientModal(null)}
         onSaved={() => {
           const cvId = facturesClientModal.contrat_vente_id
           setFacturesClientModal(null)
           showToast('Contrat de vente clos')
-          // Retirer de facturesManquantes localement
           setData((prev: any) => {
             if (!prev) return prev
             return {
@@ -735,7 +727,6 @@ export default function DashboardPage() {
               facturesManquantes: (prev.facturesManquantes ?? []).filter((f: any) => f.contrat_vente_id !== cvId),
             }
           })
-          reloadData()
         }}
       />
     )}
@@ -749,7 +740,6 @@ export default function DashboardPage() {
           setCmrModal(null)
           showToast('Livraison enregistrée')
           removeCmrLocalement(id)
-          reloadData()
         }}
       />
     )}
