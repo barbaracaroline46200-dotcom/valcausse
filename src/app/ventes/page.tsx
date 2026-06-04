@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Plus, Loader2, ShoppingCart, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import { BadgeStatut } from '@/components/ui/Badge'
 import FilterBar from '@/components/ui/FilterBar'
@@ -27,6 +28,8 @@ function SortHeader({ label, col, sortKey, sortDir, onToggle }: {
 export default function VentesPage() {
   const { isAdmin } = useAdmin()
   const { sortKey, sortDir, toggle, sort } = useSortable<any>('')
+  const searchParams = useSearchParams()
+  const q = searchParams.get('q')?.toLowerCase().trim() ?? ''
   const [ventes, setVentes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -63,10 +66,20 @@ export default function VentesPage() {
       if (filtAgriculteur && v.agriculteur_id !== filtAgriculteur) return false
       if (filtFournisseur && v.contrat_achat?.fournisseur?.id !== filtFournisseur) return false
       if (filtTransporteur && v.contrat_achat?.transporteur?.id !== filtTransporteur) return false
+      if (q) {
+        const haystack = [
+          v.numero_contrat,
+          v.agriculteur?.nom,
+          v.produit?.nom,
+          v.contrat_achat?.numero_contrat,
+          v.contrat_achat?.fournisseur?.nom,
+        ].filter(Boolean).join(' ').toLowerCase()
+        if (!haystack.includes(q)) return false
+      }
       return true
     })
     return sort(base)
-  }, [ventes, filtFamille, filtStatut, filtProduit, filtAgriculteur, filtFournisseur, filtTransporteur, sortKey, sortDir])
+  }, [ventes, filtFamille, filtStatut, filtProduit, filtAgriculteur, filtFournisseur, filtTransporteur, q, sortKey, sortDir])
 
   function resetFilters() {
     setFiltFamille(''); setFiltStatut(''); setFiltProduit('')
@@ -104,6 +117,12 @@ export default function VentesPage() {
         )}
       </div>
 
+      {q && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm" style={{ backgroundColor: '#fdf5f3', color: '#7B2820' }}>
+          <span>🔍 Recherche : <strong>« {q} »</strong> — {filtered.length} résultat{filtered.length > 1 ? 's' : ''}</span>
+          <a href="/ventes" className="ml-auto text-xs underline opacity-60 hover:opacity-100">Effacer</a>
+        </div>
+      )}
       <FilterBar filters={filters} onReset={resetFilters} />
 
       <div className="card-section overflow-hidden">

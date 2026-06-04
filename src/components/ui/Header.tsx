@@ -62,13 +62,24 @@ export default function Header() {
     return () => clearInterval(interval)
   }, [pathname])
 
+  // Pages qui supportent la recherche contextuelle (filtrage local)
+  const PAGES_CONTEXTUELLES = ['/contrats', '/ventes', '/archives', '/livraisons', '/cmr', '/facturation', '/rf']
+  const pageContextuelle = PAGES_CONTEXTUELLES.find(p => pathname === p || pathname.startsWith(p + '/'))
+
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
-    if (search.trim()) {
-      router.push(`/recherche?q=${encodeURIComponent(search.trim())}`)
-      setSearch('')
-    }
+    if (!search.trim()) return
+    const dest = pageContextuelle
+      ? `${pageContextuelle}?q=${encodeURIComponent(search.trim())}`
+      : `/recherche?q=${encodeURIComponent(search.trim())}`
+    router.push(dest)
+    setSearch('')
   }
+
+  // Placeholder selon la page
+  const placeholder = pageContextuelle
+    ? `Rechercher dans cette page…`
+    : 'Rechercher un contrat, agriculteur, fournisseur…'
 
   return (
     <header
@@ -83,7 +94,7 @@ export default function Header() {
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Rechercher un contrat, agriculteur, fournisseur…"
+            placeholder={placeholder}
             className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-amber-400 focus:bg-white transition-colors"
           />
         </div>

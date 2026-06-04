@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Plus, Loader2, FileText, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import { BadgeFamille, BadgeStatut } from '@/components/ui/Badge'
 import FilterBar from '@/components/ui/FilterBar'
@@ -35,6 +36,8 @@ export default function ContratsPage() {
   const [contrats, setContrats] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const { sortKey, sortDir, toggle, sort } = useSortable<any>('')
+  const searchParams = useSearchParams()
+  const q = searchParams.get('q')?.toLowerCase().trim() ?? ''
   const [showModal, setShowModal] = useState(false)
   const [produits, setProduits] = useState<any[]>([])
   const [fournisseurs, setFournisseurs] = useState<any[]>([])
@@ -81,6 +84,16 @@ export default function ContratsPage() {
         if (filtAgriculteur) {
           const agriIds = (c.contrats_vente ?? []).map((cv: any) => cv.agriculteur_id)
           if (!agriIds.includes(filtAgriculteur)) return false
+        }
+        if (q) {
+          const haystack = [
+            c.numero_contrat,
+            c.fournisseur?.nom,
+            c.produit?.nom,
+            c.famille,
+            ...(c.contrats_vente ?? []).map((cv: any) => cv.agriculteur?.nom),
+          ].filter(Boolean).join(' ').toLowerCase()
+          if (!haystack.includes(q)) return false
         }
         return true
       })
@@ -134,6 +147,12 @@ export default function ContratsPage() {
         )}
       </div>
 
+      {q && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm" style={{ backgroundColor: '#fdf5f3', color: '#7B2820' }}>
+          <span>🔍 Recherche : <strong>« {q} »</strong> — {filtered.length} résultat{filtered.length > 1 ? 's' : ''}</span>
+          <a href="/contrats" className="ml-auto text-xs underline opacity-60 hover:opacity-100">Effacer</a>
+        </div>
+      )}
       <FilterBar filters={filters} onReset={resetFilters} />
 
       <div className="card-section overflow-hidden">

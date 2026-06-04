@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Archive, Loader2 } from 'lucide-react'
 import { BadgeFamille, BadgeStatut } from '@/components/ui/Badge'
 import FilterBar from '@/components/ui/FilterBar'
@@ -12,6 +13,8 @@ type Tab = 'achat' | 'vente'
 
 export default function ArchivesPage() {
   const [tab, setTab] = useState<Tab>('achat')
+  const searchParams = useSearchParams()
+  const q = searchParams.get('q')?.toLowerCase().trim() ?? ''
   const [contrats, setContrats] = useState<any[]>([])
   const [ventes, setVentes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -61,8 +64,13 @@ export default function ArchivesPage() {
       const ids = (c.contrats_vente ?? []).map((cv: any) => cv.agriculteur_id)
       if (!ids.includes(filtAgriculteurA)) return false
     }
+    if (q) {
+      const h = [c.numero_contrat, c.fournisseur?.nom, c.produit?.nom,
+        ...(c.contrats_vente ?? []).map((cv: any) => cv.agriculteur?.nom)].filter(Boolean).join(' ').toLowerCase()
+      if (!h.includes(q)) return false
+    }
     return true
-  }), [contrats, filtFamilleA, filtProduitA, filtFournisseurA, filtTransporteurA, filtAgriculteurA])
+  }), [contrats, filtFamilleA, filtProduitA, filtFournisseurA, filtTransporteurA, filtAgriculteurA, q])
 
   const filteredVentes = useMemo(() => ventes.filter(v => {
     if (filtFamilleV && v.contrat_achat?.famille !== filtFamilleV) return false
@@ -70,8 +78,13 @@ export default function ArchivesPage() {
     if (filtAgriculteurV && v.agriculteur_id !== filtAgriculteurV) return false
     if (filtFournisseurV && v.contrat_achat?.fournisseur?.id !== filtFournisseurV) return false
     if (filtTransporteurV && v.contrat_achat?.transporteur?.id !== filtTransporteurV) return false
+    if (q) {
+      const h = [v.numero_contrat, v.agriculteur?.nom, v.produit?.nom,
+        v.contrat_achat?.numero_contrat, v.contrat_achat?.fournisseur?.nom].filter(Boolean).join(' ').toLowerCase()
+      if (!h.includes(q)) return false
+    }
     return true
-  }), [ventes, filtFamilleV, filtProduitV, filtAgriculteurV, filtFournisseurV, filtTransporteurV])
+  }), [ventes, filtFamilleV, filtProduitV, filtAgriculteurV, filtFournisseurV, filtTransporteurV, q])
 
   const filtersAchat = [
     { key: 'famille', label: 'Famille', options: [{ value: 'negoce', label: 'Négoce' }, { value: 'appro', label: 'Appro' }], value: filtFamilleA, onChange: setFiltFamilleA },
@@ -100,6 +113,13 @@ export default function ArchivesPage() {
         </h1>
         <p className="text-gray-500 text-sm mt-0.5">Contrats clos et annulés — lecture seule</p>
       </div>
+
+      {q && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm" style={{ backgroundColor: '#fdf5f3', color: '#7B2820' }}>
+          <span>🔍 Recherche : <strong>« {q} »</strong></span>
+          <a href="/archives" className="ml-auto text-xs underline opacity-60 hover:opacity-100">Effacer</a>
+        </div>
+      )}
 
       {/* Onglets Achat / Vente */}
       <div className="flex border-b border-gray-200">
