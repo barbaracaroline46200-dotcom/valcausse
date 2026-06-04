@@ -16,6 +16,12 @@ export default function Header() {
   const [alerts, setAlerts] = useState<AlertItem[]>([])
   const [total, setTotal] = useState(0)
   const ref = useRef<HTMLDivElement>(null)
+  const [now, setNow] = useState(new Date())
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(t)
+  }, [])
 
   // Fermer au clic extérieur
   useEffect(() => {
@@ -174,8 +180,18 @@ export default function Header() {
           )}
         </div>
 
+        {/* Date & heure */}
+        <div className="hidden md:flex flex-col items-end pl-3 border-l border-gray-200 pr-3 border-r">
+          <span className="text-xs font-semibold text-gray-700 leading-tight tabular-nums">
+            {now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+          </span>
+          <span className="text-[11px] text-gray-400 leading-tight capitalize">
+            {now.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
+          </span>
+        </div>
+
         {/* Profil */}
-        <div className="flex items-center gap-2.5 pl-3 border-l border-gray-200">
+        <div className="flex items-center gap-2.5">
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
             style={{ backgroundColor: '#7B2820' }}
