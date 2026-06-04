@@ -80,49 +80,17 @@ export default function DashboardPage() {
       .then(setLivraisonsTransporteur)
   }, [selectedTransporteur, selectedMois])
 
-  // Met à jour l'état local immédiatement — sans attendre le rechargement API
-  function removeLivraisonLocalement(id: string) {
-    setData((prev: any) => {
-      if (!prev) return prev
-      return {
-        ...prev,
-        cmrEnAttente: (prev.cmrEnAttente ?? []).filter((l: any) => l.id !== id),
-        livraisonsAFacturer: (prev.livraisonsAFacturer ?? []).filter((l: any) => l.id !== id),
-        livraisonsPlanifiees: (prev.livraisonsPlanifiees ?? []).filter((l: any) => l.id !== id),
-      }
-    })
-  }
-
-  function removeCmrLocalement(id: string) {
-    setData((prev: any) => {
-      if (!prev) return prev
-      return {
-        ...prev,
-        cmrEnAttente: (prev.cmrEnAttente ?? []).filter((l: any) => l.id !== id),
-      }
-    })
-  }
-
-  function updateFacturationLocalement(id: string, champs: { transport_facture?: boolean; facture_fournisseur_id?: string }) {
-    setData((prev: any) => {
-      if (!prev) return prev
-      const updated = (prev.livraisonsAFacturer ?? []).map((l: any) =>
-        l.id === id ? { ...l, ...champs } : l
-      )
-      // Retirer si les deux sont faits
-      const filtered = updated.filter((l: any) => !l.transport_facture || !l.facture_fournisseur_id)
-      return { ...prev, livraisonsAFacturer: filtered }
-    })
+  function recharger() {
+    window.location.reload()
   }
 
   async function deleteLivraison(livraisonId: string) {
     if (!window.confirm('Supprimer cette livraison ? Cette action est irréversible.')) return
     const res = await fetch(`/api/livraisons/${livraisonId}`, { method: 'DELETE' })
     if (res.ok) {
-      removeLivraisonLocalement(livraisonId)
-      showToast('Livraison supprimée')
+      recharger()
     } else {
-      showToast('Erreur : impossible de supprimer')
+      alert('Erreur : impossible de supprimer')
     }
   }
 
@@ -302,7 +270,7 @@ export default function DashboardPage() {
                   moisCourant={moisCourant}
                   moisSuivant={moisSuivant}
                   isAdmin={isAdmin}
-                  onConfirme={async () => { await reloadData() }}
+                  onConfirme={() => recharger()}
                   onDelete={() => deleteLivraison(l.id)}
                 />
               ))}
@@ -470,12 +438,7 @@ export default function DashboardPage() {
                   <td className="table-cell">{formatDate(f.date_facture)}</td>
                   <td className="table-cell">{f.montant_ht ? `${f.montant_ht} €` : '—'}</td>
                   <td className="table-cell">
-                    <SaisirRFInline factureId={f.id} onSaved={() => {
-                      setData((prev: any) => {
-                        if (!prev) return prev
-                        return { ...prev, rfManquants: (prev.rfManquants ?? []).filter((r: any) => r.id !== f.id) }
-                      })
-                    }} />
+                    <SaisirRFInline factureId={f.id} onSaved={recharger} />
                   </td>
                 </tr>
               ))}
@@ -686,24 +649,14 @@ export default function DashboardPage() {
       <SaisirFactureTransportModal
         livraison={factureTransportModal}
         onClose={() => setFactureTransportModal(null)}
-        onSaved={() => {
-          const id = factureTransportModal.id
-          setFactureTransportModal(null)
-          showToast('Facture transport enregistrée')
-          updateFacturationLocalement(id, { transport_facture: true })
-        }}
+        onSaved={() => { setFactureTransportModal(null); recharger() }}
       />
     )}
     {factureFournisseurModal && (
       <SaisirFactureFournisseurModal
         livraison={factureFournisseurModal}
         onClose={() => setFactureFournisseurModal(null)}
-        onSaved={() => {
-          const id = factureFournisseurModal.id
-          setFactureFournisseurModal(null)
-          showToast('Facture fournisseur enregistrée')
-          updateFacturationLocalement(id, { facture_fournisseur_id: 'done' })
-        }}
+        onSaved={() => { setFactureFournisseurModal(null); recharger() }}
       />
     )}
     {facturesClientModal && (
@@ -716,18 +669,7 @@ export default function DashboardPage() {
         }}
         contratAchatId={facturesClientModal.contrat_achat_id}
         onClose={() => setFacturesClientModal(null)}
-        onSaved={() => {
-          const cvId = facturesClientModal.contrat_vente_id
-          setFacturesClientModal(null)
-          showToast('Contrat de vente clos')
-          setData((prev: any) => {
-            if (!prev) return prev
-            return {
-              ...prev,
-              facturesManquantes: (prev.facturesManquantes ?? []).filter((f: any) => f.contrat_vente_id !== cvId),
-            }
-          })
-        }}
+        onSaved={() => { setFacturesClientModal(null); recharger() }}
       />
     )}
     {cmrModal && (
@@ -735,12 +677,7 @@ export default function DashboardPage() {
         livraison={cmrModal}
         contrat={cmrModal.contrat_achat}
         onClose={() => setCmrModal(null)}
-        onSaved={() => {
-          const id = cmrModal.id
-          setCmrModal(null)
-          showToast('Livraison enregistrée')
-          removeCmrLocalement(id)
-        }}
+        onSaved={() => { setCmrModal(null); recharger() }}
       />
     )}
     </>
