@@ -4,7 +4,7 @@ export function getPrefixes(famille: FamilleType) {
   if (famille === 'negoce') {
     return {
       fournisseur: 'BA',
-      client: 'LVC',
+      client: 'LC',
       factureAchat: 'FAN',
       contratAchat: 'CA',
       contratVente: 'CV',
