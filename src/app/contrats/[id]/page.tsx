@@ -34,7 +34,7 @@ export default function ContratDetailPage() {
   const [modifierVente, setModifierVente] = useState<any>(null)
 
   async function reload() {
-    const data = await fetch(`/api/contrats/${id}`).then(r => r.json())
+    const data = await fetch(`/api/contrats/${id}?t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json())
     setContrat(data)
     setLoading(false)
   }
