@@ -20,11 +20,14 @@ function todayStr() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+type TabId = 'livraisons' | 'cmr' | 'facturation' | 'rf'
+
 export default function DashboardPage() {
   const { isAdmin } = useAdmin()
   const pathname = usePathname()
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<TabId>('livraisons')
   const [selectedTransporteur, setSelectedTransporteur] = useState('')
   const [selectedMois, setSelectedMois] = useState('')
   const [transporteurs, setTransporteurs] = useState<any[]>([])
@@ -241,256 +244,283 @@ export default function DashboardPage() {
       {/* Calendrier des livraisons */}
       <CalendrierLivraisons />
 
-      {/* Section Livraisons à organiser — process 3 étapes */}
-      <Section
-        icon={<Truck size={20} />}
-        title="Livraisons à organiser"
-        count={planifiees.length}
-        color="brun"
-        subtitle="Mois passés non livrés + mois en cours + mois prochain (dès le 20)"
-      >
-        {planifiees.length === 0 ? (
-          <EmptyState text="Aucune livraison en attente 🎉" />
-        ) : (
-          <>
-            {/* Légende process */}
-            <div className="flex items-center gap-6 px-5 py-3 bg-gray-50 border-b border-gray-100 text-xs text-gray-500 flex-wrap">
-              <div className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">1</span> Appel agri + date souhaitée</div>
-              <div className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center font-bold text-xs">2</span> PDF envoyé au transporteur</div>
-              <div className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold text-xs">3</span> Transporteur confirmé + date/semaine</div>
-            </div>
-            <div className="divide-y divide-gray-100">
-              {planifiees.map((l: any) => (
-                <LivraisonAOrganiser
-                  key={l.id}
-                  livraison={l}
-                  moisCourant={moisCourant}
-                  moisSuivant={moisSuivant}
-                  isAdmin={isAdmin}
-                  onConfirme={() => recharger()}
-                  onDelete={() => deleteLivraison(l.id)}
-                />
-              ))}
-            </div>
-          </>
-        )}
-      </Section>
+      {/* ── Onglets Suivi livraisons ── */}
+      <div className="card-section overflow-hidden">
+        {/* Barre d'onglets */}
+        <div className="flex border-b border-gray-200 bg-gray-50 overflow-x-auto">
+          {([
+            { id: 'livraisons' as TabId, label: 'Livraisons à organiser', count: planifiees.length, icon: <Truck size={15} />, color: '#7B2820' },
+            { id: 'cmr'        as TabId, label: 'CMR en attente',         count: cmr.length,        icon: <FileWarning size={15} />, color: '#dc2626' },
+            { id: 'facturation'as TabId, label: 'Facturation en attente', count: aFacturer.length + facturesMq.length, icon: <Receipt size={15} />, color: '#448ab5' },
+            { id: 'rf'         as TabId, label: 'RF à récupérer',         count: rfManquants.length, icon: <FileWarning size={15} />, color: '#dc2626' },
+          ]).map(tab => {
+            const isActive = activeTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
+                  isActive
+                    ? 'border-current text-current bg-white'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                }`}
+                style={isActive ? { color: tab.color, borderColor: tab.color } : {}}
+              >
+                <span className={isActive ? '' : 'text-gray-400'}>{tab.icon}</span>
+                {tab.label}
+                {tab.count > 0 && (
+                  <span
+                    className="ml-1 min-w-[20px] h-5 px-1.5 rounded-full text-white text-xs font-bold flex items-center justify-center"
+                    style={{ backgroundColor: isActive ? tab.color : '#9ca3af' }}
+                  >
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
 
-      {/* Section CMR */}
-      <Section
-        icon={<FileWarning size={20} />}
-        title="CMR en attente"
-        count={cmr.length}
-        color="red"
-        subtitle="Date de livraison dépassée sans lettre de voiture"
-      >
-        {cmr.length === 0 ? (
-          <EmptyState text="Aucun CMR en attente 🎉" />
-        ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100">
-                {['Produit', 'Agriculteur', 'Transporteur', 'Date livraison', 'Contact', 'Délai', '', ''].map(h => (
-                  <th key={h} className="table-header">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {cmr.map((l: any) => {
-                const isRealisee = l.type === 'realisee'
-                const dateRef = isRealisee ? l.date_reelle : l.date_prevue
-                const jours = joursDepuis(dateRef)
-                const dateAffichee = isRealisee
-                  ? formatDate(l.date_reelle)
-                  : l.date_prevue ? formatDate(l.date_prevue) : (l.semaine_prevue ?? '—')
-                const agri = l.contrat_achat?.contrats_vente?.find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur
-                  ?? l.contrat_achat?.contrats_vente?.[0]?.agriculteur
-                return (
-                  <tr key={l.id}
-                    className={`table-row cursor-pointer hover:bg-red-50 transition-colors ${!isRealisee ? 'bg-amber-50/40' : ''}`}
-                    onClick={() => setCmrModal(l)}
-                    title="Cliquer pour saisir le CMR">
-                    <td className="table-cell font-medium">{l.contrat_achat?.produit?.nom ?? '—'}</td>
-                    <td className="table-cell text-sm">{agri?.nom ?? '—'}</td>
-                    <td className="table-cell">{l.contrat_achat?.transporteur?.nom ?? '—'}</td>
-                    <td className="table-cell">
-                      <span className={!isRealisee ? 'text-amber-700 font-medium' : ''}>{dateAffichee}</span>
-                      {!isRealisee && <span className="ml-1 text-xs text-amber-600">(prévue)</span>}
-                    </td>
-                    <td className="table-cell text-sm">
-                      {l.contrat_achat?.transporteur?.telephone && (
-                        <span className="text-gray-600">📞 {l.contrat_achat.transporteur.telephone}</span>
-                      )}
-                    </td>
-                    <td className="table-cell">
-                      <span className="badge-alerte">{jours}j</span>
-                    </td>
-                    <td className="table-cell">
-                      {isRealisee
-                        ? <span className="text-xs text-orange-600 font-medium underline">N° CMR manquant →</span>
-                        : <span className="text-xs text-red-600 font-medium underline">Saisir CMR →</span>
-                      }
-                    </td>
-                    {isAdmin && (
-                      <td className="table-cell" onClick={e => e.stopPropagation()}>
-                        <button onClick={() => deleteLivraison(l.id)} className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded" title="Supprimer la livraison">
-                          <Trash2 size={14} />
-                        </button>
-                      </td>
-                    )}
+        {/* Contenu de l'onglet actif */}
+        <div className="overflow-x-auto">
+
+          {/* ── Onglet 1 : Livraisons à organiser ── */}
+          {activeTab === 'livraisons' && (
+            planifiees.length === 0 ? (
+              <EmptyState text="Aucune livraison en attente 🎉" />
+            ) : (
+              <>
+                <div className="flex items-center gap-6 px-5 py-3 bg-gray-50 border-b border-gray-100 text-xs text-gray-500 flex-wrap">
+                  <div className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">1</span> Appel agri + date souhaitée</div>
+                  <div className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center font-bold text-xs">2</span> PDF envoyé au transporteur</div>
+                  <div className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold text-xs">3</span> Transporteur confirmé + date/semaine</div>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {planifiees.map((l: any) => (
+                    <LivraisonAOrganiser
+                      key={l.id}
+                      livraison={l}
+                      moisCourant={moisCourant}
+                      moisSuivant={moisSuivant}
+                      isAdmin={isAdmin}
+                      onConfirme={() => recharger()}
+                      onDelete={() => deleteLivraison(l.id)}
+                    />
+                  ))}
+                </div>
+              </>
+            )
+          )}
+
+          {/* ── Onglet 2 : CMR en attente ── */}
+          {activeTab === 'cmr' && (
+            cmr.length === 0 ? (
+              <EmptyState text="Aucun CMR en attente 🎉" />
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    {['Produit', 'Agriculteur', 'Transporteur', 'Date livraison', 'Contact', 'Délai', '', ''].map(h => (
+                      <th key={h} className="table-header">{h}</th>
+                    ))}
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        )}
-      </Section>
+                </thead>
+                <tbody>
+                  {cmr.map((l: any) => {
+                    const isRealisee = l.type === 'realisee'
+                    const dateRef = isRealisee ? l.date_reelle : l.date_prevue
+                    const jours = joursDepuis(dateRef)
+                    const dateAffichee = isRealisee
+                      ? formatDate(l.date_reelle)
+                      : l.date_prevue ? formatDate(l.date_prevue) : (l.semaine_prevue ?? '—')
+                    const agri = l.contrat_achat?.contrats_vente?.find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur
+                      ?? l.contrat_achat?.contrats_vente?.[0]?.agriculteur
+                    return (
+                      <tr key={l.id}
+                        className={`table-row cursor-pointer hover:bg-red-50 transition-colors ${!isRealisee ? 'bg-amber-50/40' : ''}`}
+                        onClick={() => setCmrModal(l)}
+                        title="Cliquer pour saisir le CMR">
+                        <td className="table-cell font-medium">{l.contrat_achat?.produit?.nom ?? '—'}</td>
+                        <td className="table-cell text-sm">{agri?.nom ?? '—'}</td>
+                        <td className="table-cell">{l.contrat_achat?.transporteur?.nom ?? '—'}</td>
+                        <td className="table-cell">
+                          <span className={!isRealisee ? 'text-amber-700 font-medium' : ''}>{dateAffichee}</span>
+                          {!isRealisee && <span className="ml-1 text-xs text-amber-600">(prévue)</span>}
+                        </td>
+                        <td className="table-cell text-sm">
+                          {l.contrat_achat?.transporteur?.telephone && (
+                            <span className="text-gray-600">📞 {l.contrat_achat.transporteur.telephone}</span>
+                          )}
+                        </td>
+                        <td className="table-cell">
+                          <span className="badge-alerte">{jours}j</span>
+                        </td>
+                        <td className="table-cell">
+                          {isRealisee
+                            ? <span className="text-xs text-orange-600 font-medium underline">N° CMR manquant →</span>
+                            : <span className="text-xs text-red-600 font-medium underline">Saisir CMR →</span>
+                          }
+                        </td>
+                        {isAdmin && (
+                          <td className="table-cell" onClick={e => e.stopPropagation()}>
+                            <button onClick={() => deleteLivraison(l.id)} className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded" title="Supprimer">
+                              <Trash2 size={14} />
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            )
+          )}
 
-      {/* Section Facturation en attente */}
-      <Section
-        icon={<Receipt size={20} />}
-        title="Facturation en attente"
-        count={aFacturer.length}
-        color="blue"
-        subtitle="Livraisons réalisées — transport et/ou fournisseur non encore facturés"
-      >
-        {aFacturer.length === 0 ? (
-          <EmptyState text="Toutes les livraisons sont facturées 🎉" />
-        ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100">
-                {['Date', 'Produit', 'Contrat', 'Agriculteur', 'Tonnes', 'Transport facturé', 'Fournisseur facturé', ''].map(h => (
-                  <th key={h} className="table-header">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {aFacturer.map((l: any) => {
-                const ca = l.contrat_achat
-                const agri = ca?.contrats_vente?.find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur
-                  ?? ca?.contrats_vente?.[0]?.agriculteur
-                return (
-                  <tr key={l.id} className="table-row">
-                    <td className="table-cell text-sm">{formatDate(l.date_reelle)}</td>
-                    <td className="table-cell font-medium">{ca?.produit?.nom ?? '—'}</td>
-                    <td className="table-cell">
-                      <a href={`/contrats/${ca?.id}`} className="text-green-700 hover:underline text-sm">{ca?.numero_contrat}</a>
-                    </td>
-                    <td className="table-cell text-sm">{agri?.nom ?? (l.destination_silo ? 'Silo' : '—')}</td>
-                    <td className="table-cell font-semibold">{formatTonnes(l.quantite_reelle)}</td>
-                    <td className="table-cell text-center">
-                      {l.transport_facture
-                        ? <span className="badge-clos">✓ Facturé</span>
-                        : <button onClick={() => setFactureTransportModal(l)} className="badge-alerte cursor-pointer hover:opacity-80 transition-opacity">⏳ Saisir →</button>
-                      }
-                    </td>
-                    <td className="table-cell text-center">
-                      {l.facture_fournisseur_id
-                        ? <span className="badge-clos">✓ Facturé</span>
-                        : <button onClick={() => setFactureFournisseurModal(l)} className="badge-alerte cursor-pointer hover:opacity-80 transition-opacity">⏳ Saisir →</button>
-                      }
-                    </td>
-                    {isAdmin && (
-                      <td className="table-cell text-center">
-                        <button onClick={() => deleteLivraison(l.id)} className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded" title="Supprimer la livraison">
-                          <Trash2 size={14} />
-                        </button>
-                      </td>
-                    )}
+          {/* ── Onglet 3 : Facturation en attente ── */}
+          {activeTab === 'facturation' && (
+            <>
+              {/* Transport / fournisseur */}
+              {aFacturer.length === 0 && facturesMq.length === 0 ? (
+                <EmptyState text="Toutes les livraisons sont facturées 🎉" />
+              ) : (
+                <>
+                  {aFacturer.length > 0 && (
+                    <>
+                      <div className="px-5 py-2 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                        Transport &amp; fournisseur à facturer — {aFacturer.length} livraison{aFacturer.length > 1 ? 's' : ''}
+                      </div>
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-gray-100">
+                            {['Date', 'Produit', 'Contrat', 'Agriculteur', 'Tonnes', 'Transport facturé', 'Fournisseur facturé', ''].map(h => (
+                              <th key={h} className="table-header">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {aFacturer.map((l: any) => {
+                            const ca = l.contrat_achat
+                            const agri = ca?.contrats_vente?.find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur
+                              ?? ca?.contrats_vente?.[0]?.agriculteur
+                            return (
+                              <tr key={l.id} className="table-row">
+                                <td className="table-cell text-sm">{formatDate(l.date_reelle)}</td>
+                                <td className="table-cell font-medium">{ca?.produit?.nom ?? '—'}</td>
+                                <td className="table-cell">
+                                  <a href={`/contrats/${ca?.id}`} className="text-green-700 hover:underline text-sm">{ca?.numero_contrat}</a>
+                                </td>
+                                <td className="table-cell text-sm">{agri?.nom ?? (l.destination_silo ? 'Silo' : '—')}</td>
+                                <td className="table-cell font-semibold">{formatTonnes(l.quantite_reelle)}</td>
+                                <td className="table-cell text-center">
+                                  {l.transport_facture
+                                    ? <span className="badge-clos">✓ Facturé</span>
+                                    : <button onClick={() => setFactureTransportModal(l)} className="badge-alerte cursor-pointer hover:opacity-80 transition-opacity">⏳ Saisir →</button>
+                                  }
+                                </td>
+                                <td className="table-cell text-center">
+                                  {l.facture_fournisseur_id
+                                    ? <span className="badge-clos">✓ Facturé</span>
+                                    : <button onClick={() => setFactureFournisseurModal(l)} className="badge-alerte cursor-pointer hover:opacity-80 transition-opacity">⏳ Saisir →</button>
+                                  }
+                                </td>
+                                {isAdmin && (
+                                  <td className="table-cell text-center">
+                                    <button onClick={() => deleteLivraison(l.id)} className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded" title="Supprimer">
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </td>
+                                )}
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </>
+                  )}
+
+                  {/* Factures clients */}
+                  {facturesMq.length > 0 && (
+                    <>
+                      <div className="px-5 py-2 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide mt-0">
+                        Factures clients à récupérer dans Atys — {facturesMq.length} contrat{facturesMq.length > 1 ? 's' : ''}
+                      </div>
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-gray-100">
+                            {['Agriculteur', 'Produit', 'Contrat vente', 'Dernière livraison', 'Mois concernés', ''].map(h => (
+                              <th key={h} className="table-header">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {facturesMq.map((item: any) => (
+                            <tr key={item.contrat_vente_id} className="table-row">
+                              <td className="table-cell font-medium">{item.agriculteur?.nom ?? '—'}</td>
+                              <td className="table-cell">{item.produit?.nom ?? '—'}</td>
+                              <td className="table-cell">
+                                <a href={`/contrats/${item.contrat_achat_id}`} className="text-green-700 hover:underline text-sm font-medium">
+                                  {item.contrat_vente_numero}
+                                </a>
+                              </td>
+                              <td className="table-cell">{formatDate(item.derniere_livraison)}</td>
+                              <td className="table-cell text-sm text-gray-600">
+                                {item.mois_livraison.map((m: string) => formatMois(m + '-01')).join(', ')}
+                              </td>
+                              <td className="table-cell text-center">
+                                <button
+                                  onClick={() => setFacturesClientModal(item)}
+                                  className="badge-alerte cursor-pointer hover:opacity-80 transition-opacity"
+                                >
+                                  ⏳ Saisir factures →
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </>
+                  )}
+                </>
+              )}
+            </>
+          )}
+
+          {/* ── Onglet 4 : RF à récupérer ── */}
+          {activeTab === 'rf' && (
+            rfManquants.length === 0 ? (
+              <EmptyState text="Aucun RF en attente 🎉" />
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    {['Fournisseur', 'Produit', 'Contrat', 'N° Facture', 'Date', 'Montant HT', 'Saisir RF'].map(h => (
+                      <th key={h} className="table-header">{h}</th>
+                    ))}
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        )}
-      </Section>
+                </thead>
+                <tbody>
+                  {rfManquants.map((f: any) => (
+                    <tr key={f.id} className="table-row">
+                      <td className="table-cell font-medium">{f.contrat_achat?.fournisseur?.nom ?? '—'}</td>
+                      <td className="table-cell">{f.contrat_achat?.produit?.nom ?? '—'}</td>
+                      <td className="table-cell">
+                        <a href={`/contrats/${f.contrat_achat?.id}`} className="text-green-700 hover:underline text-sm">{f.contrat_achat?.numero_contrat}</a>
+                      </td>
+                      <td className="table-cell">{f.numero_facture ?? '—'}</td>
+                      <td className="table-cell">{formatDate(f.date_facture)}</td>
+                      <td className="table-cell">{f.montant_ht ? `${f.montant_ht} €` : '—'}</td>
+                      <td className="table-cell">
+                        <SaisirRFInline factureId={f.id} onSaved={recharger} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )
+          )}
 
-      {/* Section RF à récupérer */}
-      {rfManquants.length > 0 && (
-        <Section
-          icon={<FileWarning size={20} />}
-          title="RF à récupérer"
-          count={rfManquants.length}
-          color="red"
-          subtitle="Factures fournisseur enregistrées — numéro RF manquant (à recevoir de la comptable)"
-        >
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100">
-                {['Fournisseur', 'Produit', 'Contrat', 'N° Facture', 'Date', 'Montant HT', 'Saisir RF'].map(h => (
-                  <th key={h} className="table-header">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rfManquants.map((f: any) => (
-                <tr key={f.id} className="table-row">
-                  <td className="table-cell font-medium">{f.contrat_achat?.fournisseur?.nom ?? '—'}</td>
-                  <td className="table-cell">{f.contrat_achat?.produit?.nom ?? '—'}</td>
-                  <td className="table-cell">
-                    <a href={`/contrats/${f.contrat_achat?.id}`} className="text-green-700 hover:underline text-sm">{f.contrat_achat?.numero_contrat}</a>
-                  </td>
-                  <td className="table-cell">{f.numero_facture ?? '—'}</td>
-                  <td className="table-cell">{formatDate(f.date_facture)}</td>
-                  <td className="table-cell">{f.montant_ht ? `${f.montant_ht} €` : '—'}</td>
-                  <td className="table-cell">
-                    <SaisirRFInline factureId={f.id} onSaved={recharger} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Section>
-      )}
-
-      {/* Section Factures clients */}
-      <Section
-        icon={<Receipt size={20} />}
-        title="Factures clients à récupérer"
-        count={facturesMq.length}
-        color="brun"
-        subtitle="Contrats de vente entièrement livrés depuis + de 30 jours — récupérer les factures dans Atys"
-      >
-        {facturesMq.length === 0 ? (
-          <EmptyState text="Toutes les factures sont à jour 🎉" />
-        ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100">
-                {['Agriculteur', 'Produit', 'Contrat vente', 'Dernière livraison', 'Mois concernés', ''].map(h => (
-                  <th key={h} className="table-header">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {facturesMq.map((item: any) => (
-                <tr key={item.contrat_vente_id} className="table-row">
-                  <td className="table-cell font-medium">{item.agriculteur?.nom ?? '—'}</td>
-                  <td className="table-cell">{item.produit?.nom ?? '—'}</td>
-                  <td className="table-cell">
-                    <a href={`/contrats/${item.contrat_achat_id}`} className="text-green-700 hover:underline text-sm font-medium">
-                      {item.contrat_vente_numero}
-                    </a>
-                  </td>
-                  <td className="table-cell">{formatDate(item.derniere_livraison)}</td>
-                  <td className="table-cell text-sm text-gray-600">
-                    {item.mois_livraison.map((m: string) => formatMois(m + '-01')).join(', ')}
-                  </td>
-                  <td className="table-cell text-center">
-                    <button
-                      onClick={() => setFacturesClientModal(item)}
-                      className="badge-alerte cursor-pointer hover:opacity-80 transition-opacity"
-                    >
-                      ⏳ Saisir factures →
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </Section>
+        </div>
+      </div>
 
       {/* Section Point transporteur */}
       <Section
