@@ -50,6 +50,7 @@ export default function ContratsPage() {
 
   const filtered = useMemo(() => {
     return contrats.filter(c => {
+      if (c.statut === 'clos' || c.statut === 'annule') return false  // → Archives
       if (filtFamille && c.famille !== filtFamille) return false
       if (filtStatut && c.statut !== filtStatut) return false
       if (filtProduit && c.produit_id !== filtProduit) return false
@@ -86,7 +87,10 @@ export default function ContratsPage() {
             <FileText size={24} style={{ color: '#C8941A' }} />
             Contrats d'achat
           </h1>
-          <p className="text-gray-500 text-sm mt-0.5">{filtered.length} contrat{filtered.length > 1 ? 's' : ''}</p>
+          <p className="text-gray-500 text-sm mt-0.5">
+            {filtered.length} contrat{filtered.length > 1 ? 's' : ''} en cours
+            <a href="/archives" className="ml-3 text-gray-400 hover:text-gray-600 underline text-xs">→ Voir les archives</a>
+          </p>
         </div>
         {isAdmin && (
           <button onClick={() => setShowModal(true)} className="btn-primary">

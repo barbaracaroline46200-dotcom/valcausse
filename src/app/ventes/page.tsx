@@ -38,6 +38,7 @@ export default function VentesPage() {
   function reload() { fetch('/api/ventes').then(r => r.json()).then(setVentes) }
 
   const filtered = useMemo(() => ventes.filter(v => {
+    if (v.statut === 'clos' || v.statut === 'annule') return false  // → Archives
     if (filtFamille && v.contrat_achat?.famille !== filtFamille) return false
     if (filtStatut && v.statut !== filtStatut) return false
     if (filtProduit && v.produit_id !== filtProduit) return false
@@ -71,7 +72,10 @@ export default function VentesPage() {
             <ShoppingCart size={24} style={{ color: '#C8941A' }} />
             Contrats de vente
           </h1>
-          <p className="text-gray-500 text-sm mt-0.5">{filtered.length} contrat{filtered.length > 1 ? 's' : ''}</p>
+          <p className="text-gray-500 text-sm mt-0.5">
+            {filtered.length} contrat{filtered.length > 1 ? 's' : ''} en cours
+            <a href="/archives" className="ml-3 text-gray-400 hover:text-gray-600 underline text-xs">→ Voir les archives</a>
+          </p>
         </div>
         {isAdmin && (
           <button onClick={() => setShowModal(true)} className="btn-primary">
