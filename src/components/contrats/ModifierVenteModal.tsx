@@ -16,6 +16,8 @@ export default function ModifierVenteModal({ vente, contrat, onClose, onSaved }:
     prix_vente: String(vente.prix_vente ?? ''),
     quantite: String(vente.quantite ?? ''),
     statut: vente.statut ?? 'en_cours',
+    date_debut: vente.date_debut ?? '',
+    date_fin: vente.date_fin ?? '',
     notes: vente.notes ?? '',
   })
   const [agriculteurs, setAgriculteurs] = useState<any[]>([])
@@ -40,6 +42,8 @@ export default function ModifierVenteModal({ vente, contrat, onClose, onSaved }:
       prix_vente: parseFloat(form.prix_vente),
       quantite: parseFloat(form.quantite),
       statut: form.statut,
+      date_debut: form.date_debut || null,
+      date_fin: form.date_fin || null,
       notes: form.notes || null,
     }
     const res = await fetch(`/api/ventes/${vente.id}`, {
@@ -79,6 +83,14 @@ export default function ModifierVenteModal({ vente, contrat, onClose, onSaved }:
           <div>
             <label className="label">Quantité (t) *</label>
             <input type="number" step="0.001" className="input" value={form.quantite} onChange={f('quantite')} required />
+          </div>
+          <div>
+            <label className="label">Date début</label>
+            <input type="date" className="input" value={form.date_debut} onChange={f('date_debut')} />
+          </div>
+          <div>
+            <label className="label">Date fin</label>
+            <input type="date" className="input" value={form.date_fin} onChange={f('date_fin')} />
           </div>
           <div>
             <label className="label">Statut</label>
