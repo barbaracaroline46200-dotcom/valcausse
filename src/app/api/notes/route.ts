@@ -13,11 +13,11 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const { contenu } = await req.json()
+  const { contenu, priorite } = await req.json()
   const supabase = getServiceClient()
   const { data, error } = await supabase
     .from('notes_dashboard')
-    .insert({ contenu })
+    .insert({ contenu, priorite: priorite ?? 'normale' })
     .select()
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })

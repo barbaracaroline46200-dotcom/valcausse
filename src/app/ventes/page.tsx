@@ -1,15 +1,32 @@
 'use client'
 import { useEffect, useState, useMemo } from 'react'
-import { Plus, Loader2, ShoppingCart } from 'lucide-react'
+import { Plus, Loader2, ShoppingCart, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import { BadgeStatut } from '@/components/ui/Badge'
 import FilterBar from '@/components/ui/FilterBar'
 import { formatTonnes, formatEurosParTonne } from '@/lib/annee-agricole'
 import { useAdmin } from '@/components/ui/AdminProvider'
 import Link from 'next/link'
 import NouvelleVenteSiloModal from '@/components/contrats/NouvelleVenteSiloModal'
+import { useSortable } from '@/lib/useSortable'
+
+function SortHeader({ label, col, sortKey, sortDir, onToggle }: {
+  label: string; col: string; sortKey: string; sortDir: 'asc'|'desc'; onToggle: (k: any) => void
+}) {
+  const active = sortKey === col
+  return (
+    <th className="table-header cursor-pointer select-none hover:text-gray-700" onClick={() => onToggle(col)}>
+      <span className="inline-flex items-center gap-1">
+        {label}
+        {active ? sortDir === 'asc' ? <ChevronUp size={13} /> : <ChevronDown size={13} />
+          : <ChevronsUpDown size={13} className="opacity-30" />}
+      </span>
+    </th>
+  )
+}
 
 export default function VentesPage() {
   const { isAdmin } = useAdmin()
+  const { sortKey, sortDir, toggle, sort } = useSortable<any>('')
   const [ventes, setVentes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -37,16 +54,19 @@ export default function VentesPage() {
 
   function reload() { fetch('/api/ventes').then(r => r.json()).then(setVentes) }
 
-  const filtered = useMemo(() => ventes.filter(v => {
-    if (v.statut === 'clos' || v.statut === 'annule') return false  // → Archives
-    if (filtFamille && v.contrat_achat?.famille !== filtFamille) return false
-    if (filtStatut && v.statut !== filtStatut) return false
-    if (filtProduit && v.produit_id !== filtProduit) return false
-    if (filtAgriculteur && v.agriculteur_id !== filtAgriculteur) return false
-    if (filtFournisseur && v.contrat_achat?.fournisseur?.id !== filtFournisseur) return false
-    if (filtTransporteur && v.contrat_achat?.transporteur?.id !== filtTransporteur) return false
-    return true
-  }), [ventes, filtFamille, filtStatut, filtProduit, filtAgriculteur, filtFournisseur, filtTransporteur])
+  const filtered = useMemo(() => {
+    const base = ventes.filter(v => {
+      if (v.statut === 'clos' || v.statut === 'annule') return false
+      if (filtFamille && v.contrat_achat?.famille !== filtFamille) return false
+      if (filtStatut && v.statut !== filtStatut) return false
+      if (filtProduit && v.produit_id !== filtProduit) return false
+      if (filtAgriculteur && v.agriculteur_id !== filtAgriculteur) return false
+      if (filtFournisseur && v.contrat_achat?.fournisseur?.id !== filtFournisseur) return false
+      if (filtTransporteur && v.contrat_achat?.transporteur?.id !== filtTransporteur) return false
+      return true
+    })
+    return sort(base)
+  }, [ventes, filtFamille, filtStatut, filtProduit, filtAgriculteur, filtFournisseur, filtTransporteur, sortKey, sortDir])
 
   function resetFilters() {
     setFiltFamille(''); setFiltStatut(''); setFiltProduit('')
@@ -91,9 +111,13 @@ export default function VentesPage() {
           <table className="w-full">
             <thead className="bg-gray-50/50">
               <tr>
-                {['N° Contrat', 'Agriculteur', 'Produit', 'Contrat achat lié', 'Quantité', 'Prix vente', 'Statut'].map(h => (
-                  <th key={h} className="table-header">{h}</th>
-                ))}
+                    <SortHeader label="N° Contrat"      col="numero_contrat" sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                    <SortHeader label="Agriculteur"      col="agriculteur_id" sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                    <SortHeader label="Produit"          col="produit_id"     sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                    <th className="table-header">Contrat achat lié</th>
+                    <SortHeader label="Quantité"         col="quantite"       sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                    <SortHeader label="Prix vente"       col="prix_vente"     sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                    <SortHeader label="Statut"           col="statut"         sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
               </tr>
             </thead>
             <tbody>

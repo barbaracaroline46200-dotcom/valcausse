@@ -3,7 +3,7 @@ import { getDashboardData } from './actions'
 import { useEffect, useState, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 import { Phone, AlertTriangle, TrendingUp, Loader2, Plus, Trash2, CheckSquare, Square, CalendarDays, CheckCircle2, Circle, ClipboardList, CheckCircle, Wheat, Sprout } from 'lucide-react'
-import { formatDate, formatTonnes, getAnneeAgricoleLabel } from '@/lib/annee-agricole'
+import { formatDate, formatTonnes, getAnneeAgricoleLabel, getAnneeAgricole } from '@/lib/annee-agricole'
 import { quantiteLivree, reliquat } from '@/lib/utils'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import CalendrierLivraisons from '@/components/ui/CalendrierLivraisons'
@@ -26,6 +26,7 @@ export default function DashboardPage() {
   const [livraisonsTransporteur, setLivraisonsTransporteur] = useState<any[]>([])
   const [agendaToday, setAgendaToday] = useState<any[]>([])
   const [toast, setToast] = useState('')
+  const [filtAnnee, setFiltAnnee] = useState<string>(() => getAnneeAgricoleLabel())
 
   function showToast(msg: string) {
     setToast(msg)
@@ -79,7 +80,28 @@ export default function DashboardPage() {
   )
 
   // Calculs statistiques année agricole
-  const contrats = data?.contrats ?? []
+  const allContrats = data?.contrats ?? []
+
+  // Années agricoles disponibles (format "2024/2025")
+  function anneeLabel(dateStr?: string | null): string | null {
+    if (!dateStr) return null
+    return getAnneeAgricoleLabel(new Date(dateStr))
+  }
+  const anneesDisponibles = [...new Set(
+    allContrats.map((c: any) => anneeLabel(c.date_debut)).filter(Boolean)
+  )].sort().reverse() as string[]
+  if (!anneesDisponibles.includes(getAnneeAgricoleLabel())) {
+    anneesDisponibles.unshift(getAnneeAgricoleLabel())
+  }
+
+  // Filtrage par année
+  const contrats = filtAnnee
+    ? allContrats.filter((c: any) => {
+        if (!c.date_debut) return false
+        return getAnneeAgricoleLabel(new Date(c.date_debut)) === filtAnnee
+      })
+    : allContrats
+
   const parFamille = { appro: { total: 0, livre: 0, contrats: 0 }, negoce: { total: 0, livre: 0, contrats: 0 } }
   const parProduit: Record<string, number> = {}
 
@@ -111,9 +133,24 @@ export default function DashboardPage() {
       </div>
     )}
     <div className="space-y-8 pb-10">
-      <div>
-        <h1 className="text-2xl font-bold" style={{ color: '#7B2820' }}>Tableau de bord</h1>
-        <p className="text-gray-500 text-sm mt-0.5">Année agricole {getAnneeAgricoleLabel()} · {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+      <div className="flex items-end justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold" style={{ color: '#7B2820' }}>Tableau de bord</h1>
+          <p className="text-gray-500 text-sm mt-0.5">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Année agricole</span>
+          <select
+            value={filtAnnee}
+            onChange={e => setFiltAnnee(e.target.value)}
+            className="input w-32 text-sm font-semibold py-1.5"
+            style={{ color: '#7B2820', borderColor: '#e4b5ad' }}
+          >
+            {anneesDisponibles.map(a => (
+              <option key={a} value={a}>{a}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Bloc Agenda du jour — admin uniquement */}
@@ -194,7 +231,7 @@ export default function DashboardPage() {
         <div className="card">
           <h2 className="font-bold mb-4 flex items-center gap-2" style={{ color: '#7B2820' }}>
             <TrendingUp size={18} style={{ color: '#C8941A' }} />
-            Tonnage livré par produit — année agricole {getAnneeAgricoleLabel()}
+            Tonnage livré par produit — année agricole {filtAnnee}
           </h2>
           <ResponsiveContainer width="100%" height={Math.max(200, chartData.length * 44)}>
             <BarChart data={chartData} layout="vertical" margin={{ left: 90, right: 40, top: 4, bottom: 4 }} barSize={22}>
@@ -426,9 +463,16 @@ function EmptyState({ text }: { text: string }) {
   )
 }
 
+const PRIORITE_CONFIG = {
+  haute:   { label: '🔴 Haute',   bg: '#fef2f2', border: '#fecaca', dot: '#dc2626' },
+  normale: { label: '🟡 Normale', bg: '#fffbeb', border: '#fde68a', dot: '#d97706' },
+  basse:   { label: '🔵 Basse',   bg: '#eff6fb', border: '#bfdbfe', dot: '#3b82f6' },
+}
+
 function BlocNotes() {
   const [notes, setNotes] = useState<any[]>([])
   const [nouveau, setNouveau] = useState('')
+  const [priorite, setPriorite] = useState<'haute'|'normale'|'basse'>('normale')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -441,7 +485,7 @@ function BlocNotes() {
     const res = await fetch('/api/notes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contenu: nouveau.trim() }),
+      body: JSON.stringify({ contenu: nouveau.trim(), priorite }),
     })
     const note = await res.json()
     setNotes(prev => [note, ...prev])
@@ -464,13 +508,19 @@ function BlocNotes() {
     setNotes(prev => prev.filter(n => n.id !== id))
   }
 
-  const actives = notes.filter(n => !n.fait)
+  // Tri : haute → normale → basse, puis par date
+  const ORDRE: Record<string, number> = { haute: 0, normale: 1, basse: 2 }
+  const actives = notes
+    .filter(n => !n.fait)
+    .sort((a, b) => (ORDRE[a.priorite] ?? 1) - (ORDRE[b.priorite] ?? 1))
   const faites = notes.filter(n => n.fait)
 
   return (
     <div className="card-section overflow-hidden">
       <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3" style={{ backgroundColor: '#fdf5f3' }}>
-        <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-lg flex-shrink-0" style={{ backgroundColor: '#7B2820' }}>📝</div>
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white flex-shrink-0" style={{ backgroundColor: '#7B2820' }}>
+          <CheckSquare size={18} />
+        </div>
         <div>
           <h2 className="font-bold" style={{ color: '#3a1e1a' }}>Notes & rappels</h2>
           <p className="text-xs" style={{ color: '#7B2820', opacity: 0.7 }}>Mémos, choses importantes, rappels personnels</p>
@@ -479,6 +529,15 @@ function BlocNotes() {
       <div className="p-4 space-y-3">
         {/* Saisie */}
         <div className="flex gap-2">
+          <select
+            value={priorite}
+            onChange={e => setPriorite(e.target.value as any)}
+            className="input w-36 text-xs py-2"
+          >
+            <option value="haute">🔴 Haute</option>
+            <option value="normale">🟡 Normale</option>
+            <option value="basse">🔵 Basse</option>
+          </select>
           <input
             type="text"
             value={nouveau}
@@ -499,17 +558,25 @@ function BlocNotes() {
           <p className="text-sm text-gray-400 text-center py-4">Aucune note pour l'instant</p>
         )}
         <div className="space-y-2">
-          {actives.map(note => (
-            <div key={note.id} className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2.5 group">
-              <button onClick={() => toggleFait(note)} className="mt-0.5 text-amber-400 hover:text-green-500 transition-colors flex-shrink-0">
-                <Square size={16} />
-              </button>
-              <span className="text-sm text-gray-800 flex-1 leading-snug">{note.contenu}</span>
-              <button onClick={() => supprimer(note.id)} className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 hover:text-red-500 flex-shrink-0">
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))}
+          {actives.map(note => {
+            const p = PRIORITE_CONFIG[note.priorite as keyof typeof PRIORITE_CONFIG] ?? PRIORITE_CONFIG.normale
+            return (
+              <div key={note.id} className="flex items-start gap-2.5 rounded-lg px-3 py-2.5 group border" style={{ backgroundColor: p.bg, borderColor: p.border }}>
+                <button onClick={() => toggleFait(note)} className="mt-0.5 flex-shrink-0 transition-colors" style={{ color: p.dot }}>
+                  <Square size={16} />
+                </button>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm text-gray-800 leading-snug">{note.contenu}</span>
+                </div>
+                <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 self-center" style={{ color: p.dot, backgroundColor: p.border }}>
+                  {note.priorite}
+                </span>
+                <button onClick={() => supprimer(note.id)} className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 hover:text-red-500 flex-shrink-0 self-center">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            )
+          })}
         </div>
 
         {/* Notes faites (repliées) */}

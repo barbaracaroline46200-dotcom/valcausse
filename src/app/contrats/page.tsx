@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useMemo } from 'react'
-import { Plus, Loader2, FileText } from 'lucide-react'
+import { Plus, Loader2, FileText, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import { BadgeFamille, BadgeStatut } from '@/components/ui/Badge'
 import FilterBar from '@/components/ui/FilterBar'
 import ProgressBar from '@/components/ui/ProgressBar'
@@ -9,11 +9,32 @@ import { quantiteLivree, reliquat } from '@/lib/utils'
 import Link from 'next/link'
 import NouveauContratModal from '@/components/contrats/NouveauContratModal'
 import { useAdmin } from '@/components/ui/AdminProvider'
+import { useSortable } from '@/lib/useSortable'
+
+function SortHeader({ label, col, sortKey, sortDir, onToggle, className }: {
+  label: string; col: string; sortKey: string; sortDir: 'asc'|'desc'; onToggle: (k: any) => void; className?: string
+}) {
+  const active = sortKey === col
+  return (
+    <th
+      className={`table-header cursor-pointer select-none hover:text-gray-700 ${className ?? ''}`}
+      onClick={() => onToggle(col)}
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        {active
+          ? sortDir === 'asc' ? <ChevronUp size={13} /> : <ChevronDown size={13} />
+          : <ChevronsUpDown size={13} className="opacity-30" />}
+      </span>
+    </th>
+  )
+}
 
 export default function ContratsPage() {
   const { isAdmin } = useAdmin()
   const [contrats, setContrats] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const { sortKey, sortDir, toggle, sort } = useSortable<any>('')
   const [showModal, setShowModal] = useState(false)
   const [produits, setProduits] = useState<any[]>([])
   const [fournisseurs, setFournisseurs] = useState<any[]>([])
@@ -49,20 +70,34 @@ export default function ContratsPage() {
   }
 
   const filtered = useMemo(() => {
-    return contrats.filter(c => {
-      if (c.statut === 'clos' || c.statut === 'annule') return false  // → Archives
-      if (filtFamille && c.famille !== filtFamille) return false
-      if (filtStatut && c.statut !== filtStatut) return false
-      if (filtProduit && c.produit_id !== filtProduit) return false
-      if (filtFournisseur && c.fournisseur_id !== filtFournisseur) return false
-      if (filtTransporteur && c.transporteur_id !== filtTransporteur) return false
-      if (filtAgriculteur) {
-        const agriIds = (c.contrats_vente ?? []).map((cv: any) => cv.agriculteur_id)
-        if (!agriIds.includes(filtAgriculteur)) return false
-      }
-      return true
-    })
-  }, [contrats, filtFamille, filtStatut, filtProduit, filtFournisseur, filtTransporteur, filtAgriculteur])
+    const base = contrats
+      .filter(c => {
+        if (c.statut === 'clos' || c.statut === 'annule') return false
+        if (filtFamille && c.famille !== filtFamille) return false
+        if (filtStatut && c.statut !== filtStatut) return false
+        if (filtProduit && c.produit_id !== filtProduit) return false
+        if (filtFournisseur && c.fournisseur_id !== filtFournisseur) return false
+        if (filtTransporteur && c.transporteur_id !== filtTransporteur) return false
+        if (filtAgriculteur) {
+          const agriIds = (c.contrats_vente ?? []).map((cv: any) => cv.agriculteur_id)
+          if (!agriIds.includes(filtAgriculteur)) return false
+        }
+        return true
+      })
+      .map(c => {
+        // Calcul marge théorique €/t
+        const ventes = c.contrats_vente ?? []
+        const totalQteVendue = ventes.reduce((s: number, cv: any) => s + (cv.quantite ?? 0), 0)
+        const prixVenteMoyen = totalQteVendue > 0
+          ? ventes.reduce((s: number, cv: any) => s + (cv.prix_vente ?? 0) * (cv.quantite ?? 0), 0) / totalQteVendue
+          : null
+        const marge = prixVenteMoyen != null && c.prix_achat != null
+          ? prixVenteMoyen - c.prix_achat
+          : null
+        return { ...c, _prixVenteMoyen: prixVenteMoyen, _marge: marge }
+      })
+    return sort(base)
+  }, [contrats, filtFamille, filtStatut, filtProduit, filtFournisseur, filtTransporteur, filtAgriculteur, sortKey, sortDir])
 
   const filters = [
     { key: 'famille', label: 'Famille', options: [{ value: 'negoce', label: 'Négoce' }, { value: 'appro', label: 'Appro' }], value: filtFamille, onChange: setFiltFamille },
@@ -106,14 +141,25 @@ export default function ContratsPage() {
           <table className="w-full">
             <thead className="bg-gray-50/50">
               <tr>
-                {['N° Contrat', 'Famille', 'Produit', 'Fournisseur', 'Contrats de vente', 'Total', 'Livré', 'Reliquat à livrer', 'Non réservé', 'Prix achat', 'Date fin', 'Statut', ''].map(h => (
-                  <th key={h} className="table-header">{h}</th>
-                ))}
+                    <SortHeader label="N° Contrat"  col="numero_contrat"  sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                    <SortHeader label="Famille"      col="famille"         sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                    <SortHeader label="Produit"      col="produit_id"      sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                    <SortHeader label="Fournisseur"  col="fournisseur_id"  sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                    <th className="table-header">Contrats de vente</th>
+                    <SortHeader label="Total"        col="quantite_totale" sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                    <th className="table-header">Livré</th>
+                    <th className="table-header">Reliquat</th>
+                    <th className="table-header">Non réservé</th>
+                    <SortHeader label="Prix achat"   col="prix_achat"      sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                    <SortHeader label="Marge est."   col="_marge"          sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                    <SortHeader label="Date fin"     col="date_fin"        sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                    <th className="table-header">Statut</th>
+                    <th className="table-header"></th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={12} className="px-4 py-10 text-center text-gray-400">Aucun contrat trouvé</td></tr>
+                <tr><td colSpan={14} className="px-4 py-10 text-center text-gray-400">Aucun contrat trouvé</td></tr>
               )}
               {filtered.map(c => {
                 const isSilo = !!c.gere_par_silo
@@ -170,6 +216,15 @@ export default function ContratsPage() {
                       }
                     </td>
                     <td className="table-cell">{formatEurosParTonne(c.prix_achat)}</td>
+                    <td className="table-cell">
+                      {c._marge != null ? (
+                        <span className={`font-bold text-sm ${c._marge > 0 ? 'text-green-700' : c._marge < 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                          {c._marge > 0 ? '+' : ''}{formatEurosParTonne(c._marge)}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-300">—</span>
+                      )}
+                    </td>
                     <td className="table-cell">
                       <span className={depasse ? 'text-red-600 font-medium' : ''}>
                         {formatDate(c.date_fin)}
