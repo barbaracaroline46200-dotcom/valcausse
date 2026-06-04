@@ -1,7 +1,8 @@
 'use client'
 import { useEffect, useState, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Archive, Loader2 } from 'lucide-react'
+import { Archive, Loader2, RotateCcw } from 'lucide-react'
+import { useAdmin } from '@/components/ui/AdminProvider'
 import { BadgeFamille, BadgeStatut } from '@/components/ui/Badge'
 import FilterBar from '@/components/ui/FilterBar'
 import ProgressBar from '@/components/ui/ProgressBar'
@@ -12,6 +13,7 @@ import Link from 'next/link'
 type Tab = 'achat' | 'vente'
 
 export default function ArchivesPage() {
+  const { isAdmin } = useAdmin()
   const [tab, setTab] = useState<Tab>('achat')
   const searchParams = useSearchParams()
   const q = searchParams.get('q')?.toLowerCase().trim() ?? ''
@@ -39,21 +41,25 @@ export default function ArchivesPage() {
   const [filtFournisseurV, setFiltFournisseurV] = useState('')
   const [filtTransporteurV, setFiltTransporteurV] = useState('')
 
-  useEffect(() => {
+  function charger() {
+    const t = Date.now()
+    setLoading(true)
     Promise.all([
-      fetch('/api/contrats').then(r => r.json()),
-      fetch('/api/ventes').then(r => r.json()),
+      fetch(`/api/contrats?t=${t}`).then(r => r.json()),
+      fetch(`/api/ventes?t=${t}`).then(r => r.json()),
       fetch('/api/referentiels/produits').then(r => r.json()),
       fetch('/api/referentiels/fournisseurs').then(r => r.json()),
       fetch('/api/referentiels/transporteurs').then(r => r.json()),
       fetch('/api/referentiels/agriculteurs').then(r => r.json()),
-    ]).then(([c, v, p, f, t, a]) => {
+    ]).then(([c, v, p, f, t2, a]) => {
       setContrats((c ?? []).filter((x: any) => x.statut === 'clos' || x.statut === 'annule'))
       setVentes((v ?? []).filter((x: any) => x.statut === 'clos' || x.statut === 'annule'))
-      setProduits(p); setFournisseurs(f); setTransporteurs(t); setAgriculteurs(a)
+      setProduits(p); setFournisseurs(f); setTransporteurs(t2); setAgriculteurs(a)
       setLoading(false)
     })
-  }, [])
+  }
+
+  useEffect(() => { charger() }, [])
 
   const filteredContrats = useMemo(() => contrats.filter(c => {
     if (filtFamilleA && c.famille !== filtFamilleA) return false
@@ -101,6 +107,15 @@ export default function ArchivesPage() {
     { key: 'transporteur', label: 'Transporteur', options: transporteurs.map(t => ({ value: t.id, label: t.nom })), value: filtTransporteurV, onChange: setFiltTransporteurV },
     { key: 'agriculteur', label: 'Agriculteur', options: agriculteurs.map(a => ({ value: a.id, label: a.nom })), value: filtAgriculteurV, onChange: setFiltAgriculteurV },
   ]
+
+  async function rouvrir(id: string, type: 'contrat' | 'vente') {
+    await fetch(`/api/${type === 'contrat' ? 'contrats' : 'ventes'}/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ statut: 'en_cours' }),
+    })
+    charger()
+  }
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-green-600" size={32} /></div>
 
@@ -155,7 +170,7 @@ export default function ArchivesPage() {
               <table className="w-full">
                 <thead className="bg-gray-50/50">
                   <tr>
-                    {['N° Contrat', 'Famille', 'Produit', 'Fournisseur', 'Contrats de vente', 'Total', 'Livré', 'Prix achat', 'Date fin', 'Statut'].map(h => (
+                    {['N° Contrat', 'Famille', 'Produit', 'Fournisseur', 'Contrats de vente', 'Total', 'Livré', 'Prix achat', 'Date fin', 'Statut', ...(isAdmin ? [''] : [])].map(h => (
                       <th key={h} className="table-header">{h}</th>
                     ))}
                   </tr>
@@ -201,6 +216,17 @@ export default function ArchivesPage() {
                         <td className="table-cell">{formatEurosParTonne(c.prix_achat)}</td>
                         <td className="table-cell">{formatDate(c.date_fin)}</td>
                         <td className="table-cell"><BadgeStatut statut={c.statut} /></td>
+                        {isAdmin && (
+                          <td className="table-cell">
+                            <button
+                              onClick={() => rouvrir(c.id, 'contrat')}
+                              className="flex items-center gap-1 text-xs text-amber-700 hover:text-amber-900 font-medium hover:underline"
+                              title="Remettre ce contrat en cours"
+                            >
+                              <RotateCcw size={13} /> Rouvrir
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     )
                   })}
@@ -220,7 +246,7 @@ export default function ArchivesPage() {
               <table className="w-full">
                 <thead className="bg-gray-50/50">
                   <tr>
-                    {['N° Contrat', 'Agriculteur', 'Produit', 'Contrat achat lié', 'Quantité', 'Prix vente', 'Statut'].map(h => (
+                    {['N° Contrat', 'Agriculteur', 'Produit', 'Contrat achat lié', 'Quantité', 'Prix vente', 'Statut', ...(isAdmin ? [''] : [])].map(h => (
                       <th key={h} className="table-header">{h}</th>
                     ))}
                   </tr>
@@ -248,6 +274,17 @@ export default function ArchivesPage() {
                       <td className="table-cell font-semibold">{formatTonnes(v.quantite)}</td>
                       <td className="table-cell">{formatEurosParTonne(v.prix_vente)}</td>
                       <td className="table-cell"><BadgeStatut statut={v.statut} /></td>
+                      {isAdmin && (
+                        <td className="table-cell">
+                          <button
+                            onClick={() => rouvrir(v.id, 'vente')}
+                            className="flex items-center gap-1 text-xs text-amber-700 hover:text-amber-900 font-medium hover:underline"
+                            title="Remettre ce contrat en cours"
+                          >
+                            <RotateCcw size={13} /> Rouvrir
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
