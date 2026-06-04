@@ -3,12 +3,16 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, FileText, ShoppingCart, Truck, BookOpen, Search, LogOut, ShieldCheck, Eye, BarChart2, CalendarDays
+  LayoutDashboard, FileText, ShoppingCart, Truck, BookOpen, Search, LogOut, ShieldCheck, Eye, BarChart2, CalendarDays, FileWarning, Receipt
 } from 'lucide-react'
 import { useAdmin } from './AdminProvider'
 import { cn } from '@/lib/utils'
+import { useEffect, useState } from 'react'
 
-const navItems = [
+const BRUN = '#7B2820'
+const BRUN_LIGHT = '#fdf5f3'
+
+const mainNav = [
   { href: '/', label: 'Tableau de bord', icon: LayoutDashboard },
   { href: '/contrats', label: 'Contrats achat', icon: FileText },
   { href: '/ventes', label: 'Contrats vente', icon: ShoppingCart },
@@ -19,12 +23,33 @@ const navItems = [
   { href: '/recherche', label: 'Recherche globale', icon: Search },
 ]
 
-const BRUN = '#7B2820'
-const BRUN_LIGHT = '#fdf5f3'
-
 export default function Sidebar() {
   const pathname = usePathname()
   const { isAdmin, role, logout } = useAdmin()
+  const [counts, setCounts] = useState({ livraisons: 0, cmr: 0, facturation: 0, rf: 0 })
+
+  useEffect(() => {
+    async function fetchCounts() {
+      try {
+        const res = await fetch('/api/dashboard')
+        const d = await res.json()
+        setCounts({
+          livraisons: (d.livraisonsPlanifiees ?? []).length,
+          cmr: (d.cmrEnAttente ?? []).length,
+          facturation: (d.livraisonsAFacturer ?? []).length + (d.facturesManquantes ?? []).length,
+          rf: (d.rfManquants ?? []).length,
+        })
+      } catch {}
+    }
+    fetchCounts()
+  }, [pathname])
+
+  const suiviNav = [
+    { href: '/livraisons',  label: 'Livraisons à organiser', icon: Truck,        count: counts.livraisons,  color: BRUN },
+    { href: '/cmr',         label: 'CMR en attente',         icon: FileWarning,  count: counts.cmr,         color: '#dc2626' },
+    { href: '/facturation', label: 'Facturation en attente', icon: Receipt,      count: counts.facturation, color: '#448ab5' },
+    { href: '/rf',          label: 'RF à récupérer',         icon: FileWarning,  count: counts.rf,          color: '#dc2626' },
+  ]
 
   return (
     <aside className="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 flex flex-col z-40 shadow-sm">
@@ -48,25 +73,33 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {navItems.map(({ href, label, icon: Icon, adminOnly }) => {
+
+        {/* Navigation principale */}
+        {mainNav.map(({ href, label, icon: Icon, adminOnly }) => {
           if (adminOnly && !isAdmin) return null
           const active = pathname === href || (href !== '/' && pathname.startsWith(href))
           return (
-            <Link
+            <NavItem key={href} href={href} label={label} icon={<Icon size={18} />} active={active} />
+          )
+        })}
+
+        {/* Séparateur Suivi livraisons */}
+        <div className="pt-3 pb-1 px-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Suivi livraisons</p>
+        </div>
+
+        {suiviNav.map(({ href, label, icon: Icon, count, color }) => {
+          const active = pathname === href || pathname.startsWith(href + '/')
+          return (
+            <NavItem
               key={href}
               href={href}
-              style={active ? { backgroundColor: BRUN_LIGHT, color: BRUN } : {}}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                active ? 'font-semibold' : 'text-gray-600 hover:text-gray-900'
-              )}
-              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.backgroundColor = '#fafafa' }}
-              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.backgroundColor = '' }}
-            >
-              <Icon size={18} style={active ? { color: BRUN } : {}} className={active ? '' : 'text-gray-400'} />
-              {label}
-              {active && <span className="ml-auto w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#C8941A' }} />}
-            </Link>
+              label={label}
+              icon={<Icon size={18} />}
+              active={active}
+              badge={count > 0 ? count : undefined}
+              badgeColor={color}
+            />
           )
         })}
       </nav>
@@ -94,5 +127,42 @@ export default function Sidebar() {
         </button>
       </div>
     </aside>
+  )
+}
+
+function NavItem({
+  href, label, icon, active, badge, badgeColor,
+}: {
+  href: string
+  label: string
+  icon: React.ReactNode
+  active: boolean
+  badge?: number
+  badgeColor?: string
+}) {
+  return (
+    <Link
+      href={href}
+      style={active ? { backgroundColor: BRUN_LIGHT, color: BRUN } : {}}
+      className={cn(
+        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+        active ? 'font-semibold' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+      )}
+    >
+      <span style={active ? { color: BRUN } : {}} className={active ? '' : 'text-gray-400'}>
+        {icon}
+      </span>
+      <span className="flex-1 leading-tight">{label}</span>
+      {badge !== undefined ? (
+        <span
+          className="min-w-[20px] h-5 px-1.5 rounded-full text-white text-xs font-bold flex items-center justify-center flex-shrink-0"
+          style={{ backgroundColor: badgeColor ?? BRUN }}
+        >
+          {badge}
+        </span>
+      ) : (
+        active && <span className="ml-auto w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: '#C8941A' }} />
+      )}
+    </Link>
   )
 }
