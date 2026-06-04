@@ -55,11 +55,21 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     if (e) return NextResponse.json({ error: e.message }, { status: 400 })
   }
 
-  // 4. Supprimer les factures fournisseur
+  // 4. Couper la FK livraisons.facture_fournisseur_id → factures_fournisseur (NO ACTION)
+  //    Sans ça, la suppression des factures fournisseur échoue car les livraisons les référencent encore
+  if (livraisonIds.length > 0) {
+    const { error: e } = await supabase
+      .from('livraisons')
+      .update({ facture_fournisseur_id: null })
+      .in('id', livraisonIds)
+    if (e) return NextResponse.json({ error: e.message }, { status: 400 })
+  }
+
+  // 5. Supprimer les factures fournisseur
   const { error: e2 } = await supabase.from('factures_fournisseur').delete().eq('contrat_achat_id', id)
   if (e2) return NextResponse.json({ error: e2.message }, { status: 400 })
 
-  // 5. Supprimer les livraisons
+  // 6. Supprimer les livraisons
   const { error: e3 } = await supabase.from('livraisons').delete().eq('contrat_achat_id', id)
   if (e3) return NextResponse.json({ error: e3.message }, { status: 400 })
 
