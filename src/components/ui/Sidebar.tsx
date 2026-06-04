@@ -146,17 +146,11 @@ function NavItem({
       href={href}
       style={active ? { backgroundColor: BRUN_LIGHT, color: BRUN } : {}}
       className={cn(
-        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-        active ? 'font-semibold' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+        active ? 'font-semibold' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
       )}
     >
-      <span
-        className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
-        style={active
-          ? { backgroundColor: BRUN, color: '#fff' }
-          : { backgroundColor: '#f3f0ee', color: '#9ca3af' }
-        }
-      >
+      <span style={active ? { color: BRUN } : { color: '#9ca3af' }} className="flex-shrink-0">
         {icon}
       </span>
       <span className="flex-1 leading-tight">{label}</span>
@@ -168,7 +162,7 @@ function NavItem({
           {badge}
         </span>
       ) : (
-        active && <span className="ml-auto w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: '#C8941A' }} />
+        active && <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: '#C8941A' }} />
       )}
     </Link>
   )

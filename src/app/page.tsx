@@ -2,10 +2,9 @@
 import { getDashboardData } from './actions'
 import { useEffect, useState, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
-import { Phone, AlertTriangle, TrendingUp, Loader2, Plus, Trash2, CheckSquare, Square, CalendarDays, CheckCircle2, Circle, ClipboardList, CheckCircle, Wheat, Sprout } from 'lucide-react'
+import { Phone, AlertTriangle, TrendingUp, Loader2, Plus, Trash2, CheckSquare, Square, CalendarDays, CheckCircle2, Circle, ClipboardList, CheckCircle, Wheat, Sprout, PackageOpen } from 'lucide-react'
 import { formatDate, formatTonnes, getAnneeAgricoleLabel, getAnneeAgricole } from '@/lib/annee-agricole'
 import { quantiteLivree, reliquat } from '@/lib/utils'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import CalendrierLivraisons from '@/components/ui/CalendrierLivraisons'
 import { useAdmin } from '@/components/ui/AdminProvider'
 import Link from 'next/link'
@@ -203,52 +202,61 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Résumé année — cartes aux couleurs Valcausse */}
+      {/* Résumé année — cartes horizontales style mockup */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {([
-          { label: 'Contrats en cours', value: contratsEnCours, Icon: ClipboardList, iconBg: '#fff3d0', iconColor: '#a37514', bg: '#fffdf7', border: '#f5e4a0' },
-          { label: 'Contrats clos', value: contratsClos, Icon: CheckCircle, iconBg: '#dcfce7', iconColor: '#15803d', bg: '#f7fef9', border: '#bbf7d0' },
-          { label: 'Négoce livré', value: formatTonnes(parFamille.negoce.livre), Icon: Wheat, iconBg: '#fde8e5', iconColor: '#7B2820', bg: '#fdf8f7', border: '#e4b5ad' },
-          { label: 'Appro livré', value: formatTonnes(parFamille.appro.livre), Icon: Sprout, iconBg: '#dbeafe', iconColor: '#2a5570', bg: '#f5f9fe', border: '#a8d2e8' },
+          { label: 'Contrats en cours', value: contratsEnCours,                     sub: 'campagne active',      Icon: ClipboardList, iconBg: '#fff3d0', iconColor: '#a37514' },
+          { label: 'Contrats clos',     value: contratsClos,                         sub: 'soldés cette année',   Icon: CheckCircle,   iconBg: '#dcfce7', iconColor: '#15803d' },
+          { label: 'Négoce livré',      value: formatTonnes(parFamille.negoce.livre), sub: 'cumul année agricole', Icon: Wheat,         iconBg: '#fde8e5', iconColor: '#7B2820' },
+          { label: 'Appro livré',       value: formatTonnes(parFamille.appro.livre),  sub: 'cumul année agricole', Icon: Sprout,        iconBg: '#dbeafe', iconColor: '#2a5570' },
         ] as any[]).map(item => (
-          <div key={item.label} className="card border" style={{ backgroundColor: item.bg, borderColor: item.border }}>
-            <div className="flex items-start justify-between mb-3">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ backgroundColor: item.iconBg }}
-              >
-                <item.Icon size={20} style={{ color: item.iconColor }} />
-              </div>
+          <div key={item.label} className="card flex items-center gap-4">
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: item.iconBg }}>
+              <item.Icon size={22} style={{ color: item.iconColor }} />
             </div>
-            <div className="text-2xl font-bold text-gray-800">{item.value}</div>
-            <div className="text-xs font-medium text-gray-500 mt-0.5">{item.label}</div>
+            <div className="min-w-0">
+              <div className="text-2xl font-bold text-gray-900 leading-tight">{item.value}</div>
+              <div className="text-xs font-semibold text-gray-600 leading-tight mt-0.5">{item.label}</div>
+              <div className="text-[11px] text-gray-400 leading-tight">{item.sub}</div>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Graphique par produit */}
+      {/* Graphique par produit — barres CSS style mockup */}
       {chartData.length > 0 && (
         <div className="card">
-          <h2 className="font-bold mb-4 flex items-center gap-2" style={{ color: '#7B2820' }}>
-            <TrendingUp size={18} style={{ color: '#C8941A' }} />
-            Tonnage livré par produit — année agricole {filtAnnee}
-          </h2>
-          <ResponsiveContainer width="100%" height={Math.max(200, chartData.length * 44)}>
-            <BarChart data={chartData} layout="vertical" margin={{ left: 90, right: 40, top: 4, bottom: 4 }} barSize={22}>
-              <XAxis type="number" tick={{ fontSize: 11, fill: '#9ca3af' }} tickFormatter={v => `${v} t`} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="nom" tick={{ fontSize: 12, fill: '#6b7280' }} width={88} axisLine={false} tickLine={false} />
-              <Tooltip
-                formatter={(v: any) => [`${v} t`, 'Livré']}
-                contentStyle={{ borderRadius: 10, border: '1px solid #ede9e3', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', fontSize: 13 }}
-              />
-              <Bar dataKey="tonnes" radius={[0, 6, 6, 0]}>
-                {chartData.map((_, i) => {
-                  const colors = ['#7B2820', '#C8941A', '#448ab5', '#16a34a', '#9333ea', '#e67e22']
-                  return <Cell key={i} fill={colors[i % colors.length]} />
-                })}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#fff3d0' }}>
+              <TrendingUp size={18} style={{ color: '#a37514' }} />
+            </div>
+            <div>
+              <h2 className="font-bold text-gray-800">Tonnage livré par produit</h2>
+              <p className="text-xs text-gray-400">Année agricole {filtAnnee}</p>
+            </div>
+          </div>
+          {(() => {
+            const max = Math.max(...chartData.map(d => d.tonnes))
+            const BAR_COLORS = ['#7B2820','#C8941A','#7B2820','#C8941A','#7B2820','#C8941A','#7B2820','#C8941A']
+            return (
+              <div className="space-y-3">
+                {chartData.map((d, i) => (
+                  <div key={d.nom} className="flex items-center gap-3">
+                    <span className="text-sm text-gray-600 w-28 flex-shrink-0 text-right">{d.nom}</span>
+                    <div className="flex-1 h-6 rounded-full overflow-hidden" style={{ backgroundColor: '#f3f0ee' }}>
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{ width: `${(d.tonnes / max) * 100}%`, backgroundColor: BAR_COLORS[i % BAR_COLORS.length] }}
+                      />
+                    </div>
+                    <span className="text-sm font-semibold text-gray-700 w-20 flex-shrink-0">
+                      {d.tonnes.toLocaleString('fr-FR')} t
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
         </div>
       )}
 
