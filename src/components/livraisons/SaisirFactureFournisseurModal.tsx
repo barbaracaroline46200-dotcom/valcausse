@@ -17,6 +17,7 @@ export default function SaisirFactureFournisseurModal({ livraison, onClose, onSa
     date_facture: '',
     numero_facture: '',
     prefixe: prefixeDefaut,
+    numero_piece_logiciel: '',
     montant_ht: '',
     montant_ttc: '',
     numero_rf: '',
@@ -44,7 +45,7 @@ export default function SaisirFactureFournisseurModal({ livraison, onClose, onSa
       prefixe: form.prefixe || null,
       montant_ht: form.montant_ht ? parseFloat(form.montant_ht) : null,
       montant_ttc: form.montant_ttc ? parseFloat(form.montant_ttc) : null,
-      numero_piece_logiciel: form.numero_rf || null,
+      numero_piece_logiciel: form.numero_piece_logiciel ? `${form.prefixe}${form.numero_piece_logiciel}` : null,
       mode_paiement: form.mode_paiement || null,
       date_paiement: form.date_paiement || null,
     }
@@ -105,7 +106,7 @@ export default function SaisirFactureFournisseurModal({ livraison, onClose, onSa
             <div className="flex gap-1">
               <input className="input w-16 text-center font-mono" value={form.prefixe} onChange={f('prefixe')} />
               <span className="flex items-center text-gray-400 text-sm px-1">+</span>
-              <span className="flex items-center text-xs text-gray-400">numéro saisi dans logiciel compta</span>
+              <input className="input flex-1" value={form.numero_piece_logiciel ?? ''} onChange={f('numero_piece_logiciel')} placeholder="numéro saisi dans logiciel compta" />
             </div>
           </div>
           <div>
