@@ -74,10 +74,10 @@ export async function GET() {
     .order('date_reelle', { ascending: true })
 
   const cmrRealisees = (toutesLivraisons ?? []).filter(
-    (l: any) => l.type === 'realisee' && !l.numero_lettre_voiture
+    (l: any) => l.type === 'realisee' && !l.numero_lettre_voiture && !l.solde_ouverture
   )
   const cmrPlanifiees = (toutesLivraisons ?? []).filter(
-    (l: any) => l.type === 'planifiee' && !!l.transporteur_contacte
+    (l: any) => l.type === 'planifiee' && !!l.transporteur_contacte && !l.solde_ouverture
   )
 
   // Fusion + dédoublonnage + tri : plus vieille date en premier
@@ -107,7 +107,7 @@ export async function GET() {
     .select(facturationSelect)
     .order('date_reelle', { ascending: false })
   const livraisonsAFacturer = (livraisonsAFacturerRaw ?? []).filter(
-    (l: any) => l.type === 'realisee' && (!l.transport_facture || !l.facture_fournisseur_id)
+    (l: any) => l.type === 'realisee' && !l.solde_ouverture && (!l.transport_facture || !l.facture_fournisseur_id)
   )
 
   // RF à récupérer : factures fournisseur sans numéro RF (numero_piece_logiciel null)

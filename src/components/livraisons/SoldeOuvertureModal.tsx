@@ -34,12 +34,8 @@ export default function SoldeOuvertureModal({ contratId, contratNumero, quantite
         type: 'realisee',
         quantite_reelle: qte,
         date_reelle: date,
-        ville_chargement: 'Solde ouverture',
-        ville_destination: 'Migration Google Sheet',
-        // Marquer pour ne pas apparaître dans CMR/facturation
-        numero_lettre_voiture: 'SOLDE-OUVERTURE',
+        solde_ouverture: true,
         transport_facture: true,
-        facture_fournisseur_id: null,
       }),
     })
     if (!res.ok) {
