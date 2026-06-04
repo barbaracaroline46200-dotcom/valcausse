@@ -70,7 +70,7 @@ export default function NouveauContratModal({ onClose, onSaved }: Props) {
       ...form,
       courtier_id: form.courtier_id || null,
       date_conclusion: form.date_conclusion || null,
-      prix_achat: parseFloat(form.prix_achat),
+      prix_achat: form.prix_achat ? parseFloat(form.prix_achat) : null,
       quantite_totale: parseFloat(form.quantite_totale),
       prix_transport_prevu: parseFloat(form.prix_transport_prevu),
       date_debut: form.date_debut || null,
@@ -141,7 +141,7 @@ export default function NouveauContratModal({ onClose, onSaved }: Props) {
           </div>
           <div>
             <label className="label">Prix achat (€/t) *</label>
-            <input type="number" step="0.01" className="input" value={form.prix_achat} onChange={f('prix_achat')} required />
+            <input type="number" step="0.01" className="input" value={form.prix_achat} onChange={f('prix_achat')} placeholder="— À définir —" />
           </div>
           <div>
             <label className="label">Quantité totale (t) *</label>
