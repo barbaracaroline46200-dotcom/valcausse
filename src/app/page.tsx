@@ -1,4 +1,5 @@
 'use client'
+import { getDashboardData } from './actions'
 import { useEffect, useState, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 import { Truck, FileWarning, Receipt, Phone, AlertTriangle, TrendingUp, Loader2, Plus, Trash2, CheckSquare, Square, CalendarDays, CheckCircle2, Circle } from 'lucide-react'
@@ -41,13 +42,9 @@ export default function DashboardPage() {
   }
 
   const reloadData = useCallback(async () => {
-    const ts = Date.now()
-    const [d, t] = await Promise.all([
-      fetch(`/api/dashboard?t=${ts}`, { cache: 'no-store' }).then(r => r.json()),
-      fetch(`/api/referentiels/transporteurs?t=${ts}`, { cache: 'no-store' }).then(r => r.json()),
-    ])
+    const d = await getDashboardData()
     setData(d)
-    setTransporteurs(t)
+    setTransporteurs((d as any).transporteurs ?? [])
     setLoading(false)
     fetch(`/api/agenda?lte=${todayStr()}&non_fait=1`).then(r => r.json()).then(d => setAgendaToday(Array.isArray(d) ? d : []))
   }, [])
