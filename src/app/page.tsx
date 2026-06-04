@@ -2,7 +2,7 @@
 import { getDashboardData } from './actions'
 import { useEffect, useState, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
-import { Phone, AlertTriangle, TrendingUp, Loader2, Plus, Trash2, CheckSquare, Square, CalendarDays, CheckCircle2, Circle } from 'lucide-react'
+import { Phone, AlertTriangle, TrendingUp, Loader2, Plus, Trash2, CheckSquare, Square, CalendarDays, CheckCircle2, Circle, ClipboardList, CheckCircle, Wheat, Sprout } from 'lucide-react'
 import { formatDate, formatTonnes, getAnneeAgricoleLabel } from '@/lib/annee-agricole'
 import { quantiteLivree, reliquat } from '@/lib/utils'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
@@ -169,15 +169,22 @@ export default function DashboardPage() {
       {/* Résumé année — cartes aux couleurs Valcausse */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {([
-          { label: 'Contrats en cours', value: contratsEnCours, icon: '📋', bg: '#fff8f0', border: '#f5d08c', text: '#a37514' },
-          { label: 'Contrats clos', value: contratsClos, icon: '✅', bg: '#f0fdf4', border: '#bbf7d0', text: '#15803d' },
-          { label: 'Négoce livré', value: formatTonnes(parFamille.negoce.livre), icon: '🌾', bg: '#fdf5f3', border: '#e4b5ad', text: '#7B2820' },
-          { label: 'Appro livré', value: formatTonnes(parFamille.appro.livre), icon: '🌿', bg: '#eff6fb', border: '#a8d2e8', text: '#2a5570' },
+          { label: 'Contrats en cours', value: contratsEnCours, Icon: ClipboardList, iconBg: '#fff3d0', iconColor: '#a37514', bg: '#fffdf7', border: '#f5e4a0' },
+          { label: 'Contrats clos', value: contratsClos, Icon: CheckCircle, iconBg: '#dcfce7', iconColor: '#15803d', bg: '#f7fef9', border: '#bbf7d0' },
+          { label: 'Négoce livré', value: formatTonnes(parFamille.negoce.livre), Icon: Wheat, iconBg: '#fde8e5', iconColor: '#7B2820', bg: '#fdf8f7', border: '#e4b5ad' },
+          { label: 'Appro livré', value: formatTonnes(parFamille.appro.livre), Icon: Sprout, iconBg: '#dbeafe', iconColor: '#2a5570', bg: '#f5f9fe', border: '#a8d2e8' },
         ] as any[]).map(item => (
-          <div key={item.label} className="card border text-center" style={{ backgroundColor: item.bg, borderColor: item.border }}>
-            <div className="text-3xl mb-1">{item.icon}</div>
-            <div className="text-2xl font-bold" style={{ color: item.text }}>{item.value}</div>
-            <div className="text-xs font-semibold mt-0.5" style={{ color: item.text, opacity: 0.8 }}>{item.label}</div>
+          <div key={item.label} className="card border" style={{ backgroundColor: item.bg, borderColor: item.border }}>
+            <div className="flex items-start justify-between mb-3">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ backgroundColor: item.iconBg }}
+              >
+                <item.Icon size={20} style={{ color: item.iconColor }} />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-gray-800">{item.value}</div>
+            <div className="text-xs font-medium text-gray-500 mt-0.5">{item.label}</div>
           </div>
         ))}
       </div>
@@ -189,15 +196,19 @@ export default function DashboardPage() {
             <TrendingUp size={18} style={{ color: '#C8941A' }} />
             Tonnage livré par produit — année agricole {getAnneeAgricoleLabel()}
           </h2>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={chartData} layout="vertical" margin={{ left: 80, right: 30 }}>
-              <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={v => `${v} t`} />
-              <YAxis type="category" dataKey="nom" tick={{ fontSize: 12 }} width={80} />
-              <Tooltip formatter={(v: any) => [`${v} t`, 'Livré']} />
-              <Bar dataKey="tonnes" radius={[0, 4, 4, 0]}>
-                {chartData.map((_, i) => (
-                  <Cell key={i} fill={i % 2 === 0 ? '#7B2820' : '#C8941A'} />
-                ))}
+          <ResponsiveContainer width="100%" height={Math.max(200, chartData.length * 44)}>
+            <BarChart data={chartData} layout="vertical" margin={{ left: 90, right: 40, top: 4, bottom: 4 }} barSize={22}>
+              <XAxis type="number" tick={{ fontSize: 11, fill: '#9ca3af' }} tickFormatter={v => `${v} t`} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="nom" tick={{ fontSize: 12, fill: '#6b7280' }} width={88} axisLine={false} tickLine={false} />
+              <Tooltip
+                formatter={(v: any) => [`${v} t`, 'Livré']}
+                contentStyle={{ borderRadius: 10, border: '1px solid #ede9e3', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', fontSize: 13 }}
+              />
+              <Bar dataKey="tonnes" radius={[0, 6, 6, 0]}>
+                {chartData.map((_, i) => {
+                  const colors = ['#7B2820', '#C8941A', '#448ab5', '#16a34a', '#9333ea', '#e67e22']
+                  return <Cell key={i} fill={colors[i % colors.length]} />
+                })}
               </Bar>
             </BarChart>
           </ResponsiveContainer>

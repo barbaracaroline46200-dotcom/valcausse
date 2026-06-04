@@ -38,10 +38,14 @@
   }
 
   .card {
-    @apply bg-white rounded-xl shadow-sm border border-gray-100 p-5;
+    @apply bg-white rounded-2xl p-5;
+    border: 1px solid #ede9e3;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03);
   }
   .card-section {
-    @apply bg-white rounded-xl shadow-sm border border-gray-100;
+    @apply bg-white rounded-2xl;
+    border: 1px solid #ede9e3;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03);
   }
 
   /* Bouton principal — brun-bordeaux Valcausse */

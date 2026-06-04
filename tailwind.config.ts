@@ -10,7 +10,7 @@ const config: Config = {
     extend: {
       colors: {
         // Palette Valcausse — extraite du logo et du site officiel
-        cream: '#FAFAF8',
+        cream: '#f7f5f0',
 
         // Brun-bordeaux principal (texte "VALCAUSSE" dans le logo)
         brun: {

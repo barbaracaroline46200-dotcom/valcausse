@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import Sidebar from '@/components/ui/Sidebar'
+import Header from '@/components/ui/Header'
 import AdminProvider from '@/components/ui/AdminProvider'
 import AuthGate from '@/components/ui/AuthGate'
 
@@ -27,9 +28,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <AuthGate>
             <div className="flex min-h-screen">
               <Sidebar />
-              <main className="flex-1 ml-64 p-6 max-w-full overflow-x-hidden">
-                {children}
-              </main>
+              <div className="flex-1 ml-64 flex flex-col min-h-screen">
+                <Header />
+                <main className="flex-1 p-6 pt-20 max-w-full overflow-x-hidden">
+                  {children}
+                </main>
+              </div>
             </div>
           </AuthGate>
         </AdminProvider>
