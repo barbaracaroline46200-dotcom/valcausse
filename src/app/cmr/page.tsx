@@ -64,7 +64,7 @@ export default function CmrPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
-                {['Produit', 'Agriculteur', 'Transporteur', 'Date livraison', 'Contact', 'Délai', '', ''].map(h => (
+                {['Contrat', 'Produit', 'Agriculteur', 'Transporteur', 'Date livraison', 'Contact', 'Délai', '', ''].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
@@ -84,6 +84,11 @@ export default function CmrPage() {
                     className={`table-row cursor-pointer hover:bg-red-50 transition-colors ${!isRealisee ? 'bg-amber-50/40' : ''}`}
                     onClick={() => setCmrModal(l)}
                     title="Cliquer pour saisir le CMR">
+                    <td className="table-cell">
+                      <a href={`/contrats/${l.contrat_achat?.id}`} className="text-green-700 hover:underline text-sm font-medium" onClick={e => e.stopPropagation()}>
+                        {l.contrat_achat?.numero_contrat ?? '—'}
+                      </a>
+                    </td>
                     <td className="table-cell font-medium">{l.contrat_achat?.produit?.nom ?? '—'}</td>
                     <td className="table-cell text-sm">{agri?.nom ?? '—'}</td>
                     <td className="table-cell">{l.contrat_achat?.transporteur?.nom ?? '—'}</td>
