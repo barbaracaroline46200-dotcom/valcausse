@@ -33,11 +33,13 @@ export default function ContratDetailPage() {
   const [showModifierContrat, setShowModifierContrat] = useState(false)
   const [modifierVente, setModifierVente] = useState<any>(null)
 
-  async function reload() {
-    window.location.reload()
+  async function chargerContrat() {
+    const data = await fetch(`/api/contrats/${id}?t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json())
+    setContrat(data)
+    setLoading(false)
   }
 
-  useEffect(() => { reload() }, [id])
+  useEffect(() => { chargerContrat() }, [id])
 
   async function toggleStatut() {
     const nouveau = contrat.statut === 'en_cours' ? 'clos' : 'en_cours'
@@ -46,19 +48,19 @@ export default function ContratDetailPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ statut: nouveau }),
     })
-    reload()
+    window.location.reload()
   }
 
   async function supprimerLivraison(livId: string) {
     if (!confirm('Supprimer cette livraison ?')) return
     await fetch(`/api/livraisons/${livId}`, { method: 'DELETE' })
-    reload()
+    window.location.reload()
   }
 
   async function supprimerFactureFournisseur(factureId: string) {
     if (!confirm('Supprimer cette facture fournisseur ?')) return
     await fetch(`/api/factures/fournisseur/${factureId}`, { method: 'DELETE' })
-    reload()
+    window.location.reload()
   }
 
   async function toggleTransporteurContacte(livId: string, current: boolean) {
@@ -67,7 +69,7 @@ export default function ContratDetailPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ transporteur_contacte: !current }),
     })
-    reload()
+    window.location.reload()
   }
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-green-600" size={32} /></div>
@@ -262,7 +264,7 @@ export default function ContratDetailPage() {
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ contrat_achat_id: null }),
                             })
-                            reload()
+                            window.location.reload()
                           }}
                           className="btn-secondary text-xs py-1 px-2 text-orange-600 hover:bg-orange-50"
                           title="Délier ce contrat de vente"
@@ -272,7 +274,7 @@ export default function ContratDetailPage() {
                         <button onClick={async () => {
                           if (!confirm(`Supprimer le contrat de vente ${cv.numero_contrat} ?`)) return
                           await fetch(`/api/ventes/${cv.id}`, { method: 'DELETE' })
-                          reload()
+                          window.location.reload()
                         }} className="btn-danger text-xs py-1 px-2" title="Supprimer">
                           <Trash2 size={12} />
                         </button>
@@ -554,7 +556,7 @@ export default function ContratDetailPage() {
         <AjouterLivraisonModal
           contrat={contrat}
           onClose={() => setShowAjoutLiv(false)}
-          onSaved={() => { setShowAjoutLiv(false); reload() }}
+          onSaved={() => { setShowAjoutLiv(false); window.location.reload() }}
         />
       )}
       {realiserLiv && (
@@ -562,7 +564,7 @@ export default function ContratDetailPage() {
           livraison={realiserLiv}
           contrat={contrat}
           onClose={() => setRealiserLiv(null)}
-          onSaved={() => { setRealiserLiv(null); reload() }}
+          onSaved={() => { setRealiserLiv(null); window.location.reload() }}
         />
       )}
       {modifierLiv && (
@@ -570,7 +572,7 @@ export default function ContratDetailPage() {
           livraison={modifierLiv}
           contrat={contrat}
           onClose={() => setModifierLiv(null)}
-          onSaved={() => { setModifierLiv(null); reload() }}
+          onSaved={() => { setModifierLiv(null); window.location.reload() }}
         />
       )}
       {modifierLivRealisee && (
@@ -578,7 +580,7 @@ export default function ContratDetailPage() {
           livraison={modifierLivRealisee}
           contrat={contrat}
           onClose={() => setModifierLivRealisee(null)}
-          onSaved={() => { setModifierLivRealisee(null); reload() }}
+          onSaved={() => { setModifierLivRealisee(null); window.location.reload() }}
         />
       )}
       {modifierVente && (
@@ -586,28 +588,28 @@ export default function ContratDetailPage() {
           vente={modifierVente}
           contrat={contrat}
           onClose={() => setModifierVente(null)}
-          onSaved={() => { setModifierVente(null); reload() }}
+          onSaved={() => { setModifierVente(null); window.location.reload() }}
         />
       )}
       {showModifierContrat && (
         <ModifierContratModal
           contrat={contrat}
           onClose={() => setShowModifierContrat(false)}
-          onSaved={() => { setShowModifierContrat(false); reload() }}
+          onSaved={() => { setShowModifierContrat(false); window.location.reload() }}
         />
       )}
       {showLierVente && (
         <LierVenteModal
           contratAchatId={id}
           onClose={() => setShowLierVente(false)}
-          onSaved={() => { setShowLierVente(false); reload() }}
+          onSaved={() => { setShowLierVente(false); window.location.reload() }}
         />
       )}
       {showNouvelleVente && (
         <NouvelleVenteModal
           contrat={contrat}
           onClose={() => setShowNouvelleVente(false)}
-          onSaved={() => { setShowNouvelleVente(false); reload() }}
+          onSaved={() => { setShowNouvelleVente(false); window.location.reload() }}
         />
       )}
     </div>
