@@ -30,6 +30,7 @@ export default function ModifierContratModal({ contrat, onClose, onSaved }: Prop
     notes: contrat.notes ?? '',
     base_prix: contrat.base_prix ?? '',
     mbm_autorise: contrat.mbm_autorise ?? false,
+    gere_par_silo: contrat.gere_par_silo ?? false,
   })
 
   // Adresses d'enlèvement multiples
@@ -206,6 +207,18 @@ export default function ModifierContratModal({ contrat, onClose, onSaved }: Prop
               </div>
             </>
           )}
+          <div className="col-span-2 flex items-center gap-3 py-1 px-3 rounded-lg bg-blue-50 border border-blue-100">
+            <input
+              type="checkbox"
+              id="gere_par_silo_modifier"
+              checked={form.gere_par_silo}
+              onChange={e => setForm(prev => ({ ...prev, gere_par_silo: e.target.checked }))}
+              className="w-4 h-4 rounded accent-blue-600 flex-shrink-0"
+            />
+            <label htmlFor="gere_par_silo_modifier" className="text-sm font-medium text-blue-800 cursor-pointer select-none">
+              Géré par le silo <span className="text-xs text-blue-500 font-normal">(tonnage compté comme livré, pas de livraisons à organiser)</span>
+            </label>
+          </div>
           <div className="col-span-2">
             <label className="label">Notes</label>
             <textarea className="input" rows={2} value={form.notes} onChange={f('notes')} />

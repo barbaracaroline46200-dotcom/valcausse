@@ -21,7 +21,7 @@ export default function NouveauContratModal({ onClose, onSaved }: Props) {
     courtier_id: '', reference_fournisseur: '',
     prix_achat: '', quantite_totale: '', transporteur_id: '', prix_transport_prevu: '0',
     point_chargement: '', ville_chargement: '', contact_enlevement: '', date_conclusion: '', date_debut: '', date_fin: '',
-    notes: '', base_prix: '', mbm_autorise: false,
+    notes: '', base_prix: '', mbm_autorise: false, gere_par_silo: false,
   })
   const [livraisons, setLivraisons] = useState<LivraisonPlanifiee[]>([])
   const [produits, setProduits] = useState<any[]>([])
@@ -209,6 +209,18 @@ export default function NouveauContratModal({ onClose, onSaved }: Props) {
               </div>
             </>
           )}
+          <div className="col-span-2 flex items-center gap-3 py-1 px-3 rounded-lg bg-blue-50 border border-blue-100">
+            <input
+              type="checkbox"
+              id="gere_par_silo_nouveau"
+              checked={form.gere_par_silo}
+              onChange={e => setForm(prev => ({ ...prev, gere_par_silo: e.target.checked }))}
+              className="w-4 h-4 rounded accent-blue-600 flex-shrink-0"
+            />
+            <label htmlFor="gere_par_silo_nouveau" className="text-sm font-medium text-blue-800 cursor-pointer select-none">
+              Géré par le silo <span className="text-xs text-blue-500 font-normal">(tonnage compté comme livré, pas de livraisons à organiser)</span>
+            </label>
+          </div>
           <div className="col-span-2">
             <label className="label">Notes</label>
             <textarea className="input" rows={2} value={form.notes} onChange={f('notes')} />

@@ -85,7 +85,8 @@ export default function DashboardPage() {
 
   contrats.forEach((c: any) => {
     const f = c.famille as 'appro' | 'negoce'
-    const livre = quantiteLivree(c.livraisons ?? [])
+    // Contrats gérés par le silo : tout le tonnage est considéré comme livré
+    const livre = c.gere_par_silo ? c.quantite_totale : quantiteLivree(c.livraisons ?? [])
     parFamille[f].total += c.quantite_totale
     parFamille[f].livre += livre
     parFamille[f].contrats++
@@ -100,7 +101,7 @@ export default function DashboardPage() {
   const contratsEnCours = contrats.filter((c: any) => c.statut === 'en_cours').length
   const contratsClos = contrats.filter((c: any) => c.statut === 'clos').length
 
-  const alertes = (data?.contratsAlerte ?? []).filter((c: any) => reliquat(c.quantite_totale, c.livraisons ?? []) > 0)
+  const alertes = (data?.contratsAlerte ?? []).filter((c: any) => !c.gere_par_silo && reliquat(c.quantite_totale, c.livraisons ?? []) > 0)
 
   return (
     <>

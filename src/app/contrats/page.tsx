@@ -112,9 +112,10 @@ export default function ContratsPage() {
                 <tr><td colSpan={12} className="px-4 py-10 text-center text-gray-400">Aucun contrat trouvé</td></tr>
               )}
               {filtered.map(c => {
-                const livre = quantiteLivree(c.livraisons ?? [])
-                const rel = reliquat(c.quantite_totale, c.livraisons ?? [])
-                const depasse = c.date_fin && new Date(c.date_fin) < new Date() && c.statut === 'en_cours' && rel > 0
+                const isSilo = !!c.gere_par_silo
+                const livre = isSilo ? c.quantite_totale : quantiteLivree(c.livraisons ?? [])
+                const rel = isSilo ? 0 : reliquat(c.quantite_totale, c.livraisons ?? [])
+                const depasse = !isSilo && c.date_fin && new Date(c.date_fin) < new Date() && c.statut === 'en_cours' && rel > 0
                 const totalVendu = (c.contrats_vente ?? []).reduce((s: number, cv: any) => s + (cv.quantite ?? 0), 0)
                 const nonReserve = Math.max(0, c.quantite_totale - totalVendu)
                 return (
@@ -123,6 +124,9 @@ export default function ContratsPage() {
                       <Link href={`/contrats/${c.id}`} className="font-semibold text-green-700 hover:underline">
                         {c.numero_contrat}
                       </Link>
+                      {isSilo && (
+                        <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700">🏗 Silo</span>
+                      )}
                     </td>
                     <td className="table-cell"><BadgeFamille famille={c.famille} /></td>
                     <td className="table-cell font-medium">{c.produit?.nom ?? '—'}</td>

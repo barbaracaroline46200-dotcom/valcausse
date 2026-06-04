@@ -32,7 +32,7 @@ export async function GET() {
     .select(`
       *,
       contrat_achat:contrats_achat(
-        numero_contrat,famille,
+        numero_contrat,famille,gere_par_silo,
         produit:produits(nom),
         fournisseur:fournisseurs(nom),
         transporteur:transporteurs(id,nom),
@@ -45,8 +45,9 @@ export async function GET() {
   // Filtrer en JS (les filtres PostgREST sur booléens et dates sont peu fiables sur Vercel)
   const livraisonsPlanifiees = (livraisonsPlanifieesRaw ?? []).filter(
     (l: any) =>
-      !l.transporteur_contacte &&                        // pas encore confirmé
-      l.mois_prevu && l.mois_prevu.slice(0, 10) <= moisFin  // dans la fenêtre temporelle
+      !l.transporteur_contacte &&                              // pas encore confirmé
+      l.mois_prevu && l.mois_prevu.slice(0, 10) <= moisFin && // dans la fenêtre temporelle
+      !l.contrat_achat?.gere_par_silo                          // exclure les contrats gérés par le silo
   )
 
   // CMR en attente :
