@@ -51,6 +51,18 @@ export default function ContratDetailPage() {
     window.location.reload()
   }
 
+  async function supprimerContrat() {
+    if (!confirm(`Supprimer le contrat ${contrat.numero_contrat} et TOUTES ses données (livraisons, contrats de vente, factures) ?\n\nCette action est irréversible.`)) return
+    if (!confirm('Dernière confirmation — supprimer définitivement ?')) return
+    const res = await fetch(`/api/contrats/${id}`, { method: 'DELETE' })
+    if (res.ok) {
+      router.push('/contrats')
+    } else {
+      const d = await res.json()
+      alert('Erreur : ' + (d.error ?? 'impossible de supprimer'))
+    }
+  }
+
   async function supprimerLivraison(livId: string) {
     if (!confirm('Supprimer cette livraison ?')) return
     await fetch(`/api/livraisons/${livId}`, { method: 'DELETE' })
@@ -107,6 +119,9 @@ export default function ContratDetailPage() {
             <button onClick={toggleStatut} className={contrat.statut === 'en_cours' ? 'btn-primary' : 'btn-secondary'}>
               <CheckCircle size={16} />
               {contrat.statut === 'en_cours' ? 'Clôturer' : 'Rouvrir'}
+            </button>
+            <button onClick={supprimerContrat} className="btn-danger">
+              <Trash2 size={15} /> Supprimer
             </button>
           </div>
         )}
