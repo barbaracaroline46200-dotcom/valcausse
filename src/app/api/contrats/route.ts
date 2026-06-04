@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
       courtier:courtiers(id,nom,numero_courtier),
       transporteur:transporteurs(id,nom),
       livraisons(id,type,quantite_reelle,quantite_prevue,mois_prevu),
-      contrats_vente(id,quantite,agriculteur_id,agriculteur:agriculteurs(id,nom))
+      contrats_vente(id,numero_contrat,quantite,agriculteur_id,agriculteur:agriculteurs(id,nom))
     `)
     .order('created_at', { ascending: false })
 

@@ -102,7 +102,7 @@ export default function ContratsPage() {
           <table className="w-full">
             <thead className="bg-gray-50/50">
               <tr>
-                {['N° Contrat', 'Famille', 'Produit', 'Fournisseur', 'Total', 'Livré', 'Reliquat à livrer', 'Non réservé', 'Prix achat', 'Date fin', 'Statut', ''].map(h => (
+                {['N° Contrat', 'Famille', 'Produit', 'Fournisseur', 'Contrats de vente', 'Total', 'Livré', 'Reliquat à livrer', 'Non réservé', 'Prix achat', 'Date fin', 'Statut', ''].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
@@ -127,6 +127,21 @@ export default function ContratsPage() {
                     <td className="table-cell"><BadgeFamille famille={c.famille} /></td>
                     <td className="table-cell font-medium">{c.produit?.nom ?? '—'}</td>
                     <td className="table-cell">{c.fournisseur?.nom ?? '—'}</td>
+                    <td className="table-cell">
+                      {(c.contrats_vente ?? []).length === 0
+                        ? <span className="text-xs text-gray-300">—</span>
+                        : (
+                          <div className="flex flex-col gap-1">
+                            {(c.contrats_vente as any[]).map((cv: any) => (
+                              <span key={cv.id} className="text-xs leading-tight">
+                                <span className="font-semibold text-green-700">{cv.numero_contrat}</span>
+                                {cv.agriculteur?.nom && <span className="text-gray-500"> · {cv.agriculteur.nom}</span>}
+                              </span>
+                            ))}
+                          </div>
+                        )
+                      }
+                    </td>
                     <td className="table-cell">{formatTonnes(c.quantite_totale)}</td>
                     <td className="table-cell">
                       <div className="min-w-[100px]">
