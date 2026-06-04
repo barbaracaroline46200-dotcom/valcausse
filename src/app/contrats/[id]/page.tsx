@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Loader2, ArrowLeft, AlertTriangle, Plus, FileDown, Edit, CheckCircle, Pencil, Trash2, Link2Off } from 'lucide-react'
+import { Loader2, ArrowLeft, AlertTriangle, Plus, FileDown, Edit, CheckCircle, Pencil, Trash2, Link2Off, PackageOpen } from 'lucide-react'
 import { BadgeFamille, BadgeStatut } from '@/components/ui/Badge'
 import ProgressBar from '@/components/ui/ProgressBar'
 import { formatDate, formatTonnes, formatEurosParTonne, formatEuros } from '@/lib/annee-agricole'
@@ -17,6 +17,7 @@ import ModifierVenteModal from '@/components/contrats/ModifierVenteModal'
 import LierVenteModal from '@/components/contrats/LierVenteModal'
 import NouvelleVenteModal from '@/components/contrats/NouvelleVenteModal'
 import { getPrefixes } from '@/lib/prefixes'
+import SoldeOuvertureModal from '@/components/livraisons/SoldeOuvertureModal'
 
 export default function ContratDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -32,6 +33,7 @@ export default function ContratDetailPage() {
   const [modifierLivRealisee, setModifierLivRealisee] = useState<any>(null)
   const [showModifierContrat, setShowModifierContrat] = useState(false)
   const [modifierVente, setModifierVente] = useState<any>(null)
+  const [showSoldeOuverture, setShowSoldeOuverture] = useState(false)
 
   async function chargerContrat() {
     const data = await fetch(`/api/contrats/${id}?t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json())
@@ -112,10 +114,19 @@ export default function ContratDetailPage() {
           <p className="text-gray-500 text-sm mt-1">{contrat.produit?.nom} · {contrat.fournisseur?.nom}</p>
         </div>
         {isAdmin && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button onClick={() => setShowModifierContrat(true)} className="btn-secondary">
               <Edit size={15} /> Modifier
             </button>
+            {contrat.statut === 'en_cours' && !contrat.gere_par_silo && (
+              <button
+                onClick={() => setShowSoldeOuverture(true)}
+                className="btn-secondary text-sm"
+                title="Migration depuis Google Sheet — saisir le tonnage déjà livré avant l'utilisation de ce logiciel"
+              >
+                <PackageOpen size={15} /> Solde d'ouverture
+              </button>
+            )}
             <button onClick={toggleStatut} className={contrat.statut === 'en_cours' ? 'btn-primary' : 'btn-secondary'}>
               <CheckCircle size={16} />
               {contrat.statut === 'en_cours' ? 'Clôturer' : 'Rouvrir'}
@@ -625,6 +636,16 @@ export default function ContratDetailPage() {
           contrat={contrat}
           onClose={() => setShowNouvelleVente(false)}
           onSaved={() => { setShowNouvelleVente(false); window.location.reload() }}
+        />
+      )}
+      {showSoldeOuverture && (
+        <SoldeOuvertureModal
+          contratId={id}
+          contratNumero={contrat.numero_contrat}
+          quantiteTotale={contrat.quantite_totale ?? 0}
+          quantiteDejaLivree={quantiteLivree(contrat.livraisons ?? [])}
+          onClose={() => setShowSoldeOuverture(false)}
+          onSaved={() => { setShowSoldeOuverture(false); chargerContrat() }}
         />
       )}
     </div>
