@@ -1,13 +1,66 @@
 'use client'
-import { Search, Bell, Wheat } from 'lucide-react'
+import { Search, Bell, Wheat, Truck, FileWarning, Receipt, AlertTriangle, X } from 'lucide-react'
 import { useAdmin } from './AdminProvider'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
+import Link from 'next/link'
+
+type AlertItem = { href: string; label: string; count: number; icon: React.ReactNode; color: string }
 
 export default function Header() {
   const { role } = useAdmin()
   const [search, setSearch] = useState('')
   const router = useRouter()
+  const pathname = usePathname()
+  const [open, setOpen] = useState(false)
+  const [alerts, setAlerts] = useState<AlertItem[]>([])
+  const [total, setTotal] = useState(0)
+  const ref = useRef<HTMLDivElement>(null)
+
+  // Fermer au clic extérieur
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  // Fermer en changeant de page
+  useEffect(() => { setOpen(false) }, [pathname])
+
+  // Charger les alertes depuis /api/dashboard
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch('/api/dashboard')
+        const d = await res.json()
+        const livraisons  = (d.livraisonsPlanifiees ?? []).length
+        const cmr         = (d.cmrEnAttente ?? []).length
+        const facturation = (d.livraisonsAFacturer ?? []).length + (d.facturesManquantes ?? []).length
+        const rf          = (d.rfManquants ?? []).length
+        const alerte      = (d.contratsAlerte ?? []).filter((c: any) => {
+          const rel = (c.quantite_totale ?? 0) - (c.livraisons ?? []).filter((l: any) => l.type === 'realisee').reduce((s: number, l: any) => s + (l.quantite_reelle ?? 0), 0)
+          return rel > 0
+        }).length
+
+        const items: AlertItem[] = [
+          { href: '/livraisons',  label: 'Livraisons à organiser',  count: livraisons,  icon: <Truck size={15} />,        color: '#7B2820' },
+          { href: '/cmr',         label: 'CMR en attente',          count: cmr,         icon: <FileWarning size={15} />,   color: '#dc2626' },
+          { href: '/facturation', label: 'Facturation en attente',  count: facturation, icon: <Receipt size={15} />,       color: '#448ab5' },
+          { href: '/rf',          label: 'RF à récupérer',          count: rf,          icon: <FileWarning size={15} />,   color: '#dc2626' },
+          { href: '/contrats',    label: 'Contrats en alerte',      count: alerte,      icon: <AlertTriangle size={15} />, color: '#d97706' },
+        ].filter(i => i.count > 0)
+
+        setAlerts(items)
+        setTotal(items.reduce((s, i) => s + i.count, 0))
+      } catch {}
+    }
+    load()
+    // Rafraîchir toutes les 2 minutes
+    const interval = setInterval(load, 120_000)
+    return () => clearInterval(interval)
+  }, [pathname])
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
@@ -36,11 +89,81 @@ export default function Header() {
         </div>
       </form>
 
-      {/* Droite : notif + profil */}
+      {/* Droite : cloche + profil */}
       <div className="flex items-center gap-3 ml-4">
-        <button className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
-          <Bell size={16} />
-        </button>
+
+        {/* Cloche avec dropdown */}
+        <div className="relative" ref={ref}>
+          <button
+            onClick={() => setOpen(o => !o)}
+            className="relative w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+          >
+            <Bell size={16} />
+            {total > 0 && (
+              <span
+                className="absolute -top-1 -right-1 min-w-[17px] h-[17px] rounded-full text-white text-[10px] font-bold flex items-center justify-center px-0.5"
+                style={{ backgroundColor: '#dc2626' }}
+              >
+                {total > 99 ? '99+' : total}
+              </span>
+            )}
+          </button>
+
+          {open && (
+            <div
+              className="absolute right-0 top-10 w-72 rounded-xl shadow-xl border overflow-hidden z-50"
+              style={{ backgroundColor: '#fff', borderColor: '#ede9e3' }}
+            >
+              {/* Header panneau */}
+              <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: '#f0ece6', backgroundColor: '#fdf5f3' }}>
+                <span className="text-sm font-bold" style={{ color: '#7B2820' }}>
+                  Alertes en cours
+                </span>
+                <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600">
+                  <X size={14} />
+                </button>
+              </div>
+
+              {/* Liste */}
+              {alerts.length === 0 ? (
+                <div className="px-4 py-6 text-center text-sm text-gray-400">
+                  ✓ Tout est à jour
+                </div>
+              ) : (
+                <div className="py-1">
+                  {alerts.map(item => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors"
+                    >
+                      <span
+                        className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: item.color + '18', color: item.color }}
+                      >
+                        {item.icon}
+                      </span>
+                      <span className="flex-1 text-sm text-gray-700">{item.label}</span>
+                      <span
+                        className="min-w-[22px] h-5 px-1.5 rounded-full text-white text-xs font-bold flex items-center justify-center"
+                        style={{ backgroundColor: item.color }}
+                      >
+                        {item.count}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+
+              {/* Footer */}
+              <div className="px-4 py-2 border-t text-xs text-gray-400 text-center" style={{ borderColor: '#f0ece6' }}>
+                Mis à jour à chaque navigation
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Profil */}
         <div className="flex items-center gap-2.5 pl-3 border-l border-gray-200">
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
