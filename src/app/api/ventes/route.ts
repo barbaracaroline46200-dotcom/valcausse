@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
       *,
       produit:produits(*),
       agriculteur:agriculteurs(*),
-      contrat_achat:contrats_achat(id,numero_contrat,famille),
+      contrat_achat:contrats_achat(id,numero_contrat,famille,fournisseur:fournisseurs(id,nom),transporteur:transporteurs(id,nom)),
       factures_client(*)
     `)
     .order('created_at', { ascending: false })

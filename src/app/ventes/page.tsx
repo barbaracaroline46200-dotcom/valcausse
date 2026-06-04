@@ -15,31 +15,49 @@ export default function VentesPage() {
   const [showModal, setShowModal] = useState(false)
   const [produits, setProduits] = useState<any[]>([])
   const [agriculteurs, setAgriculteurs] = useState<any[]>([])
+  const [fournisseurs, setFournisseurs] = useState<any[]>([])
+  const [transporteurs, setTransporteurs] = useState<any[]>([])
 
+  const [filtFamille, setFiltFamille] = useState('')
   const [filtStatut, setFiltStatut] = useState('')
   const [filtProduit, setFiltProduit] = useState('')
   const [filtAgriculteur, setFiltAgriculteur] = useState('')
+  const [filtFournisseur, setFiltFournisseur] = useState('')
+  const [filtTransporteur, setFiltTransporteur] = useState('')
 
   useEffect(() => {
     Promise.all([
       fetch('/api/ventes').then(r => r.json()),
       fetch('/api/referentiels/produits').then(r => r.json()),
       fetch('/api/referentiels/agriculteurs').then(r => r.json()),
-    ]).then(([v, p, a]) => { setVentes(v); setProduits(p); setAgriculteurs(a); setLoading(false) })
+      fetch('/api/referentiels/fournisseurs').then(r => r.json()),
+      fetch('/api/referentiels/transporteurs').then(r => r.json()),
+    ]).then(([v, p, a, f, t]) => { setVentes(v); setProduits(p); setAgriculteurs(a); setFournisseurs(f); setTransporteurs(t); setLoading(false) })
   }, [])
 
   function reload() { fetch('/api/ventes').then(r => r.json()).then(setVentes) }
 
   const filtered = useMemo(() => ventes.filter(v => {
+    if (filtFamille && v.contrat_achat?.famille !== filtFamille) return false
     if (filtStatut && v.statut !== filtStatut) return false
     if (filtProduit && v.produit_id !== filtProduit) return false
     if (filtAgriculteur && v.agriculteur_id !== filtAgriculteur) return false
+    if (filtFournisseur && v.contrat_achat?.fournisseur?.id !== filtFournisseur) return false
+    if (filtTransporteur && v.contrat_achat?.transporteur?.id !== filtTransporteur) return false
     return true
-  }), [ventes, filtStatut, filtProduit, filtAgriculteur])
+  }), [ventes, filtFamille, filtStatut, filtProduit, filtAgriculteur, filtFournisseur, filtTransporteur])
+
+  function resetFilters() {
+    setFiltFamille(''); setFiltStatut(''); setFiltProduit('')
+    setFiltAgriculteur(''); setFiltFournisseur(''); setFiltTransporteur('')
+  }
 
   const filters = [
+    { key: 'famille', label: 'Famille', options: [{ value: 'negoce', label: 'Négoce' }, { value: 'appro', label: 'Appro' }], value: filtFamille, onChange: setFiltFamille },
     { key: 'statut', label: 'Statut', options: [{ value: 'en_cours', label: 'En cours' }, { value: 'clos', label: 'Clos' }], value: filtStatut, onChange: setFiltStatut },
     { key: 'produit', label: 'Produit', options: produits.map(p => ({ value: p.id, label: p.nom })), value: filtProduit, onChange: setFiltProduit },
+    { key: 'fournisseur', label: 'Fournisseur', options: fournisseurs.map(f => ({ value: f.id, label: f.nom })), value: filtFournisseur, onChange: setFiltFournisseur },
+    { key: 'transporteur', label: 'Transporteur', options: transporteurs.map(t => ({ value: t.id, label: t.nom })), value: filtTransporteur, onChange: setFiltTransporteur },
     { key: 'agriculteur', label: 'Agriculteur', options: agriculteurs.map(a => ({ value: a.id, label: a.nom })), value: filtAgriculteur, onChange: setFiltAgriculteur },
   ]
 
@@ -62,7 +80,7 @@ export default function VentesPage() {
         )}
       </div>
 
-      <FilterBar filters={filters} onReset={() => { setFiltStatut(''); setFiltProduit(''); setFiltAgriculteur('') }} />
+      <FilterBar filters={filters} onReset={resetFilters} />
 
       <div className="card-section overflow-hidden">
         <div className="overflow-x-auto">
