@@ -17,6 +17,7 @@ const mainNav = [
   { href: '/contrats', label: 'Contrats achat', icon: FileText },
   { href: '/ventes', label: 'Contrats vente', icon: ShoppingCart },
   { href: '/transporteurs/factures', label: 'Transport & Factures', icon: Truck },
+  { href: '/tarifs-transport', label: 'Tarifs transport', icon: Truck },
   { href: '/stats', label: 'Statistiques', icon: BarChart2 },
   { href: '/agenda', label: 'Agenda', icon: CalendarDays, adminOnly: true },
   { href: '/referentiels', label: 'Référentiels', icon: BookOpen, adminOnly: true },
