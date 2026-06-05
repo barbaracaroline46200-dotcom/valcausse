@@ -110,7 +110,22 @@ export default function ContratsPage() {
         return { ...c, _prixVenteMoyen: prixVenteMoyen, _marge: marge }
       })
     return sort(base)
-  }, [contrats, filtFamille, filtStatut, filtProduit, filtFournisseur, filtTransporteur, filtAgriculteur, sortKey, sortDir])
+  }, [contrats, filtFamille, filtStatut, filtProduit, filtFournisseur, filtTransporteur, filtAgriculteur, q, sortKey, sortDir])
+
+  // Totaux sur les contrats filtrés
+  const totaux = useMemo(() => {
+    let contractes = 0, livres = 0, restants = 0
+    for (const c of filtered) {
+      const isSilo = !!c.gere_par_silo
+      const qt = c.quantite_totale ?? 0
+      const lv = isSilo ? qt : quantiteLivree(c.livraisons ?? [])
+      const re = isSilo ? 0 : reliquat(qt, c.livraisons ?? [])
+      contractes += qt
+      livres += lv
+      restants += re
+    }
+    return { contractes, livres, restants }
+  }, [filtered])
 
   const filters = [
     { key: 'famille', label: 'Famille', options: [{ value: 'negoce', label: 'Négoce' }, { value: 'appro', label: 'Appro' }], value: filtFamille, onChange: setFiltFamille },
@@ -160,20 +175,20 @@ export default function ContratsPage() {
           <table className="w-full">
             <thead className="bg-gray-50/50">
               <tr>
-                    <SortHeader label="N° Contrat"  col="numero_contrat"  sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
-                    <SortHeader label="Famille"      col="famille"         sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
-                    <SortHeader label="Produit"      col="produit_id"      sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
-                    <SortHeader label="Fournisseur"  col="fournisseur_id"  sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
-                    <th className="table-header">Contrats de vente</th>
-                    <SortHeader label="Total"        col="quantite_totale" sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
-                    <th className="table-header">Livré</th>
-                    <th className="table-header">Reliquat</th>
-                    <th className="table-header">Non réservé</th>
-                    <SortHeader label="Prix achat"   col="prix_achat"      sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
-                    <SortHeader label="Marge est."   col="_marge"          sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
-                    <SortHeader label="Date fin"     col="date_fin"        sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
-                    <th className="table-header">Statut</th>
-                    <th className="table-header"></th>
+                <SortHeader label="N° Contrat"  col="numero_contrat"  sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                <SortHeader label="Famille"      col="famille"         sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                <SortHeader label="Produit"      col="produit_id"      sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                <SortHeader label="Fournisseur"  col="fournisseur_id"  sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                <th className="table-header">Contrats de vente</th>
+                <SortHeader label="Total"        col="quantite_totale" sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                <th className="table-header">Livré</th>
+                <th className="table-header">Reliquat</th>
+                <th className="table-header">Non réservé</th>
+                <SortHeader label="Prix achat"   col="prix_achat"      sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                <SortHeader label="Marge est."   col="_marge"          sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                <SortHeader label="Date fin"     col="date_fin"        sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                <th className="table-header">Statut</th>
+                <th className="table-header"></th>
               </tr>
             </thead>
             <tbody>
@@ -259,6 +274,34 @@ export default function ContratsPage() {
                 )
               })}
             </tbody>
+
+            {/* ── Ligne de totaux ── */}
+            {filtered.length > 0 && (
+              <tfoot>
+                <tr className="border-t-2" style={{ borderColor: '#e4b5ad', backgroundColor: '#fdf5f3' }}>
+                  <td colSpan={5} className="px-4 py-3">
+                    <span className="text-xs font-bold uppercase tracking-wide" style={{ color: '#7B2820' }}>
+                      Total — {filtered.length} contrat{filtered.length > 1 ? 's' : ''}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="font-bold text-sm text-gray-800">{formatTonnes(totaux.contractes)}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="font-bold text-sm text-gray-700">{formatTonnes(totaux.livres)}</span>
+                    <div className="text-xs text-gray-400 mt-0.5">
+                      {totaux.contractes > 0 ? Math.round((totaux.livres / totaux.contractes) * 100) : 0} % livré
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`font-bold text-sm ${totaux.restants > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                      {formatTonnes(totaux.restants)}
+                    </span>
+                  </td>
+                  <td colSpan={6} />
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       </div>
