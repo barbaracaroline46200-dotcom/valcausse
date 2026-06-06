@@ -105,7 +105,7 @@ export default function ContratsPage() {
           ? ventes.reduce((s: number, cv: any) => s + (cv.prix_vente ?? 0) * (cv.quantite ?? 0), 0) / totalQteVendue
           : null
         const marge = prixVenteMoyen != null && c.prix_achat != null
-          ? prixVenteMoyen - c.prix_achat
+          ? prixVenteMoyen - c.prix_achat - (c.prix_transport_prevu ?? 0)
           : null
         return { ...c, _prixVenteMoyen: prixVenteMoyen, _marge: marge }
       })
