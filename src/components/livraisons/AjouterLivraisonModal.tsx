@@ -34,22 +34,13 @@ export default function AjouterLivraisonModal({ contrat, onClose, onSaved }: Pro
     transporteur_id: '',
     numero_mise_a_disposition: '',
     contrat_vente_id: '',
-    destination_silo: false,
   })
-  const [agriculteurs, setAgriculteurs] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
     fetch('/api/referentiels/transporteurs').then(r => r.json()).then(setTransporteurs)
-    fetch('/api/referentiels/agriculteurs').then(r => r.json()).then(setAgriculteurs)
   }, [])
-
-  function getVilleSilo() {
-    const nomSilo = contrat.famille === 'appro' ? 'Silo Gare' : 'Silo'
-    const silo = agriculteurs.find((a: any) => a.nom?.toLowerCase() === nomSilo.toLowerCase())
-    return silo?.ville_livraison ?? ''
-  }
 
   function f(key: string) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -61,7 +52,7 @@ export default function AjouterLivraisonModal({ contrat, onClose, onSaved }: Pro
   function onContratVenteChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const id = e.target.value
     const cv = ventesLiees.find((v: any) => v.id === id)
-    const villeAgri = cv?.agriculteur?.ville_livraison ?? ''
+    const villeAgri = cv?.destination_silo ? '' : (cv?.agriculteur?.ville_livraison ?? '')
     setForm(prev => ({ ...prev, contrat_vente_id: id, ville_destination: villeAgri || prev.ville_destination }))
   }
 
@@ -81,8 +72,7 @@ export default function AjouterLivraisonModal({ contrat, onClose, onSaved }: Pro
       piece_client_numero: form.piece_client_numero || null,
       transporteur_id: form.transporteur_id || null,
       numero_mise_a_disposition: form.numero_mise_a_disposition || null,
-      contrat_vente_id: form.destination_silo ? null : (form.contrat_vente_id || null),
-      destination_silo: form.destination_silo,
+      contrat_vente_id: form.contrat_vente_id || null,
     }
     const res = await fetch('/api/livraisons', {
       method: 'POST',
@@ -121,26 +111,16 @@ export default function AjouterLivraisonModal({ contrat, onClose, onSaved }: Pro
           </div>
           <div className="col-span-2">
             <label className="label">Affectation de cette livraison</label>
-            <div className="flex gap-3 items-center mb-2">
-              <label className="flex items-center gap-2 cursor-pointer text-sm">
-                <input type="checkbox" checked={form.destination_silo} onChange={e => {
-                  const checked = e.target.checked
-                  const villeSilo = checked ? getVilleSilo() : ''
-                  setForm(prev => ({ ...prev, destination_silo: checked, contrat_vente_id: '', ville_destination: villeSilo || prev.ville_destination }))
-                }} className="w-4 h-4 rounded" />
-                Livraison vers notre silo (Silo / Silo Gare)
-              </label>
-            </div>
-            {!form.destination_silo && (
-              <select className="input" value={form.contrat_vente_id} onChange={onContratVenteChange}>
-                <option value="">— Non affecté à un contrat de vente —</option>
-                {ventesLiees.map((cv: any) => (
-                  <option key={cv.id} value={cv.id}>
-                    {cv.numero_contrat} · {cv.agriculteur?.nom} · {cv.quantite} t
-                  </option>
-                ))}
-              </select>
-            )}
+            <select className="input" value={form.contrat_vente_id} onChange={onContratVenteChange}>
+              <option value="">— Non affecté —</option>
+              {ventesLiees.map((cv: any) => (
+                <option key={cv.id} value={cv.id}>
+                  {cv.destination_silo
+                    ? `🏚 ${cv.silo_nom} · ${cv.quantite} t`
+                    : `${cv.numero_contrat} · ${cv.agriculteur?.nom} · ${cv.quantite} t`}
+                </option>
+              ))}
+            </select>
           </div>
           {contrat.famille === 'appro' && (
             <div className="col-span-2">
