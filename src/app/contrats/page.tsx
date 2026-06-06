@@ -231,8 +231,13 @@ export default function ContratsPage() {
                           <div className="flex flex-col gap-1">
                             {(c.contrats_vente as any[]).map((cv: any) => (
                               <span key={cv.id} className="text-xs leading-tight">
-                                <span className="font-semibold text-green-700">{cv.numero_contrat}</span>
-                                {cv.agriculteur?.nom && <span className="text-gray-500"> · {cv.agriculteur.nom}</span>}
+                                {cv.destination_silo
+                                  ? <span className="font-semibold text-amber-700">🏚 {cv.silo_nom}</span>
+                                  : <>
+                                      <span className="font-semibold text-green-700">{cv.numero_contrat}</span>
+                                      {cv.agriculteur?.nom && <span className="text-gray-500"> · {cv.agriculteur.nom}</span>}
+                                    </>
+                                }
                               </span>
                             ))}
                           </div>
