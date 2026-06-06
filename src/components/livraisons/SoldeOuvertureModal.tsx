@@ -34,6 +34,7 @@ export default function SoldeOuvertureModal({ contratId, contratNumero, quantite
         type: 'realisee',
         quantite_reelle: qte,
         date_reelle: date,
+        mois_prevu: date.substring(0, 7) + '-01',
         solde_ouverture: true,
         transport_facture: true,
       }),
