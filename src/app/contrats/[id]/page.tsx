@@ -410,14 +410,15 @@ export default function ContratDetailPage() {
 
         {/* Réalisées */}
         {livraisonsRealisees.length > 0 && (
-          <div>
-            <div className="px-5 py-2 bg-green-50 text-xs font-semibold text-green-700 uppercase tracking-wide border-t border-gray-100">
+          <div className="border-t-4 border-green-200">
+            <div className="px-5 py-2.5 bg-green-600 text-xs font-bold text-white uppercase tracking-wide flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-white/70" />
               Réalisées ({livraisonsRealisees.length})
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto bg-green-50/30">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50/50">
+                  <tr className="border-b border-green-100 bg-green-50/60">
                     {['Date réelle', 'Tonnes réelles', 'Ville enlèv.', 'Ville dest.', 'CMR', 'Pièce fourn.', 'Pièce client', 'Transport prévu', 'Transport réel', 'Écart', 'Facturé', ''].map(h => (
                       <th key={h} className="table-header">{h}</th>
                     ))}
@@ -428,7 +429,7 @@ export default function ContratDetailPage() {
                     const ecart = ecartTransport(l.montant_transport_reel, l.quantite_reelle, contrat.prix_transport_prevu)
                     const prevu = l.quantite_reelle != null ? l.quantite_reelle * contrat.prix_transport_prevu : null
                     return (
-                      <tr key={l.id} className="table-row">
+                      <tr key={l.id} className="table-row bg-green-50/40 hover:bg-green-50/80">
                         <td className="table-cell font-medium">{formatDate(l.date_reelle)}</td>
                         <td className="table-cell font-semibold">{formatTonnes(l.quantite_reelle)}</td>
                         <td className="table-cell text-gray-500">{l.ville_chargement ?? '—'}</td>
