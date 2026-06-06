@@ -390,12 +390,12 @@ export default function ContratDetailPage() {
                     <tr key={l.id} className="table-row">
                       <td className="table-cell font-medium">{formatDate(l.mois_prevu)}</td>
                       <td className="table-cell text-xs">
-                        {l.destination_silo
-                          ? <span className="badge-appro">Silo</span>
-                          : l.contrat_vente_id
-                            ? <span className="text-green-700 font-medium">{(contrat.contrats_vente ?? []).find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur?.nom ?? '—'}</span>
-                            : <span className="text-gray-400">Non affecté</span>
-                        }
+                        {(() => {
+                          const cv = l.contrat_vente_id ? (contrat.contrats_vente ?? []).find((v: any) => v.id === l.contrat_vente_id) : null
+                          if (cv?.destination_silo) return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-medium text-xs">🏚 {cv.silo_nom}</span>
+                          if (cv) return <span className="text-green-700 font-medium">{cv.agriculteur?.nom ?? '—'}</span>
+                          return <span className="text-gray-400">Non affecté</span>
+                        })()}
                       </td>
                       <td className="table-cell">{formatTonnes(l.quantite_prevue)}</td>
                       <td className="table-cell text-gray-500">{l.ville_chargement ?? contrat.ville_chargement ?? '—'}</td>
