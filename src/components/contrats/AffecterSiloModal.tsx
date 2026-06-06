@@ -1,11 +1,11 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
 import { Warehouse } from 'lucide-react'
 
 interface Props {
   contrat: any
-  siloExistant?: any // contrat_vente silo déjà existant (pour modification)
+  siloExistant?: any
   onClose: () => void
   onSaved: () => void
 }
@@ -15,16 +15,28 @@ const SILOS = ['Silo', 'Silo gare']
 export default function AffecterSiloModal({ contrat, siloExistant, onClose, onSaved }: Props) {
   const [siloNom, setSiloNom] = useState<string>(siloExistant?.silo_nom ?? '')
   const [quantite, setQuantite] = useState<string>(siloExistant?.quantite?.toString() ?? '')
+  const [agriculteurs, setAgriculteurs] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   const isEdit = !!siloExistant
+
+  useEffect(() => {
+    fetch('/api/referentiels/agriculteurs').then(r => r.json()).then(setAgriculteurs)
+  }, [])
+
+  function findAgriculteurId(nom: string) {
+    const match = agriculteurs.find((a: any) => a.nom?.toLowerCase() === nom.toLowerCase())
+    return match?.id ?? null
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     const qte = parseFloat(quantite)
     if (!siloNom) { setError('Choisir un silo.'); return }
     if (!qte || qte <= 0) { setError('Saisir une quantité valide.'); return }
+
+    const agriculteurId = findAgriculteurId(siloNom)
 
     setSaving(true)
     setError('')
@@ -33,7 +45,7 @@ export default function AffecterSiloModal({ contrat, siloExistant, onClose, onSa
       const res = await fetch(`/api/ventes/${siloExistant.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ silo_nom: siloNom, quantite: qte }),
+        body: JSON.stringify({ silo_nom: siloNom, quantite: qte, agriculteur_id: agriculteurId }),
       })
       if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Erreur'); setSaving(false); return }
     } else {
@@ -47,7 +59,7 @@ export default function AffecterSiloModal({ contrat, siloExistant, onClose, onSa
           silo_nom: siloNom,
           quantite: qte,
           numero_contrat: null,
-          agriculteur_id: null,
+          agriculteur_id: agriculteurId,
           prix_vente: null,
         }),
       })
@@ -82,6 +94,9 @@ export default function AffecterSiloModal({ contrat, siloExistant, onClose, onSa
               </button>
             ))}
           </div>
+          {siloNom && !findAgriculteurId(siloNom) && agriculteurs.length > 0 && (
+            <p className="text-xs text-orange-500 mt-1">⚠ Agriculteur "{siloNom}" introuvable dans le référentiel — le filtre par agriculteur ne fonctionnera pas.</p>
+          )}
         </div>
 
         <div>
