@@ -201,8 +201,9 @@ export default function ContratDetailPage() {
         <div className="card space-y-4">
           <h2 className="font-bold text-gray-800 text-base">Avancement</h2>
           <div className="text-center">
-            <div className="text-4xl font-bold text-gray-900">{formatTonnes(livre)}</div>
-            <div className="text-gray-500 text-sm">livrées sur {formatTonnes(contrat.quantite_totale)}</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Contrat total</div>
+            <div className="text-3xl font-extrabold text-gray-900">{formatTonnes(contrat.quantite_totale)}</div>
+            <div className="mt-2 text-sm text-gray-500">dont <span className="font-semibold text-gray-700">{formatTonnes(livre)}</span> livrées</div>
           </div>
           <ProgressBar value={livre} total={contrat.quantite_totale} />
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-center">
