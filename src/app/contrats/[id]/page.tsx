@@ -463,7 +463,7 @@ export default function ContratDetailPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-green-100 bg-green-50/60">
-                    {['Date réelle', 'Tonnes réelles', 'Ville enlèv.', 'Ville dest.', 'CMR', 'Pièce fourn.', 'Pièce client', 'Transport prévu', 'Transport réel', 'Écart', 'Facturé', ''].map(h => (
+                    {['Date réelle', 'Destinataire', 'Tonnes réelles', 'Ville enlèv.', 'Ville dest.', 'CMR', 'Pièce fourn.', 'Pièce client', 'Transport prévu', 'Transport réel', 'Écart', 'Facturé', ''].map(h => (
                       <th key={h} className="table-header">{h}</th>
                     ))}
                   </tr>
@@ -475,6 +475,14 @@ export default function ContratDetailPage() {
                     return (
                       <tr key={l.id} className="table-row bg-green-50/40 hover:bg-green-50/80">
                         <td className="table-cell font-medium">{formatDate(l.date_reelle)}</td>
+                        <td className="table-cell text-xs">
+                          {(() => {
+                            const cv = (contrat.contrats_vente ?? []).find((v: any) => v.id === l.contrat_vente_id)
+                            if (!cv) return <span className="text-gray-400">—</span>
+                            if (cv.destination_silo) return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-medium">🏚 {cv.silo_nom}</span>
+                            return <span className="text-green-700 font-medium">{cv.agriculteur?.nom ?? '—'}</span>
+                          })()}
+                        </td>
                         <td className="table-cell font-semibold">{formatTonnes(l.quantite_reelle)}</td>
                         <td className="table-cell text-gray-500">{l.ville_chargement ?? '—'}</td>
                         <td className="table-cell text-gray-500">{l.ville_destination ?? '—'}</td>
