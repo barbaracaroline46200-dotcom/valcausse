@@ -16,6 +16,7 @@ import ModifierContratModal from '@/components/contrats/ModifierContratModal'
 import ModifierVenteModal from '@/components/contrats/ModifierVenteModal'
 import LierVenteModal from '@/components/contrats/LierVenteModal'
 import NouvelleVenteModal from '@/components/contrats/NouvelleVenteModal'
+import AffecterSiloModal from '@/components/contrats/AffecterSiloModal'
 import { getPrefixes } from '@/lib/prefixes'
 import SoldeOuvertureModal from '@/components/livraisons/SoldeOuvertureModal'
 
@@ -34,6 +35,8 @@ export default function ContratDetailPage() {
   const [showModifierContrat, setShowModifierContrat] = useState(false)
   const [modifierVente, setModifierVente] = useState<any>(null)
   const [showSoldeOuverture, setShowSoldeOuverture] = useState(false)
+  const [showAffecterSilo, setShowAffecterSilo] = useState(false)
+  const [modifierSilo, setModifierSilo] = useState<any>(null)
 
   async function chargerContrat() {
     const data = await fetch(`/api/contrats/${id}?t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json())
@@ -227,6 +230,9 @@ export default function ContratDetailPage() {
               <button onClick={() => setShowLierVente(true)} className="btn-secondary text-xs">
                 <Plus size={14} /> Lier existant
               </button>
+              <button onClick={() => setShowAffecterSilo(true)} className="btn-secondary text-xs text-amber-700 border-amber-200 hover:bg-amber-50">
+                <Plus size={14} /> Silo
+              </button>
               <button onClick={() => setShowNouvelleVente(true)} className="btn-primary text-xs">
                 <Plus size={14} /> Nouveau
               </button>
@@ -246,7 +252,45 @@ export default function ContratDetailPage() {
               {(contrat.contrats_vente ?? []).length === 0 && (
                 <tr><td colSpan={9} className="px-4 py-6 text-center text-gray-400 text-sm">Aucun contrat de vente lié</td></tr>
               )}
-              {(contrat.contrats_vente ?? []).map((cv: any) => (
+              {(contrat.contrats_vente ?? []).map((cv: any) => {
+                if (cv.destination_silo) {
+                  return (
+                    <tr key={cv.id} className="table-row bg-amber-50/40">
+                      <td className="table-cell">
+                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-100 text-amber-800 text-xs font-semibold">
+                          🏚 {cv.silo_nom}
+                        </span>
+                      </td>
+                      <td className="table-cell text-gray-400 text-xs italic">Stock propre</td>
+                      <td className="table-cell">{cv.produit?.nom ?? '—'}</td>
+                      <td className="table-cell font-semibold">{formatTonnes(cv.quantite)}</td>
+                      <td className="table-cell text-gray-300">—</td>
+                      <td className="table-cell text-gray-300">—</td>
+                      <td className="table-cell text-gray-300">—</td>
+                      <td className="table-cell">
+                        <span className="badge-appro text-xs">Silo</span>
+                      </td>
+                      <td className="table-cell text-xs text-gray-400 italic">Pas de facturation</td>
+                      {isAdmin && (
+                        <td className="table-cell">
+                          <div className="flex gap-1">
+                            <button onClick={() => setModifierSilo(cv)} className="btn-secondary text-xs py-1 px-2" title="Modifier">
+                              <Pencil size={12} />
+                            </button>
+                            <button onClick={async () => {
+                              if (!confirm(`Supprimer l'affectation silo "${cv.silo_nom}" (${cv.quantite} t) ?`)) return
+                              await fetch(`/api/ventes/${cv.id}`, { method: 'DELETE' })
+                              window.location.reload()
+                            }} className="btn-danger text-xs py-1 px-2" title="Supprimer">
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  )
+                }
+                return (
                 <tr key={cv.id} className="table-row">
                   <td className="table-cell font-medium text-green-700">{cv.numero_contrat}</td>
                   <td className="table-cell">{cv.agriculteur?.nom ?? '—'}</td>
@@ -260,7 +304,6 @@ export default function ContratDetailPage() {
                     {cv.factures_client?.length > 0
                       ? cv.factures_client.map((f: any) => f.numero_facture_atys ?? f.numero_facture).join(', ')
                       : (() => {
-                          // Livraisons de ce contrat de vente
                           const livsCv = (contrat.livraisons ?? []).filter((l: any) => l.contrat_vente_id === cv.id)
                           if (livsCv.length === 0) return <span className="text-gray-400">—</span>
                           const toutesRealisees = livsCv.every((l: any) => l.type === 'realisee')
@@ -308,7 +351,8 @@ export default function ContratDetailPage() {
                     </td>
                   )}
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -637,6 +681,14 @@ export default function ContratDetailPage() {
           contrat={contrat}
           onClose={() => setShowNouvelleVente(false)}
           onSaved={() => { setShowNouvelleVente(false); window.location.reload() }}
+        />
+      )}
+      {(showAffecterSilo || modifierSilo) && (
+        <AffecterSiloModal
+          contrat={contrat}
+          siloExistant={modifierSilo ?? undefined}
+          onClose={() => { setShowAffecterSilo(false); setModifierSilo(null) }}
+          onSaved={() => { setShowAffecterSilo(false); setModifierSilo(null); window.location.reload() }}
         />
       )}
       {showSoldeOuverture && (
