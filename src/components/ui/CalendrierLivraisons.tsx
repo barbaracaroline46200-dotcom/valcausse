@@ -88,11 +88,11 @@ export default function CalendrierLivraisons() {
           quantite_reelle: l.quantite_reelle,
           produit: l.contrat_achat?.produit?.nom ?? '—',
           numero_contrat: l.contrat_achat?.numero_contrat ?? '—',
-          agriculteur: (
-            (l.contrat_achat?.contrats_vente ?? []).find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur?.nom
-            ?? l.contrat_achat?.contrats_vente?.[0]?.agriculteur?.nom
-            ?? (l.destination_silo ? 'Silo' : '—')
-          ),
+          agriculteur: (() => {
+            const cv = (l.contrat_achat?.contrats_vente ?? []).find((cv: any) => cv.id === l.contrat_vente_id)
+            if (cv?.destination_silo) return cv.silo_nom ?? 'Silo'
+            return cv?.agriculteur?.nom ?? '—'
+          })(),
           transporteur: l.transporteur?.nom ?? l.contrat_achat?.transporteur?.nom ?? '—',
           destination_silo: l.destination_silo,
         }))
