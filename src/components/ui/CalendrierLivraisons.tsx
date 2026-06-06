@@ -190,6 +190,14 @@ export default function CalendrierLivraisons() {
           <button onClick={next} className="p-1.5 rounded-lg hover:bg-white border border-gray-200 transition-colors">
             <ChevronRight size={16} className="text-gray-600" />
           </button>
+          {(month !== now.getMonth() || year !== now.getFullYear()) && (
+            <button
+              onClick={() => { setMonth(now.getMonth()); setYear(now.getFullYear()) }}
+              className="ml-1 px-2.5 py-1 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-white transition-colors"
+            >
+              Aujourd'hui
+            </button>
+          )}
         </div>
       </div>
 
