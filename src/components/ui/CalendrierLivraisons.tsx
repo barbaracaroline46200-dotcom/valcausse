@@ -125,13 +125,15 @@ export default function CalendrierLivraisons() {
   const semaines: (Date | null)[][] = []
   for (let i = 0; i < cellules.length; i += 7) semaines.push(cellules.slice(i, i + 7))
 
-  // Livraisons en retard = planifiées dont mois_prevu < mois affiché
+  // Livraisons en retard = planifiées dont mois_prevu < mois actuel (aujourd'hui, pas le mois affiché)
   const debutMois = new Date(year, month, 1)
+  const aujourd = new Date()
+  const debutMoisActuel = new Date(aujourd.getFullYear(), aujourd.getMonth(), 1)
   const livsEnRetard = livraisons.filter(l => {
     if (l.type === 'realisee') return false
     if (!l.mois_prevu) return false
     if (l.date_prevue || l.semaine_prevue) return false // organisée, pas en retard
-    return new Date(l.mois_prevu) < debutMois
+    return new Date(l.mois_prevu) < debutMoisActuel
   })
   const livsduMois = livraisons.filter(l => {
     if (l.type === 'realisee') return true
