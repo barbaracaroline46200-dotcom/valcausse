@@ -104,8 +104,17 @@ export default function ContratsPage() {
         const prixVenteMoyen = totalQteVendue > 0
           ? ventes.reduce((s: number, cv: any) => s + (cv.prix_vente ?? 0) * (cv.quantite ?? 0), 0) / totalQteVendue
           : null
+        // Transport : coût réel facturé si dispo, sinon prix prévu estimé
+        const livsRealisees = (c.livraisons ?? []).filter((l: any) => l.type === 'realisee')
+        const transportReel = livsRealisees.some((l: any) => l.montant_transport_reel != null)
+          ? livsRealisees.reduce((s: number, l: any) => s + (l.montant_transport_reel ?? 0), 0)
+          : null
+        const tonnesRealisees = livsRealisees.reduce((s: number, l: any) => s + (l.quantite_reelle ?? 0), 0)
+        const prixTransportParTonne = transportReel != null && tonnesRealisees > 0
+          ? transportReel / tonnesRealisees
+          : (c.prix_transport_prevu ?? 0)
         const marge = prixVenteMoyen != null && c.prix_achat != null
-          ? prixVenteMoyen - c.prix_achat - (c.prix_transport_prevu ?? 0)
+          ? prixVenteMoyen - c.prix_achat - prixTransportParTonne
           : null
         return { ...c, _prixVenteMoyen: prixVenteMoyen, _marge: marge }
       })
