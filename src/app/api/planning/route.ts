@@ -9,8 +9,11 @@ export async function GET() {
     .from('livraisons')
     .select(`
       id,
+      type,
       mois_prevu,
       quantite_prevue,
+      date_reelle,
+      quantite_reelle,
       contrat_vente_id,
       contrat_achat:contrats_achat(
         numero_contrat,
@@ -26,8 +29,6 @@ export async function GET() {
         agriculteur:agriculteurs(nom)
       )
     `)
-    .eq('type', 'planifiee')
-    .not('mois_prevu', 'is', null)
     .order('mois_prevu', { ascending: true })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
