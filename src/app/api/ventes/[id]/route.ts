@@ -21,7 +21,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         quantite_prevue, quantite_reelle, ville_chargement, ville_destination,
         numero_lettre_voiture, transporteur_contacte
       ),
-      factures_client(id, numero_facture, date_facture, montant_ht, montant_ttc)
+      factures_client(id, numero_facture_logiciel, montant_ht, montant_ttc, mode_paiement, date_paiement)
     `)
     .eq('id', params.id)
     .single()

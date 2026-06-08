@@ -15,8 +15,7 @@ export default function LierVenteModal({ contratAchatId, onClose, onSaved }: Pro
   const [error, setError] = useState('')
 
   useEffect(() => {
-    // Contrats de vente sans contrat d'achat lié
-    fetch('/api/ventes?contrat_achat_id=null').then(r => r.json()).then(setVentes)
+    fetch('/api/ventes?statut=en_cours').then(r => r.json()).then(setVentes)
   }, [])
 
   async function submit(e: React.FormEvent) {
@@ -39,17 +38,17 @@ export default function LierVenteModal({ contratAchatId, onClose, onSaved }: Pro
     <Modal title="Lier un contrat de vente existant" onClose={onClose} size="sm">
       <form onSubmit={submit} className="space-y-4">
         <div>
-          <label className="label">Contrat de vente (départ silo)</label>
+          <label className="label">Contrat de vente (en cours)</label>
           <select className="input" value={selected} onChange={e => setSelected(e.target.value)} required>
             <option value="">Choisir...</option>
             {ventes.map((v: any) => (
               <option key={v.id} value={v.id}>
-                {v.numero_contrat} — {v.agriculteur?.nom} — {v.produit?.nom}
+                {v.numero_contrat} — {v.agriculteur?.nom ?? v.silo_nom ?? 'Silo'} — {v.produit?.nom}
               </option>
             ))}
           </select>
           {ventes.length === 0 && (
-            <p className="text-sm text-gray-500 mt-1">Aucun contrat de vente "départ silo" disponible.</p>
+            <p className="text-sm text-gray-500 mt-1">Aucun contrat de vente en cours disponible.</p>
           )}
         </div>
         {error && <p className="text-red-600 text-sm">{error}</p>}
