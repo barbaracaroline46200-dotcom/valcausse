@@ -288,10 +288,12 @@ function EntryModal({ tab, initial, onClose, onSaved }: {
     setSaving(true)
     const url = isEdit ? `${URLS[tab]}/${initial.id}` : URLS[tab]
     const method = isEdit ? 'PATCH' : 'POST'
+    const allowedKeys = FIELDS[tab].map(f => f.key)
+    const payload = Object.fromEntries(Object.entries(form).filter(([k]) => allowedKeys.includes(k)))
     const res = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
+      body: JSON.stringify(payload),
     })
     if (res.ok) { onSaved() } else {
       const d = await res.json()
