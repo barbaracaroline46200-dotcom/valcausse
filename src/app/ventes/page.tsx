@@ -4,7 +4,8 @@ import { useSearchParams } from 'next/navigation'
 import { Plus, Loader2, ShoppingCart, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import { BadgeStatut } from '@/components/ui/Badge'
 import FilterBar from '@/components/ui/FilterBar'
-import { formatTonnes, formatEurosParTonne } from '@/lib/annee-agricole'
+import { formatTonnes, formatEurosParTonne, formatDate } from '@/lib/annee-agricole'
+import ProgressBar from '@/components/ui/ProgressBar'
 import { useAdmin } from '@/components/ui/AdminProvider'
 import Link from 'next/link'
 import NouvelleVenteSiloModal from '@/components/contrats/NouvelleVenteSiloModal'
@@ -134,21 +135,37 @@ export default function VentesPage() {
                     <SortHeader label="Agriculteur"      col="agriculteur_id" sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
                     <SortHeader label="Produit"          col="produit_id"     sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
                     <th className="table-header">Contrat achat lié</th>
-                    <SortHeader label="Quantité"         col="quantite"       sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                    <SortHeader label="Total"            col="quantite"       sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                    <th className="table-header">Livré</th>
+                    <th className="table-header">Reliquat</th>
                     <SortHeader label="Prix vente"       col="prix_vente"     sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                    <SortHeader label="Date fin"         col="date_fin"       sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
                     <SortHeader label="Statut"           col="statut"         sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400">Aucun contrat trouvé</td></tr>
+                <tr><td colSpan={10} className="px-4 py-10 text-center text-gray-400">Aucun contrat trouvé</td></tr>
               )}
-              {filtered.map(v => (
+              {filtered.map(v => {
+                const livsRealisees = (v.livraisons ?? []).filter((l: any) => l.type === 'realisee')
+                const livre = livsRealisees.reduce((s: number, l: any) => s + (l.quantite_reelle ?? 0), 0)
+                const total = v.quantite ?? 0
+                const reliquat = total - livre
+                const pct = total > 0 ? Math.min(100, Math.round((livre / total) * 100)) : 0
+                const depasse = v.date_fin && new Date(v.date_fin) < new Date() && reliquat > 0
+                return (
                 <tr key={v.id} className="table-row">
                   <td className="table-cell font-semibold">
-                    <Link href={`/ventes/${v.id}`} className="text-green-700 hover:underline">{v.numero_contrat}</Link>
+                    <Link href={`/ventes/${v.id}`} className="text-green-700 hover:underline">
+                      {v.numero_contrat || <span className="text-gray-400 italic text-xs">Sans n°</span>}
+                    </Link>
                   </td>
-                  <td className="table-cell font-medium">{v.agriculteur?.nom ?? '—'}</td>
+                  <td className="table-cell font-medium">
+                    {v.destination_silo
+                      ? <span className="inline-flex items-center gap-1 text-amber-700 text-xs font-medium">🏚 {v.silo_nom ?? 'Silo'}</span>
+                      : (v.agriculteur?.nom ?? '—')}
+                  </td>
                   <td className="table-cell">{v.produit?.nom ?? '—'}</td>
                   <td className="table-cell">
                     {v.contrat_achat ? (
@@ -159,11 +176,26 @@ export default function VentesPage() {
                       <span className="badge-appro">Départ silo</span>
                     )}
                   </td>
-                  <td className="table-cell font-semibold">{formatTonnes(v.quantite)}</td>
+                  <td className="table-cell font-semibold">{formatTonnes(total)}</td>
+                  <td className="table-cell min-w-[120px]">
+                    <div className="text-sm font-semibold text-green-700">{formatTonnes(livre)}</div>
+                    <ProgressBar value={pct} color={pct >= 100 ? '#15803d' : '#C8941A'} />
+                  </td>
+                  <td className="table-cell font-semibold">
+                    {reliquat > 0
+                      ? <span className="text-orange-600">{formatTonnes(reliquat)}</span>
+                      : <span className="text-green-600 text-xs">✓ Soldé</span>}
+                  </td>
                   <td className="table-cell">{formatEurosParTonne(v.prix_vente)}</td>
+                  <td className="table-cell text-sm">
+                    {v.date_fin
+                      ? <span className={depasse ? 'text-red-600 font-semibold' : 'text-gray-600'}>{formatDate(v.date_fin)}{depasse ? ' ⚠️' : ''}</span>
+                      : <span className="text-gray-300">—</span>}
+                  </td>
                   <td className="table-cell"><BadgeStatut statut={v.statut} /></td>
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
         </div>
