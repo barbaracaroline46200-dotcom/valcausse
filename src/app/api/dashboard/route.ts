@@ -32,7 +32,7 @@ export async function GET() {
     .select(`
       *,
       contrat_achat:contrats_achat(
-        numero_contrat,famille,gere_par_silo,
+        id,numero_contrat,famille,gere_par_silo,
         produit:produits(nom),
         fournisseur:fournisseurs(nom),
         transporteur:transporteurs(id,nom),
