@@ -63,6 +63,10 @@ export default function PlanningPage() {
     return [...s].sort()
   }, [rows])
 
+  function formatT(n: number) {
+    return n % 1 === 0 ? `${n} t` : `${n.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} t`
+  }
+
   const filtered = useMemo(() => rows.filter(r => {
     if (filtFamille && r.contrat_achat?.famille !== filtFamille) return false
     if (filtProduit && r.contrat_achat?.produit?.nom !== filtProduit) return false
@@ -247,6 +251,38 @@ export default function PlanningPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Bilan totaux */}
+        {(() => {
+          const realisees = filtered.filter(r => r.type === 'realisee')
+          const planifiees = filtered.filter(r => r.type === 'planifiee')
+          const tonnesRealisees = realisees.reduce((s, r) => s + (r.quantite_reelle ?? 0), 0)
+          const tonnesPlanifiees = planifiees.reduce((s, r) => s + (r.quantite_prevue ?? 0), 0)
+          return (
+            <div className="flex items-center gap-6 px-4 py-3 border-t-2 border-gray-200 bg-gray-50 text-sm flex-wrap">
+              <span className="font-semibold text-gray-500 uppercase tracking-wide text-xs">Totaux ({filtered.length} livraisons)</span>
+              <span className="flex items-center gap-2">
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded font-bold text-white text-[10px]" style={{ backgroundColor: '#15803d' }}>✓</span>
+                <span className="text-gray-700">
+                  <strong className="text-green-700">{realisees.length}</strong> réalisée{realisees.length > 1 ? 's' : ''}
+                  <span className="ml-1.5 font-semibold text-green-700">{formatT(tonnesRealisees)}</span>
+                </span>
+              </span>
+              <span className="text-gray-300">|</span>
+              <span className="flex items-center gap-2">
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded font-bold text-white text-[10px]" style={{ backgroundColor: '#7B2820' }}>✕</span>
+                <span className="text-gray-700">
+                  <strong style={{ color: '#7B2820' }}>{planifiees.length}</strong> planifiée{planifiees.length > 1 ? 's' : ''}
+                  <span className="ml-1.5 font-semibold" style={{ color: '#7B2820' }}>{formatT(tonnesPlanifiees)}</span>
+                </span>
+              </span>
+              <span className="text-gray-300">|</span>
+              <span className="text-gray-600">
+                Total : <strong className="text-gray-800">{formatT(tonnesRealisees + tonnesPlanifiees)}</strong>
+              </span>
+            </div>
+          )
+        })()}
       </div>
     </div>
   )
