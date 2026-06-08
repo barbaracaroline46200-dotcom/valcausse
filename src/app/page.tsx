@@ -298,7 +298,7 @@ export default function DashboardPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
-                {['Statut', 'Mois prévu', 'Produit', 'Enlèvement', 'Destination', 'Tonnes', 'Date confirmée / Semaine', 'CMR', 'Facturé'].map(h => (
+                {['Statut', 'Mois prévu', 'N° Contrat', 'Réf. fourn.', 'Fournisseur', 'Agriculteur', 'Produit', 'Enlèvement', 'Destination', 'Tonnes', 'Date confirmée / Semaine', 'CMR', 'Facturé'].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
@@ -328,6 +328,16 @@ export default function DashboardPage() {
                         {new Date(l.mois_prevu).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}
                       </span>
                     ) : '—'}
+                  </td>
+                  <td className="table-cell font-mono text-xs">{l.contrat_achat?.numero_contrat ?? '—'}</td>
+                  <td className="table-cell text-xs text-gray-500">{l.contrat_achat?.reference_fournisseur ?? '—'}</td>
+                  <td className="table-cell text-sm">{l.contrat_achat?.fournisseur?.nom ?? '—'}</td>
+                  <td className="table-cell text-sm">
+                    {(() => {
+                      const cv = (l.contrat_achat?.contrats_vente ?? []).find((cv: any) => cv.id === l.contrat_vente_id)
+                      if (cv?.destination_silo) return <span className="text-amber-700 text-xs">🏚 {cv.silo_nom ?? 'Silo'}</span>
+                      return cv?.agriculteur?.nom ?? <span className="text-gray-300">—</span>
+                    })()}
                   </td>
                   <td className="table-cell text-sm">{l.contrat_achat?.produit?.nom ?? '—'}</td>
                   <td className="table-cell">{l.ville_chargement ?? l.contrat_achat?.ville_chargement ?? '—'}</td>
