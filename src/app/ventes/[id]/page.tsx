@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { Loader2, Pencil, ArrowLeft, Link2 } from 'lucide-react'
+import { Loader2, Pencil, ArrowLeft, Link2, CheckCircle, RotateCcw } from 'lucide-react'
 import { formatTonnes, formatEurosParTonne, formatDate } from '@/lib/annee-agricole'
 import { BadgeStatut } from '@/components/ui/Badge'
 import { useAdmin } from '@/components/ui/AdminProvider'
@@ -49,10 +49,33 @@ export default function VenteDetailPage() {
             <p className="text-gray-500 text-sm">Contrat de vente · {vente.agriculteur?.nom}</p>
           </div>
           {isAdmin && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <button onClick={() => setShowRelierContrat(true)} className="btn-secondary flex items-center gap-1.5 text-sm">
                 <Link2 size={15} /> Relier à un autre contrat
               </button>
+              {vente.statut === 'en_cours' ? (
+                <button
+                  onClick={async () => {
+                    if (!confirm('Clore ce contrat de vente ?')) return
+                    await fetch(`/api/ventes/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ statut: 'clos' }) })
+                    reload()
+                  }}
+                  className="btn-secondary flex items-center gap-1.5 text-sm text-green-700 border-green-200 hover:bg-green-50"
+                >
+                  <CheckCircle size={15} /> Clore
+                </button>
+              ) : (
+                <button
+                  onClick={async () => {
+                    if (!confirm('Réouvrir ce contrat de vente ?')) return
+                    await fetch(`/api/ventes/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ statut: 'en_cours' }) })
+                    reload()
+                  }}
+                  className="btn-secondary flex items-center gap-1.5 text-sm"
+                >
+                  <RotateCcw size={15} /> Réouvrir
+                </button>
+              )}
               <button onClick={() => setShowEdit(true)} className="btn-primary flex items-center gap-1.5 text-sm">
                 <Pencil size={15} /> Modifier
               </button>
