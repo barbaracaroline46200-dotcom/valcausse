@@ -124,6 +124,11 @@ export default function LivraisonAOrganiser({ livraison: l, moisCourant, moisSui
             <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${step1ok ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'}`}>1</span>
             <span className="text-xs font-semibold text-blue-700">📞 Agri contacté</span>
           </div>
+          {agriDest?.telephone && (
+            <a href={`tel:${agriDest.telephone}`} className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 hover:underline mb-2">
+              📞 {agriDest.telephone}
+            </a>
+          )}
           <label className="flex items-center gap-2 cursor-pointer mb-2" onClick={e => e.stopPropagation()}>
             <input
               type="checkbox"
@@ -213,6 +218,11 @@ export default function LivraisonAOrganiser({ livraison: l, moisCourant, moisSui
             <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${step3ok ? 'bg-green-500 text-white' : etapeActive === 3 ? 'bg-green-500 text-white' : 'bg-green-100 text-green-700'}`}>3</span>
             <span className={`text-xs font-semibold ${etapeActive === 3 ? 'text-green-700' : 'text-gray-700'}`}>🚛 Transporteur confirmé</span>
           </div>
+          {ca?.transporteur?.telephone && (
+            <a href={`tel:${ca.transporteur.telephone}`} className="inline-flex items-center gap-1 text-xs font-medium text-green-700 hover:underline mb-2">
+              📞 {ca.transporteur.telephone}
+            </a>
+          )}
           {step1ok ? (
             <>
               <label className="flex items-center gap-2 cursor-pointer mb-2" onClick={e => e.stopPropagation()}>

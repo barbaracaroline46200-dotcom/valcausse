@@ -35,8 +35,8 @@ export async function GET() {
         id,numero_contrat,famille,gere_par_silo,
         produit:produits(nom),
         fournisseur:fournisseurs(nom),
-        transporteur:transporteurs(id,nom),
-        contrats_vente(id,agriculteur:agriculteurs(nom,ville_livraison))
+        transporteur:transporteurs(id,nom,telephone),
+        contrats_vente(id,agriculteur:agriculteurs(nom,ville_livraison,telephone))
       )
     `)
     .eq('type', 'planifiee')
