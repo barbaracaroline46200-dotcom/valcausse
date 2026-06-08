@@ -152,7 +152,6 @@ export default function VentesPage() {
                 const livre = livsRealisees.reduce((s: number, l: any) => s + (l.quantite_reelle ?? 0), 0)
                 const total = v.quantite ?? 0
                 const reliquat = total - livre
-                const pct = total > 0 ? Math.min(100, Math.round((livre / total) * 100)) : 0
                 const depasse = v.date_fin && new Date(v.date_fin) < new Date() && reliquat > 0
                 return (
                 <tr key={v.id} className="table-row">
@@ -178,8 +177,7 @@ export default function VentesPage() {
                   </td>
                   <td className="table-cell font-semibold">{formatTonnes(total)}</td>
                   <td className="table-cell min-w-[120px]">
-                    <div className="text-sm font-semibold text-green-700">{formatTonnes(livre)}</div>
-                    <ProgressBar value={pct} color={pct >= 100 ? '#15803d' : '#C8941A'} />
+                    <ProgressBar value={livre} total={total} />
                   </td>
                   <td className="table-cell font-semibold">
                     {reliquat > 0
