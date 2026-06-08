@@ -131,6 +131,26 @@ export async function GET(req: NextRequest) {
     row('Destination', liv.ville_destination ?? '—')
   }
 
+  // Note transport agriculteur
+  if (agriculteur?.note_transport) {
+    y -= 10
+    page.drawRectangle({ x: 50, y: y - 8, width: width - 100, height: 20 + Math.ceil(agriculteur.note_transport.length / 60) * 16, color: rgb(1, 0.973, 0.882) })
+    page.drawText('⚠ NOTE TRANSPORT', { x: 55, y, font: fontBold, size: 9, color: or })
+    y -= 16
+    const noteLines = agriculteur.note_transport.split('\n').flatMap((line: string) => {
+      const maxLen = 75
+      if (line.length <= maxLen) return [line]
+      const chunks: string[] = []
+      for (let i = 0; i < line.length; i += maxLen) chunks.push(line.slice(i, i + maxLen))
+      return chunks
+    })
+    noteLines.forEach((line: string) => {
+      page.drawText(line, { x: 55, y, font: fontBold, size: 9, color: black })
+      y -= 14
+    })
+    y -= 5
+  }
+
   y -= 20
   page.drawLine({ start: { x: 50, y }, end: { x: width - 50, y }, thickness: 1, color: brun })
   y -= 20
