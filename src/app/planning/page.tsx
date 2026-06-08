@@ -180,7 +180,7 @@ export default function PlanningPage() {
 
       {/* Tableau scrollable */}
       <div className="card overflow-hidden p-0">
-        <div className="overflow-x-auto">
+        <div className="overflow-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
           <table className="w-full text-xs" style={{ minWidth: `${700 + moisRange.length * 90}px` }}>
             <thead className="sticky top-0 z-10">
               <tr className="border-b-2" style={{ borderColor: '#e4b5ad', backgroundColor: '#fdf5f3' }}>
