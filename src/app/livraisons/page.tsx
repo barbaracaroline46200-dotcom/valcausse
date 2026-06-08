@@ -36,12 +36,6 @@ export default function LivraisonsPage() {
     else alert('Erreur : impossible de supprimer')
   }
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <Loader2 className="animate-spin text-green-600" size={32} />
-    </div>
-  )
-
   const planifiees = data?.livraisonsPlanifiees ?? []
   const moisCourant = data?.moisCourant ?? ''
   const moisSuivant = data?.moisSuivant ?? ''
@@ -64,6 +58,12 @@ export default function LivraisonsPage() {
   }), [planifiees, filtFournisseur, filtProduit, filtAgriculteur])
 
   const hasFiltres = filtFournisseur || filtProduit || filtAgriculteur
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <Loader2 className="animate-spin text-green-600" size={32} />
+    </div>
+  )
 
   return (
     <div className="space-y-6 pb-10">
