@@ -3,7 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, FileText, ShoppingCart, Truck, BookOpen, Search, LogOut, ShieldCheck, Eye, BarChart2, CalendarDays, FileWarning, Receipt, Archive
+  LayoutDashboard, FileText, ShoppingCart, Truck, BookOpen, Search, LogOut, ShieldCheck, Eye, BarChart2, CalendarDays, FileWarning, Receipt, Archive, Grid3X3
 } from 'lucide-react'
 import { useAdmin } from './AdminProvider'
 import { cn } from '@/lib/utils'
@@ -18,6 +18,7 @@ const mainNav = [
   { href: '/ventes', label: 'Contrats vente', icon: ShoppingCart },
   { href: '/transporteurs/factures', label: 'Transport & Factures', icon: Truck },
   { href: '/tarifs-transport', label: 'Tarifs transport', icon: Truck },
+  { href: '/planning', label: 'Planning livraisons', icon: Grid3X3 },
   { href: '/stats', label: 'Statistiques', icon: BarChart2 },
   { href: '/agenda', label: 'Agenda', icon: CalendarDays, adminOnly: true },
   { href: '/referentiels', label: 'Référentiels', icon: BookOpen, adminOnly: true },
