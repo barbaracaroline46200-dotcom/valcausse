@@ -736,14 +736,10 @@ function AffecterVenteMasseModal({ contrat, livraisonsNonAffectees, onClose, onS
   onClose: () => void
   onSaved: () => void
 }) {
-  const [ventes, setVentes] = useState<any[]>([])
+  const ventes: any[] = contrat.contrats_vente ?? []
   const [selectedVente, setSelectedVente] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-
-  useEffect(() => {
-    fetch('/api/ventes?statut=en_cours').then(r => r.json()).then(setVentes)
-  }, [])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -800,7 +796,7 @@ function AffecterVenteMasseModal({ contrat, livraisonsNonAffectees, onClose, onS
               )}
             </select>
             {ventes.length === 0 && (
-              <p className="text-sm text-gray-400 mt-1">Aucun contrat de vente en cours disponible.</p>
+              <p className="text-sm text-gray-400 mt-1">Aucun contrat de vente lié à ce contrat d'achat. Liez-en un d'abord depuis la section "Contrats de vente liés".</p>
             )}
           </div>
           {venteChoisie && (
