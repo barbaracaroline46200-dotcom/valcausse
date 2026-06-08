@@ -37,6 +37,7 @@ export default function ContratDetailPage() {
   const [showSoldeOuverture, setShowSoldeOuverture] = useState(false)
   const [showAffecterSilo, setShowAffecterSilo] = useState(false)
   const [modifierSilo, setModifierSilo] = useState<any>(null)
+  const [showAffecterVenteMasse, setShowAffecterVenteMasse] = useState(false)
 
   async function chargerContrat() {
     const data = await fetch(`/api/contrats/${id}?t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json())
@@ -364,9 +365,16 @@ export default function ContratDetailPage() {
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="font-bold text-gray-800">Planning des livraisons</h2>
           {isAdmin && (
-            <button onClick={() => setShowAjoutLiv(true)} className="btn-primary text-xs">
-              <Plus size={14} /> Ajouter livraison planifiée
-            </button>
+            <div className="flex gap-2">
+              {livraisonsPlanifiees.some((l: any) => !l.contrat_vente_id) && (
+                <button onClick={() => setShowAffecterVenteMasse(true)} className="btn-secondary text-xs">
+                  <Link2Off size={14} /> Affecter toutes à un agriculteur
+                </button>
+              )}
+              <button onClick={() => setShowAjoutLiv(true)} className="btn-primary text-xs">
+                <Plus size={14} /> Ajouter livraison planifiée
+              </button>
+            </div>
           )}
         </div>
 
@@ -710,6 +718,92 @@ export default function ContratDetailPage() {
           onSaved={() => { setShowSoldeOuverture(false); chargerContrat() }}
         />
       )}
+      {showAffecterVenteMasse && (
+        <AffecterVenteMasseModal
+          contrat={contrat}
+          livraisonsNonAffectees={(contrat.livraisons ?? []).filter((l: any) => l.type === 'planifiee' && !l.contrat_vente_id)}
+          onClose={() => setShowAffecterVenteMasse(false)}
+          onSaved={() => { setShowAffecterVenteMasse(false); chargerContrat() }}
+        />
+      )}
+    </div>
+  )
+}
+
+function AffecterVenteMasseModal({ contrat, livraisonsNonAffectees, onClose, onSaved }: {
+  contrat: any
+  livraisonsNonAffectees: any[]
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [ventes, setVentes] = useState<any[]>([])
+  const [selectedVente, setSelectedVente] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    fetch('/api/ventes?statut=en_cours').then(r => r.json()).then(setVentes)
+  }, [])
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!selectedVente) return
+    setSaving(true)
+    try {
+      for (const l of livraisonsNonAffectees) {
+        await fetch(`/api/livraisons/${l.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contrat_vente_id: selectedVente }),
+        })
+      }
+      onSaved()
+    } catch {
+      setError('Erreur lors de l\'affectation')
+      setSaving(false)
+    }
+  }
+
+  const venteChoisie = ventes.find(v => v.id === selectedVente)
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6 space-y-4">
+        <h2 className="text-lg font-bold" style={{ color: '#7B2820' }}>Affecter toutes les livraisons non affectées</h2>
+        <div className="bg-orange-50 border border-orange-100 rounded-lg px-4 py-2 text-sm text-orange-700">
+          {livraisonsNonAffectees.length} livraison{livraisonsNonAffectees.length > 1 ? 's' : ''} non affectée{livraisonsNonAffectees.length > 1 ? 's' : ''} seront liées au contrat de vente sélectionné.
+        </div>
+        <form onSubmit={submit} className="space-y-4">
+          <div>
+            <label className="label">Contrat de vente (en cours)</label>
+            <select className="input" value={selectedVente} onChange={e => setSelectedVente(e.target.value)} required>
+              <option value="">Choisir...</option>
+              {ventes.map((v: any) => (
+                <option key={v.id} value={v.id}>
+                  {v.numero_contrat} — {v.agriculteur?.nom ?? v.silo_nom ?? 'Silo'} — {v.produit?.nom}
+                </option>
+              ))}
+            </select>
+            {ventes.length === 0 && (
+              <p className="text-sm text-gray-400 mt-1">Aucun contrat de vente en cours disponible.</p>
+            )}
+          </div>
+          {venteChoisie && (
+            <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 text-xs text-blue-700 space-y-0.5">
+              <p><strong>Agriculteur :</strong> {venteChoisie.agriculteur?.nom ?? venteChoisie.silo_nom ?? '—'}</p>
+              <p><strong>Produit :</strong> {venteChoisie.produit?.nom ?? '—'}</p>
+              <p><strong>Quantité contrat :</strong> {venteChoisie.quantite} t</p>
+            </div>
+          )}
+          {error && <p className="text-red-600 text-sm">{error}</p>}
+          <div className="flex justify-end gap-3 pt-1">
+            <button type="button" onClick={onClose} className="btn-secondary">Annuler</button>
+            <button type="submit" disabled={saving || !selectedVente} className="btn-primary">
+              {saving ? 'Affectation...' : `Affecter les ${livraisonsNonAffectees.length} livraisons`}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }
