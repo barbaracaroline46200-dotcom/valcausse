@@ -50,6 +50,7 @@ function isBetween(d: Date, start: Date, end: Date) {
 
 interface LivraisonEvent {
   id: string
+  contrat_achat_id: string
   type: 'realisee' | 'planifiee'
   date_prevue?: string | null
   date_reelle?: string | null
@@ -79,6 +80,7 @@ export default function CalendrierLivraisons() {
       .then(data => {
         const events: LivraisonEvent[] = (data ?? []).map((l: any) => ({
           id: l.id,
+          contrat_achat_id: l.contrat_achat_id,
           type: l.type,
           date_prevue: l.date_prevue,
           date_reelle: l.date_reelle,
@@ -255,11 +257,12 @@ export default function CalendrierLivraisons() {
                       {livsS.map(l => {
                         const c = getCouleur(l.produit, l.type)
                         return (
-                          <span key={l.id} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
-                                style={{ backgroundColor: c.bg, color: c.text, border: `1px solid ${c.border}` }}
-                                title={`${l.produit} · ${l.numero_contrat} · ${l.agriculteur} · ${l.transporteur}`}>
-                            📦 {l.produit.split(' ')[0]} · {l.numero_contrat} · {l.agriculteur} · {l.semaine_prevue}
-                          </span>
+                          <a key={l.id} href={`/contrats/${l.contrat_achat_id}`}
+                             className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium hover:opacity-80 transition-opacity"
+                             style={{ backgroundColor: c.bg, color: c.text, border: `1px solid ${c.border}` }}
+                             title={`${l.produit} · ${l.numero_contrat} · ${l.agriculteur} · ${l.transporteur}`}>
+                            📦 {l.produit.split(' ')[0]} · {l.numero_contrat} · {l.agriculteur !== '—' ? l.agriculteur : ''} · {l.semaine_prevue}
+                          </a>
                         )
                       })}
                     </div>
@@ -291,15 +294,15 @@ export default function CalendrierLivraisons() {
                                 const c = getCouleur(l.produit, l.type)
                                 const tonnes = l.type === 'realisee' ? l.quantite_reelle : l.quantite_prevue
                                 return (
-                                  <div key={l.id}
-                                       className="text-xs rounded px-1 py-0.5 leading-tight cursor-default"
-                                       style={{ backgroundColor: c.bg, color: c.text, borderLeft: `3px solid ${c.border}` }}
-                                       title={`${l.produit} · ${l.numero_contrat} · ${l.agriculteur} · ${l.transporteur} · ${tonnes}t`}>
+                                  <a key={l.id} href={`/contrats/${l.contrat_achat_id}`}
+                                     className="block text-xs rounded px-1 py-0.5 leading-tight hover:opacity-80 transition-opacity"
+                                     style={{ backgroundColor: c.bg, color: c.text, borderLeft: `3px solid ${c.border}` }}
+                                     title={`${l.produit} · ${l.numero_contrat} · ${l.agriculteur} · ${l.transporteur} · ${tonnes}t`}>
                                     <div className="font-semibold truncate">{l.produit.split(' ')[0]}</div>
                                     <div className="truncate opacity-80">{l.numero_contrat}</div>
                                     <div className="truncate opacity-70">{l.agriculteur}</div>
                                     <div className="truncate opacity-60">{l.transporteur}</div>
-                                  </div>
+                                  </a>
                                 )
                               })}
                             </div>
@@ -323,15 +326,16 @@ export default function CalendrierLivraisons() {
                   const tonnes = l.quantite_prevue
                   const moisLabel = l.mois_prevu ? new Date(l.mois_prevu).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—'
                   return (
-                    <div key={l.id} className="text-xs rounded-lg px-3 py-1.5 font-medium"
-                         style={{ backgroundColor: c.bg, color: c.text, border: `1px solid ${c.border}` }}>
+                    <a key={l.id} href={`/contrats/${l.contrat_achat_id}`}
+                       className="text-xs rounded-lg px-3 py-1.5 font-medium hover:opacity-80 transition-opacity"
+                       style={{ backgroundColor: c.bg, color: c.text, border: `1px solid ${c.border}` }}>
                       <span className="font-bold">{l.produit}</span>
                       <span className="mx-1 opacity-60">·</span>{l.numero_contrat}
                       <span className="mx-1 opacity-60">·</span>{l.agriculteur}
                       <span className="mx-1 opacity-60">·</span>{l.transporteur}
                       <span className="mx-1 opacity-60">·</span><span className="font-bold">{tonnes} t</span>
                       <span className="ml-2 text-red-500 font-semibold">({moisLabel})</span>
-                    </div>
+                    </a>
                   )
                 })}
               </div>
@@ -347,14 +351,15 @@ export default function CalendrierLivraisons() {
                   const c = getCouleur(l.produit, l.type)
                   const tonnes = l.type === 'realisee' ? l.quantite_reelle : l.quantite_prevue
                   return (
-                    <div key={l.id} className="text-xs rounded-lg px-3 py-1.5 font-medium"
-                         style={{ backgroundColor: c.bg, color: c.text, border: `1px solid ${c.border}` }}>
+                    <a key={l.id} href={`/contrats/${l.contrat_achat_id}`}
+                       className="text-xs rounded-lg px-3 py-1.5 font-medium hover:opacity-80 transition-opacity"
+                       style={{ backgroundColor: c.bg, color: c.text, border: `1px solid ${c.border}` }}>
                       <span className="font-bold">{l.produit}</span>
                       <span className="mx-1 opacity-60">·</span>{l.numero_contrat}
                       <span className="mx-1 opacity-60">·</span>{l.agriculteur}
                       <span className="mx-1 opacity-60">·</span>{l.transporteur}
                       <span className="mx-1 opacity-60">·</span><span className="font-bold">{tonnes} t</span>
-                    </div>
+                    </a>
                   )
                 })}
               </div>
