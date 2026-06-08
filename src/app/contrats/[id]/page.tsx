@@ -778,11 +778,26 @@ function AffecterVenteMasseModal({ contrat, livraisonsNonAffectees, onClose, onS
             <label className="label">Contrat de vente (en cours)</label>
             <select className="input" value={selectedVente} onChange={e => setSelectedVente(e.target.value)} required>
               <option value="">Choisir...</option>
-              {ventes.map((v: any) => (
-                <option key={v.id} value={v.id}>
-                  {v.numero_contrat} — {v.agriculteur?.nom ?? v.silo_nom ?? 'Silo'} — {v.produit?.nom}
-                </option>
-              ))}
+              {/* Silos en premier */}
+              {ventes.filter((v: any) => v.destination_silo).length > 0 && (
+                <optgroup label="── Silos ──">
+                  {ventes.filter((v: any) => v.destination_silo).map((v: any) => (
+                    <option key={v.id} value={v.id}>
+                      🏚 {v.silo_nom ?? 'Silo'} — {v.produit?.nom}{v.numero_contrat ? ` (${v.numero_contrat})` : ''}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {/* Agriculteurs */}
+              {ventes.filter((v: any) => !v.destination_silo).length > 0 && (
+                <optgroup label="── Agriculteurs ──">
+                  {ventes.filter((v: any) => !v.destination_silo).map((v: any) => (
+                    <option key={v.id} value={v.id}>
+                      {v.numero_contrat ? `${v.numero_contrat} — ` : ''}{v.agriculteur?.nom ?? '—'} — {v.produit?.nom}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
             {ventes.length === 0 && (
               <p className="text-sm text-gray-400 mt-1">Aucun contrat de vente en cours disponible.</p>
@@ -790,7 +805,10 @@ function AffecterVenteMasseModal({ contrat, livraisonsNonAffectees, onClose, onS
           </div>
           {venteChoisie && (
             <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 text-xs text-blue-700 space-y-0.5">
-              <p><strong>Agriculteur :</strong> {venteChoisie.agriculteur?.nom ?? venteChoisie.silo_nom ?? '—'}</p>
+              {venteChoisie.destination_silo
+                ? <p><strong>Destination :</strong> 🏚 {venteChoisie.silo_nom ?? 'Silo'}</p>
+                : <p><strong>Agriculteur :</strong> {venteChoisie.agriculteur?.nom ?? '—'}</p>
+              }
               <p><strong>Produit :</strong> {venteChoisie.produit?.nom ?? '—'}</p>
               <p><strong>Quantité contrat :</strong> {venteChoisie.quantite} t</p>
             </div>
