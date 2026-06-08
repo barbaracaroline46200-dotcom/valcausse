@@ -131,7 +131,7 @@ export default function PlanningPage() {
             {produits.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
           <select value={filtClient} onChange={e => setFiltClient(e.target.value)} className="input text-sm py-1.5 w-48">
-            <option value="">Tous clients</option>
+            <option value="">Tous agriculteurs</option>
             {clients.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
@@ -174,7 +174,7 @@ export default function PlanningPage() {
                 <th className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap w-32">N° Contrat</th>
                 <th className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap w-32">Fournisseur</th>
                 <th className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap w-32">N° Contrat V.</th>
-                <th className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap w-44">Client</th>
+                <th className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap w-44">Agriculteur</th>
                 {/* Colonnes mois */}
                 {moisRange.map(k => (
                   <th key={k} className="px-2 py-2.5 text-center font-semibold text-gray-600 whitespace-nowrap w-20" style={{ minWidth: 80 }}>
