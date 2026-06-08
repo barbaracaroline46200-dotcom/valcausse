@@ -294,7 +294,11 @@ export default function ContratDetailPage() {
                 }
                 return (
                 <tr key={cv.id} className="table-row">
-                  <td className="table-cell font-medium text-green-700">{cv.numero_contrat}</td>
+                  <td className="table-cell font-medium">
+                    <Link href={`/ventes/${cv.id}`} className="text-green-700 hover:underline">
+                      {cv.numero_contrat || <span className="italic text-gray-400 text-xs">Sans n°</span>}
+                    </Link>
+                  </td>
                   <td className="table-cell">{cv.agriculteur?.nom ?? '—'}</td>
                   <td className="table-cell">{cv.produit?.nom ?? '—'}</td>
                   <td className="table-cell font-semibold">{formatTonnes(cv.quantite)}</td>
