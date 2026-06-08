@@ -26,6 +26,10 @@ export default function DashboardPage() {
   const [agendaToday, setAgendaToday] = useState<any[]>([])
   const [toast, setToast] = useState('')
   const [filtAnnee, setFiltAnnee] = useState<string>(() => getAnneeAgricoleLabel())
+  const [filtTpStatut, setFiltTpStatut] = useState('')
+  const [filtTpFournisseur, setFiltTpFournisseur] = useState('')
+  const [filtTpProduit, setFiltTpProduit] = useState('')
+  const [filtTpAgriculteur, setFiltTpAgriculteur] = useState('')
 
   function showToast(msg: string) {
     setToast(msg)
@@ -266,35 +270,79 @@ export default function DashboardPage() {
       {/* ── Onglets Suivi livraisons supprimés — voir menu latéral ── */}
 
       {/* Section Point transporteur */}
-      <Section
-        icon={<Phone size={20} />}
-        title="Point transporteur"
-        count={null}
-        color="orange"
-        subtitle="Outil d'appel — sélectionnez un transporteur et un mois"
-      >
-        <div className="flex gap-3 mb-4">
-          <select
-            value={selectedTransporteur}
-            onChange={e => setSelectedTransporteur(e.target.value)}
-            className="input max-w-xs"
-          >
-            <option value="">Choisir un transporteur...</option>
-            {transporteurs.map((t: any) => (
-              <option key={t.id} value={t.id}>{t.nom}</option>
-            ))}
-          </select>
-          <input
-            type="month"
-            value={selectedMois}
-            onChange={e => setSelectedMois(e.target.value)}
-            className="input w-40"
-          />
-        </div>
-        {selectedTransporteur && livraisonsTransporteur.length === 0 && (
-          <EmptyState text="Aucune livraison pour ce transporteur ce mois-ci." />
-        )}
-        {livraisonsTransporteur.length > 0 && (
+      {(() => {
+        const tpFournisseurs = [...new Set(livraisonsTransporteur.map((l: any) => l.contrat_achat?.fournisseur?.nom).filter(Boolean))].sort()
+        const tpProduits = [...new Set(livraisonsTransporteur.map((l: any) => l.contrat_achat?.produit?.nom).filter(Boolean))].sort()
+        const tpAgriculteurs = [...new Set(livraisonsTransporteur.map((l: any) => {
+          const cv = (l.contrat_achat?.contrats_vente ?? []).find((cv: any) => cv.id === l.contrat_vente_id)
+          return cv?.destination_silo ? (cv.silo_nom ?? 'Silo') : cv?.agriculteur?.nom
+        }).filter(Boolean))].sort()
+
+        const livraisonsFiltrees = livraisonsTransporteur.filter((l: any) => {
+          if (filtTpStatut) {
+            const isRealisee = l.type === 'realisee'
+            if (filtTpStatut === 'realisee' && !isRealisee) return false
+            if (filtTpStatut === 'planifiee' && isRealisee) return false
+          }
+          if (filtTpFournisseur && l.contrat_achat?.fournisseur?.nom !== filtTpFournisseur) return false
+          if (filtTpProduit && l.contrat_achat?.produit?.nom !== filtTpProduit) return false
+          if (filtTpAgriculteur) {
+            const cv = (l.contrat_achat?.contrats_vente ?? []).find((cv: any) => cv.id === l.contrat_vente_id)
+            const nom = cv?.destination_silo ? (cv.silo_nom ?? 'Silo') : cv?.agriculteur?.nom
+            if (nom !== filtTpAgriculteur) return false
+          }
+          return true
+        })
+
+        return (
+        <Section
+          icon={<Phone size={20} />}
+          title="Point transporteur"
+          count={null}
+          color="orange"
+          subtitle="Outil d'appel — sélectionnez un transporteur et un mois"
+        >
+          <div className="flex gap-2 mb-3 flex-wrap">
+            <select value={selectedTransporteur} onChange={e => setSelectedTransporteur(e.target.value)} className="input max-w-xs">
+              <option value="">Choisir un transporteur...</option>
+              {transporteurs.map((t: any) => (
+                <option key={t.id} value={t.id}>{t.nom}</option>
+              ))}
+            </select>
+            <input type="month" value={selectedMois} onChange={e => setSelectedMois(e.target.value)} className="input w-40" />
+          </div>
+          {livraisonsTransporteur.length > 0 && (
+            <div className="flex gap-2 mb-3 flex-wrap px-0 pb-2 border-b border-gray-100">
+              <select value={filtTpStatut} onChange={e => setFiltTpStatut(e.target.value)} className="input text-sm py-1.5 w-36">
+                <option value="">Tous statuts</option>
+                <option value="planifiee">Planifiées</option>
+                <option value="realisee">Réalisées</option>
+              </select>
+              <select value={filtTpFournisseur} onChange={e => setFiltTpFournisseur(e.target.value)} className="input text-sm py-1.5 w-40">
+                <option value="">Tous fournisseurs</option>
+                {tpFournisseurs.map((f: any) => <option key={f} value={f}>{f}</option>)}
+              </select>
+              <select value={filtTpProduit} onChange={e => setFiltTpProduit(e.target.value)} className="input text-sm py-1.5 w-40">
+                <option value="">Tous produits</option>
+                {tpProduits.map((p: any) => <option key={p} value={p}>{p}</option>)}
+              </select>
+              <select value={filtTpAgriculteur} onChange={e => setFiltTpAgriculteur(e.target.value)} className="input text-sm py-1.5 w-48">
+                <option value="">Tous agriculteurs</option>
+                {tpAgriculteurs.map((a: any) => <option key={a} value={a}>{a}</option>)}
+              </select>
+              {(filtTpStatut || filtTpFournisseur || filtTpProduit || filtTpAgriculteur) && (
+                <button onClick={() => { setFiltTpStatut(''); setFiltTpFournisseur(''); setFiltTpProduit(''); setFiltTpAgriculteur('') }}
+                  className="text-xs text-gray-400 hover:text-gray-600 underline px-2">
+                  Effacer filtres
+                </button>
+              )}
+              <span className="text-xs text-gray-400 self-center ml-1">{livraisonsFiltrees.length} / {livraisonsTransporteur.length}</span>
+            </div>
+          )}
+          {selectedTransporteur && livraisonsTransporteur.length === 0 && (
+            <EmptyState text="Aucune livraison pour ce transporteur ce mois-ci." />
+          )}
+          {livraisonsFiltrees.length > 0 && (
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
@@ -304,7 +352,7 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {livraisonsTransporteur.map((l: any) => {
+              {livraisonsFiltrees.map((l: any) => {
                 const moisPrevuDate = l.mois_prevu ? new Date(l.mois_prevu) : null
                 const maintenant = new Date()
                 const debutMoisActuel = new Date(maintenant.getFullYear(), maintenant.getMonth(), 1)
@@ -373,8 +421,10 @@ export default function DashboardPage() {
               })}
             </tbody>
           </table>
-        )}
-      </Section>
+          )}
+        </Section>
+        )
+      })()}
 
       {/* Contrats en alerte */}
       {alertes.length > 0 && (
