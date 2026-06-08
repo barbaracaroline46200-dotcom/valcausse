@@ -261,6 +261,34 @@ export default function PlanningPage() {
                 )
               })}
             </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-gray-200" style={{ backgroundColor: '#f3f0ee' }}>
+                <td colSpan={6} className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">
+                  Total / mois
+                </td>
+                {moisRange.map(k => {
+                  const rowsDuMois = filtered.filter(r => rowMoisKey(r) === k)
+                  const tonnes = rowsDuMois.reduce((s, r) => s + (r.type === 'realisee' ? (r.quantite_reelle ?? 0) : (r.quantite_prevue ?? 0)), 0)
+                  const hasRealisee = rowsDuMois.some(r => r.type === 'realisee')
+                  const hasPlanifiee = rowsDuMois.some(r => r.type === 'planifiee')
+                  return (
+                    <td key={k} className="px-2 py-2 text-center whitespace-nowrap">
+                      {tonnes > 0 ? (
+                        <span
+                          className="text-xs font-bold px-1.5 py-0.5 rounded"
+                          style={{
+                            backgroundColor: hasRealisee && !hasPlanifiee ? '#dcfce7' : hasPlanifiee && !hasRealisee ? '#fde8e5' : '#fef9c3',
+                            color: hasRealisee && !hasPlanifiee ? '#15803d' : hasPlanifiee && !hasRealisee ? '#7B2820' : '#854d0e',
+                          }}
+                        >
+                          {formatT(tonnes)}
+                        </span>
+                      ) : null}
+                    </td>
+                  )
+                })}
+              </tr>
+            </tfoot>
           </table>
         </div>
 
