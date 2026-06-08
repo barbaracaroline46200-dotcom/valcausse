@@ -37,6 +37,7 @@ export default function PlanningPage() {
   const [filtProduit, setFiltProduit] = useState('')
   const [filtStatut, setFiltStatut] = useState('en_cours')
   const [filtClient, setFiltClient] = useState('')
+  const [filtFournisseur, setFiltFournisseur] = useState('')
 
   useEffect(() => {
     fetch('/api/planning')
@@ -63,6 +64,12 @@ export default function PlanningPage() {
     return [...s].sort()
   }, [rows])
 
+  const fournisseurs = useMemo(() => {
+    const s = new Set<string>()
+    rows.forEach(r => { const n = r.contrat_achat?.fournisseur?.nom; if (n) s.add(n) })
+    return [...s].sort()
+  }, [rows])
+
   function formatT(n: number) {
     return n % 1 === 0 ? `${n} t` : `${n.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} t`
   }
@@ -72,8 +79,9 @@ export default function PlanningPage() {
     if (filtProduit && r.contrat_achat?.produit?.nom !== filtProduit) return false
     if (filtStatut && r.contrat_achat?.statut !== filtStatut) return false
     if (filtClient && getClientNom(r) !== filtClient) return false
+    if (filtFournisseur && r.contrat_achat?.fournisseur?.nom !== filtFournisseur) return false
     return true
-  }), [rows, filtFamille, filtProduit, filtStatut, filtClient])
+  }), [rows, filtFamille, filtProduit, filtStatut, filtClient, filtFournisseur])
 
   function rowMoisKey(row: any): string | null {
     if (row.type === 'realisee' && row.date_reelle) return row.date_reelle.slice(0, 7)
@@ -133,6 +141,10 @@ export default function PlanningPage() {
           <select value={filtProduit} onChange={e => setFiltProduit(e.target.value)} className="input text-sm py-1.5 w-44">
             <option value="">Tous produits</option>
             {produits.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+          <select value={filtFournisseur} onChange={e => setFiltFournisseur(e.target.value)} className="input text-sm py-1.5 w-44">
+            <option value="">Tous fournisseurs</option>
+            {fournisseurs.map(f => <option key={f} value={f}>{f}</option>)}
           </select>
           <select value={filtClient} onChange={e => setFiltClient(e.target.value)} className="input text-sm py-1.5 w-48">
             <option value="">Tous agriculteurs</option>
