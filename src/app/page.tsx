@@ -302,7 +302,7 @@ export default function DashboardPage() {
           color="orange"
           subtitle="Outil d'appel — sélectionnez un transporteur et un mois"
         >
-          <div className="flex gap-2 mb-3 flex-wrap">
+          <div className="flex gap-2 mb-3 flex-wrap items-center">
             <select value={selectedTransporteur} onChange={e => setSelectedTransporteur(e.target.value)} className="input max-w-xs">
               <option value="">Choisir un transporteur...</option>
               {transporteurs.map((t: any) => (
@@ -310,6 +310,14 @@ export default function DashboardPage() {
               ))}
             </select>
             <input type="month" value={selectedMois} onChange={e => setSelectedMois(e.target.value)} className="input w-40" />
+            {selectedTransporteur && (() => {
+              const t = transporteurs.find((t: any) => t.id === selectedTransporteur)
+              return t?.telephone ? (
+                <a href={`tel:${t.telephone}`} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: '#C8941A' }}>
+                  📞 {t.telephone}
+                </a>
+              ) : null
+            })()}
           </div>
           {livraisonsTransporteur.length > 0 && (
             <div className="flex gap-2 mb-3 flex-wrap px-0 pb-2 border-b border-gray-100">
