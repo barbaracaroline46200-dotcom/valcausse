@@ -9,7 +9,7 @@ export async function getDashboardData() {
 
   const { data: contrats } = await supabase
     .from('contrats_achat')
-    .select('id,famille,statut,quantite_totale,produit:produits(nom),livraisons(type,quantite_reelle)')
+    .select('id,famille,statut,quantite_totale,date_debut,date_fin,gere_par_silo,produit:produits(nom),livraisons(type,quantite_reelle)')
     .or(`date_debut.gte.${debut},date_fin.lte.${fin}`)
 
   const now = new Date()
