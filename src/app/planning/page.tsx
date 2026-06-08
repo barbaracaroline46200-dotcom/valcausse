@@ -182,7 +182,7 @@ export default function PlanningPage() {
       <div className="card overflow-hidden p-0">
         <div className="overflow-x-auto">
           <table className="w-full text-xs" style={{ minWidth: `${700 + moisRange.length * 90}px` }}>
-            <thead>
+            <thead className="sticky top-0 z-10">
               <tr className="border-b-2" style={{ borderColor: '#e4b5ad', backgroundColor: '#fdf5f3' }}>
                 {/* Colonnes fixes */}
                 <th className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap w-20">État</th>
