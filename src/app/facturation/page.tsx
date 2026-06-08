@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { usePathname } from 'next/navigation'
 import { Receipt, Loader2, Trash2 } from 'lucide-react'
 import SaisirFactureTransportModal from '@/components/livraisons/SaisirFactureTransportModal'
@@ -49,6 +49,26 @@ export default function FacturationPage() {
 
   const total = aFacturer.length + facturesMq.length
 
+  function getAgriFactu(l: any) {
+    const ca = l.contrat_achat
+    return ca?.contrats_vente?.find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur
+      ?? ca?.contrats_vente?.[0]?.agriculteur
+  }
+
+  const [filtFProduit, setFiltFProduit] = useState('')
+  const [filtFAgriculteur, setFiltFAgriculteur] = useState('')
+
+  const fProduits = useMemo(() => [...new Set(aFacturer.map((l: any) => l.contrat_achat?.produit?.nom).filter(Boolean))].sort(), [aFacturer])
+  const fAgriculteurs = useMemo(() => [...new Set(aFacturer.map((l: any) => getAgriFactu(l)?.nom).filter(Boolean))].sort(), [aFacturer])
+
+  const aFacturerFiltres = useMemo(() => aFacturer.filter((l: any) => {
+    if (filtFProduit && l.contrat_achat?.produit?.nom !== filtFProduit) return false
+    if (filtFAgriculteur && (getAgriFactu(l)?.nom ?? '—') !== filtFAgriculteur) return false
+    return true
+  }), [aFacturer, filtFProduit, filtFAgriculteur])
+
+  const hasFiltresF = filtFProduit || filtFAgriculteur
+
   return (
     <div className="space-y-6 pb-10">
       <div>
@@ -66,16 +86,34 @@ export default function FacturationPage() {
 
       {/* Transport & fournisseur */}
       <div className="card-section overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
+        <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2 flex-wrap">
           <span className="font-semibold text-sm" style={{ color: '#448ab5' }}>Transport &amp; fournisseur à facturer</span>
           {aFacturer.length > 0 && (
             <span className="min-w-[20px] h-5 px-1.5 rounded-full text-white text-xs font-bold flex items-center justify-center" style={{ backgroundColor: '#448ab5' }}>
-              {aFacturer.length}
+              {hasFiltresF ? `${aFacturerFiltres.length}/${aFacturer.length}` : aFacturer.length}
             </span>
+          )}
+          {aFacturer.length > 0 && (
+            <div className="ml-auto flex gap-2 items-center">
+              <select value={filtFProduit} onChange={e => setFiltFProduit(e.target.value)} className="input text-xs py-1 w-36">
+                <option value="">Tous produits</option>
+                {(fProduits as string[]).map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+              <select value={filtFAgriculteur} onChange={e => setFiltFAgriculteur(e.target.value)} className="input text-xs py-1 w-44">
+                <option value="">Tous agriculteurs</option>
+                {(fAgriculteurs as string[]).map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
+              {hasFiltresF && (
+                <button onClick={() => { setFiltFProduit(''); setFiltFAgriculteur('') }}
+                  className="text-xs text-gray-400 hover:text-gray-600 underline">Effacer</button>
+              )}
+            </div>
           )}
         </div>
         {aFacturer.length === 0 ? (
           <div className="px-5 py-8 text-center text-gray-500 text-sm">Toutes les livraisons sont facturées 🎉</div>
+        ) : aFacturerFiltres.length === 0 ? (
+          <div className="px-5 py-8 text-center text-gray-400 text-sm">Aucun résultat pour ces filtres</div>
         ) : (
           <table className="w-full">
             <thead>
@@ -86,10 +124,9 @@ export default function FacturationPage() {
               </tr>
             </thead>
             <tbody>
-              {aFacturer.map((l: any) => {
+              {aFacturerFiltres.map((l: any) => {
                 const ca = l.contrat_achat
-                const agri = ca?.contrats_vente?.find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur
-                  ?? ca?.contrats_vente?.[0]?.agriculteur
+                const agri = getAgriFactu(l)
                 return (
                   <tr key={l.id} className="table-row">
                     <td className="table-cell text-sm">{formatDate(l.date_reelle)}</td>

@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { usePathname } from 'next/navigation'
 import { FileWarning, Loader2, Trash2 } from 'lucide-react'
 import RealiserLivraisonModal from '@/components/livraisons/RealiserLivraisonModal'
@@ -13,6 +13,9 @@ export default function CmrPage() {
   const [cmr, setCmr] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [cmrModal, setCmrModal] = useState<any>(null)
+  const [filtTransporteur, setFiltTransporteur] = useState('')
+  const [filtProduit, setFiltProduit] = useState('')
+  const [filtAgriculteur, setFiltAgriculteur] = useState('')
 
   const reload = useCallback(async () => {
     const res = await fetch('/api/dashboard')
@@ -42,24 +45,66 @@ export default function CmrPage() {
     </div>
   )
 
+  function getAgri(l: any) {
+    return l.contrat_achat?.contrats_vente?.find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur
+      ?? l.contrat_achat?.contrats_vente?.[0]?.agriculteur
+  }
+
+  const transporteurs = useMemo(() => [...new Set(cmr.map((l: any) => l.contrat_achat?.transporteur?.nom).filter(Boolean))].sort(), [cmr])
+  const produits = useMemo(() => [...new Set(cmr.map((l: any) => l.contrat_achat?.produit?.nom).filter(Boolean))].sort(), [cmr])
+  const agriculteurs = useMemo(() => [...new Set(cmr.map((l: any) => getAgri(l)?.nom).filter(Boolean))].sort(), [cmr])
+
+  const cmrFiltres = useMemo(() => cmr.filter((l: any) => {
+    if (filtTransporteur && l.contrat_achat?.transporteur?.nom !== filtTransporteur) return false
+    if (filtProduit && l.contrat_achat?.produit?.nom !== filtProduit) return false
+    if (filtAgriculteur && (getAgri(l)?.nom ?? '—') !== filtAgriculteur) return false
+    return true
+  }), [cmr, filtTransporteur, filtProduit, filtAgriculteur])
+
+  const hasFiltres = filtTransporteur || filtProduit || filtAgriculteur
+
   return (
     <div className="space-y-6 pb-10">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: '#dc2626' }}>
-          <FileWarning size={22} />
-          CMR en attente
-          {cmr.length > 0 && (
-            <span className="ml-2 min-w-[24px] h-6 px-2 rounded-full text-white text-sm font-bold flex items-center justify-center bg-red-600">
-              {cmr.length}
-            </span>
-          )}
-        </h1>
-        <p className="text-gray-500 text-sm mt-0.5">Livraisons sans lettre de voiture — cliquer pour saisir le CMR</p>
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: '#dc2626' }}>
+            <FileWarning size={22} />
+            CMR en attente
+            {cmr.length > 0 && (
+              <span className="ml-2 min-w-[24px] h-6 px-2 rounded-full text-white text-sm font-bold flex items-center justify-center bg-red-600">
+                {hasFiltres ? `${cmrFiltres.length}/${cmr.length}` : cmr.length}
+              </span>
+            )}
+          </h1>
+          <p className="text-gray-500 text-sm mt-0.5">Livraisons sans lettre de voiture — cliquer pour saisir le CMR</p>
+        </div>
+        {cmr.length > 0 && (
+          <div className="flex gap-2 flex-wrap items-center">
+            <select value={filtTransporteur} onChange={e => setFiltTransporteur(e.target.value)} className="input text-sm py-1.5 w-40">
+              <option value="">Tous transporteurs</option>
+              {(transporteurs as string[]).map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <select value={filtProduit} onChange={e => setFiltProduit(e.target.value)} className="input text-sm py-1.5 w-40">
+              <option value="">Tous produits</option>
+              {(produits as string[]).map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <select value={filtAgriculteur} onChange={e => setFiltAgriculteur(e.target.value)} className="input text-sm py-1.5 w-48">
+              <option value="">Tous agriculteurs</option>
+              {(agriculteurs as string[]).map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+            {hasFiltres && (
+              <button onClick={() => { setFiltTransporteur(''); setFiltProduit(''); setFiltAgriculteur('') }}
+                className="text-xs text-gray-400 hover:text-gray-600 underline">Effacer</button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="card-section overflow-hidden">
         {cmr.length === 0 ? (
           <div className="px-5 py-12 text-center text-gray-500 text-sm">Aucun CMR en attente 🎉</div>
+        ) : cmrFiltres.length === 0 ? (
+          <div className="px-5 py-10 text-center text-gray-400 text-sm">Aucun résultat pour ces filtres</div>
         ) : (
           <table className="w-full">
             <thead>
@@ -70,15 +115,14 @@ export default function CmrPage() {
               </tr>
             </thead>
             <tbody>
-              {cmr.map((l: any) => {
+              {cmrFiltres.map((l: any) => {
                 const isRealisee = l.type === 'realisee'
                 const dateRef = isRealisee ? l.date_reelle : l.date_prevue
                 const jours = joursDepuis(dateRef)
                 const dateAffichee = isRealisee
                   ? formatDate(l.date_reelle)
                   : l.date_prevue ? formatDate(l.date_prevue) : (l.semaine_prevue ?? '—')
-                const agri = l.contrat_achat?.contrats_vente?.find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur
-                  ?? l.contrat_achat?.contrats_vente?.[0]?.agriculteur
+                const agri = getAgri(l)
                 return (
                   <tr key={l.id}
                     className={`table-row cursor-pointer hover:bg-red-50 transition-colors ${!isRealisee ? 'bg-amber-50/40' : ''}`}
@@ -124,6 +168,7 @@ export default function CmrPage() {
           </table>
         )}
       </div>
+
 
       {cmrModal && (
         <RealiserLivraisonModal
