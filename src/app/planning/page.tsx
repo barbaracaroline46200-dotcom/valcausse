@@ -36,6 +36,7 @@ export default function PlanningPage() {
   const [filtFamille, setFiltFamille] = useState('')
   const [filtProduit, setFiltProduit] = useState('')
   const [filtStatut, setFiltStatut] = useState('en_cours')
+  const [filtClient, setFiltClient] = useState('')
 
   useEffect(() => {
     fetch('/api/planning')
@@ -49,12 +50,26 @@ export default function PlanningPage() {
     return [...s].sort()
   }, [rows])
 
+  function getClientNom(row: any): string {
+    const cv = row.contrat_vente ?? null
+    if (!cv) return '—'
+    if (cv.destination_silo) return cv.silo_nom ?? 'Silo'
+    return cv.agriculteur?.nom ?? '—'
+  }
+
+  const clients = useMemo(() => {
+    const s = new Set<string>()
+    rows.forEach(r => { const n = getClientNom(r); if (n && n !== '—') s.add(n) })
+    return [...s].sort()
+  }, [rows])
+
   const filtered = useMemo(() => rows.filter(r => {
     if (filtFamille && r.contrat_achat?.famille !== filtFamille) return false
     if (filtProduit && r.contrat_achat?.produit?.nom !== filtProduit) return false
     if (filtStatut && r.contrat_achat?.statut !== filtStatut) return false
+    if (filtClient && getClientNom(r) !== filtClient) return false
     return true
-  }), [rows, filtFamille, filtProduit, filtStatut])
+  }), [rows, filtFamille, filtProduit, filtStatut, filtClient])
 
   function rowMoisKey(row: any): string | null {
     if (row.type === 'realisee' && row.date_reelle) return row.date_reelle.slice(0, 7)
@@ -114,6 +129,10 @@ export default function PlanningPage() {
           <select value={filtProduit} onChange={e => setFiltProduit(e.target.value)} className="input text-sm py-1.5 w-44">
             <option value="">Tous produits</option>
             {produits.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+          <select value={filtClient} onChange={e => setFiltClient(e.target.value)} className="input text-sm py-1.5 w-48">
+            <option value="">Tous clients</option>
+            {clients.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
       </div>
@@ -176,9 +195,7 @@ export default function PlanningPage() {
                 const ca = row.contrat_achat ?? {}
                 const cv = row.contrat_vente ?? null
                 const isSilo = !!cv?.destination_silo
-                const clientNom = isSilo
-                  ? (cv?.silo_nom ?? 'Silo')
-                  : (cv?.agriculteur?.nom ?? '—')
+                const clientNom = getClientNom(row)
                 const moisRow = rowMoisKey(row)
                 const isRealisee = row.type === 'realisee'
 
