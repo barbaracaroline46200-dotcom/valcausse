@@ -688,7 +688,7 @@ function BlocNotes() {
       {showNouveauContrat && (
         <NouveauContratModal
           onClose={() => setShowNouveauContrat(false)}
-          onSaved={() => { setShowNouveauContrat(false); reload() }}
+          onSaved={() => { setShowNouveauContrat(false); reloadData() }}
         />
       )}
     </div>
