@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react'
 
 const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 const MOIS_NOMS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -344,31 +344,49 @@ export default function CalendrierLivraisons() {
 
           {/* Zone livraisons non fixées */}
           {livsNonFix.length > 0 && (
-            <div className="mt-3 border border-dashed border-gray-300 rounded-lg p-3">
-              <p className="text-xs font-semibold text-gray-500 mb-2">📌 Livraisons du mois — date non encore fixée</p>
-              <div className="flex flex-wrap gap-2">
-                {livsNonFix.map(l => {
-                  const c = getCouleur(l.produit, l.type)
-                  const tonnes = l.type === 'realisee' ? l.quantite_reelle : l.quantite_prevue
-                  return (
-                    <a key={l.id} href={`/contrats/${l.contrat_achat_id}`}
-                       className="text-xs rounded-lg px-3 py-1.5 font-medium hover:opacity-80 transition-opacity"
-                       style={{ backgroundColor: c.bg, color: c.text, border: `1px solid ${c.border}` }}>
-                      <span className="font-bold">{l.produit}</span>
-                      <span className="mx-1 opacity-60">·</span>{l.numero_contrat}
-                      <span className="mx-1 opacity-60">·</span>{l.agriculteur}
-                      <span className="mx-1 opacity-60">·</span>{l.transporteur}
-                      <span className="mx-1 opacity-60">·</span><span className="font-bold">{tonnes} t</span>
-                    </a>
-                  )
-                })}
-              </div>
-            </div>
+            <NonFixees livraisons={livsNonFix} getCouleur={getCouleur} />
           )}
 
           {livraisons.length === 0 && (
             <div className="py-10 text-center text-gray-400 text-sm">Aucune livraison ce mois-ci</div>
           )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function NonFixees({ livraisons, getCouleur }: { livraisons: any[]; getCouleur: (p: string, t: string) => any }) {
+  const [ouvert, setOuvert] = useState(false)
+  return (
+    <div className="mt-3 border border-dashed border-gray-300 rounded-lg overflow-hidden">
+      <button
+        onClick={() => setOuvert(v => !v)}
+        className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 transition-colors text-left"
+      >
+        <span className="text-xs font-semibold text-gray-500 flex items-center gap-1.5">
+          📌 Livraisons du mois — date non encore fixée
+          <span className="ml-1 px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[11px] font-bold">{livraisons.length}</span>
+        </span>
+        {ouvert ? <ChevronUp size={14} className="text-gray-400 flex-shrink-0" /> : <ChevronDown size={14} className="text-gray-400 flex-shrink-0" />}
+      </button>
+      {ouvert && (
+        <div className="px-3 pb-3 flex flex-wrap gap-2">
+          {livraisons.map(l => {
+            const c = getCouleur(l.produit, l.type)
+            const tonnes = l.type === 'realisee' ? l.quantite_reelle : l.quantite_prevue
+            return (
+              <a key={l.id} href={`/contrats/${l.contrat_achat_id}`}
+                 className="text-xs rounded-lg px-3 py-1.5 font-medium hover:opacity-80 transition-opacity"
+                 style={{ backgroundColor: c.bg, color: c.text, border: `1px solid ${c.border}` }}>
+                <span className="font-bold">{l.produit}</span>
+                <span className="mx-1 opacity-60">·</span>{l.numero_contrat}
+                <span className="mx-1 opacity-60">·</span>{l.agriculteur}
+                <span className="mx-1 opacity-60">·</span>{l.transporteur}
+                <span className="mx-1 opacity-60">·</span><span className="font-bold">{tonnes} t</span>
+              </a>
+            )
+          })}
         </div>
       )}
     </div>
