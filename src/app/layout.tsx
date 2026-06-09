@@ -4,6 +4,7 @@ import Sidebar from '@/components/ui/Sidebar'
 import Header from '@/components/ui/Header'
 import AdminProvider from '@/components/ui/AdminProvider'
 import AuthGate from '@/components/ui/AuthGate'
+import ErrorBoundary from '@/components/ui/ErrorBoundary'
 
 export const metadata: Metadata = {
   title: 'Valcausse — Gestion des contrats céréales',
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="bg-cream">
         <AdminProvider>
+          <ErrorBoundary>
           <AuthGate>
             <div className="flex min-h-screen">
               <Sidebar />
@@ -36,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
             </div>
           </AuthGate>
+          </ErrorBoundary>
         </AdminProvider>
       </body>
     </html>
