@@ -8,6 +8,7 @@ import { quantiteLivree, reliquat } from '@/lib/utils'
 import CalendrierLivraisons from '@/components/ui/CalendrierLivraisons'
 import { useAdmin } from '@/components/ui/AdminProvider'
 import Link from 'next/link'
+import NouveauContratModal from '@/components/contrats/NouveauContratModal'
 
 function todayStr() {
   const d = new Date()
@@ -26,6 +27,7 @@ export default function DashboardPage() {
   const [agendaToday, setAgendaToday] = useState<any[]>([])
   const [toast, setToast] = useState('')
   const [filtAnnee, setFiltAnnee] = useState<string>(() => getAnneeAgricoleLabel())
+  const [showNouveauContrat, setShowNouveauContrat] = useState(false)
   const [filtTpStatut, setFiltTpStatut] = useState('')
   const [filtTpFournisseur, setFiltTpFournisseur] = useState('')
   const [filtTpProduit, setFiltTpProduit] = useState('')
@@ -141,7 +143,12 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold" style={{ color: '#7B2820' }}>Tableau de bord</h1>
           <p className="text-gray-500 text-sm mt-0.5">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          {isAdmin && (
+            <button onClick={() => setShowNouveauContrat(true)} className="btn-primary">
+              <Plus size={16} /> Nouveau contrat
+            </button>
+          )}
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Année agricole</span>
           <select
             value={filtAnnee}
@@ -677,6 +684,13 @@ function BlocNotes() {
           </details>
         )}
       </div>
+
+      {showNouveauContrat && (
+        <NouveauContratModal
+          onClose={() => setShowNouveauContrat(false)}
+          onSaved={() => { setShowNouveauContrat(false); reload() }}
+        />
+      )}
     </div>
   )
 }
