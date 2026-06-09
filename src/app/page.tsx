@@ -489,6 +489,12 @@ export default function DashboardPage() {
       {/* Bloc-notes */}
       <BlocNotes />
 
+      {showNouveauContrat && (
+        <NouveauContratModal
+          onClose={() => setShowNouveauContrat(false)}
+          onSaved={() => { setShowNouveauContrat(false); reloadData() }}
+        />
+      )}
     </div>
     </>
   )
@@ -686,12 +692,6 @@ function BlocNotes() {
         )}
       </div>
 
-      {showNouveauContrat && (
-        <NouveauContratModal
-          onClose={() => setShowNouveauContrat(false)}
-          onSaved={() => { setShowNouveauContrat(false); reloadData() }}
-        />
-      )}
     </div>
   )
 }
