@@ -1,4 +1,5 @@
 'use client'
+// v2
 import { getDashboardData } from './actions'
 import { useEffect, useState, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
