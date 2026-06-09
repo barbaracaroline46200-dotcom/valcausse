@@ -1,18 +1,103 @@
 'use client'
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { usePathname } from 'next/navigation'
-import { Truck, Loader2, Trash2 } from 'lucide-react'
+import { Truck, Loader2, ChevronDown, X } from 'lucide-react'
 import LivraisonAOrganiser from '@/components/livraisons/LivraisonAOrganiser'
 import { useAdmin } from '@/components/ui/AdminProvider'
 
+// ── Dropdown multi-sélection ──────────────────────────────────────────────────
+function MultiSelect({
+  label,
+  options,
+  selected,
+  onChange,
+}: {
+  label: string
+  options: string[]
+  selected: string[]
+  onChange: (v: string[]) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  function toggle(val: string) {
+    onChange(selected.includes(val) ? selected.filter(v => v !== val) : [...selected, val])
+  }
+
+  const label2 = selected.length === 0
+    ? label
+    : selected.length === 1
+      ? selected[0]
+      : `${selected.length} sélectionnés`
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className={`input text-sm py-1.5 flex items-center gap-1 min-w-[11rem] justify-between ${selected.length > 0 ? 'border-orange-400 bg-orange-50' : ''}`}
+      >
+        <span className="truncate text-left flex-1" style={{ color: selected.length > 0 ? '#c2410c' : undefined }}>
+          {label2}
+        </span>
+        {selected.length > 0
+          ? <X size={13} className="flex-shrink-0 text-orange-400" onClick={e => { e.stopPropagation(); onChange([]) }} />
+          : <ChevronDown size={13} className="flex-shrink-0 text-gray-400" />
+        }
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg min-w-[14rem] py-1 max-h-64 overflow-y-auto">
+          {options.length === 0 && (
+            <p className="px-3 py-2 text-xs text-gray-400">Aucune option</p>
+          )}
+          {options.map(opt => (
+            <label key={opt} className="flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm">
+              <input
+                type="checkbox"
+                checked={selected.includes(opt)}
+                onChange={() => toggle(opt)}
+                className="rounded border-gray-300 accent-orange-500"
+              />
+              <span className="leading-tight">{opt}</span>
+            </label>
+          ))}
+          {selected.length > 0 && (
+            <div className="border-t border-gray-100 mt-1 pt-1">
+              <button
+                type="button"
+                onClick={() => { onChange([]); setOpen(false) }}
+                className="w-full text-left px-3 py-1.5 text-xs text-gray-400 hover:text-gray-600"
+              >
+                Effacer la sélection
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Page principale ───────────────────────────────────────────────────────────
 export default function LivraisonsPage() {
   const { isAdmin } = useAdmin()
   const pathname = usePathname()
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [filtFournisseur, setFiltFournisseur] = useState('')
-  const [filtProduit, setFiltProduit] = useState('')
-  const [filtAgriculteur, setFiltAgriculteur] = useState('')
+
+  // Filtres multi-sélection
+  const [filtFournisseurs, setFiltFournisseurs] = useState<string[]>([])
+  const [filtProduits, setFiltProduits] = useState<string[]>([])
+  const [filtAgriculteurs, setFiltAgriculteurs] = useState<string[]>([])
 
   const reload = useCallback(async () => {
     const res = await fetch('/api/dashboard')
@@ -46,18 +131,19 @@ export default function LivraisonsPage() {
     return cv?.agriculteur?.nom ?? null
   }
 
-  const fournisseurs = useMemo(() => [...new Set(planifiees.map((l: any) => l.contrat_achat?.fournisseur?.nom).filter(Boolean))].sort(), [planifiees])
-  const produits = useMemo(() => [...new Set(planifiees.map((l: any) => l.contrat_achat?.produit?.nom).filter(Boolean))].sort(), [planifiees])
-  const agriculteurs = useMemo(() => [...new Set(planifiees.map((l: any) => getAgriNom(l)).filter(Boolean))].sort(), [planifiees])
+  const optFournisseurs = useMemo(() => [...new Set(planifiees.map((l: any) => l.contrat_achat?.fournisseur?.nom).filter(Boolean))].sort() as string[], [planifiees])
+  const optProduits = useMemo(() => [...new Set(planifiees.map((l: any) => l.contrat_achat?.produit?.nom).filter(Boolean))].sort() as string[], [planifiees])
+  const optAgriculteurs = useMemo(() => [...new Set(planifiees.map((l: any) => getAgriNom(l)).filter(Boolean))].sort() as string[], [planifiees])
 
   const filtrees = useMemo(() => planifiees.filter((l: any) => {
-    if (filtFournisseur && l.contrat_achat?.fournisseur?.nom !== filtFournisseur) return false
-    if (filtProduit && l.contrat_achat?.produit?.nom !== filtProduit) return false
-    if (filtAgriculteur && getAgriNom(l) !== filtAgriculteur) return false
+    if (filtFournisseurs.length > 0 && !filtFournisseurs.includes(l.contrat_achat?.fournisseur?.nom)) return false
+    if (filtProduits.length > 0 && !filtProduits.includes(l.contrat_achat?.produit?.nom)) return false
+    if (filtAgriculteurs.length > 0 && !filtAgriculteurs.includes(getAgriNom(l))) return false
     return true
-  }), [planifiees, filtFournisseur, filtProduit, filtAgriculteur])
+  }), [planifiees, filtFournisseurs, filtProduits, filtAgriculteurs])
 
-  const hasFiltres = filtFournisseur || filtProduit || filtAgriculteur
+  const hasFiltres = filtFournisseurs.length > 0 || filtProduits.length > 0 || filtAgriculteurs.length > 0
+  const nbActifs = filtFournisseurs.length + filtProduits.length + filtAgriculteurs.length
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -80,24 +166,18 @@ export default function LivraisonsPage() {
           </h1>
           <p className="text-gray-500 text-sm mt-0.5">Mois passés non livrés + mois en cours + mois prochain (dès le 20)</p>
         </div>
+
         {planifiees.length > 0 && (
           <div className="flex gap-2 flex-wrap items-center">
-            <select value={filtFournisseur} onChange={e => setFiltFournisseur(e.target.value)} className="input text-sm py-1.5 w-40">
-              <option value="">Tous fournisseurs</option>
-              {(fournisseurs as string[]).map(f => <option key={f} value={f}>{f}</option>)}
-            </select>
-            <select value={filtProduit} onChange={e => setFiltProduit(e.target.value)} className="input text-sm py-1.5 w-40">
-              <option value="">Tous produits</option>
-              {(produits as string[]).map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-            <select value={filtAgriculteur} onChange={e => setFiltAgriculteur(e.target.value)} className="input text-sm py-1.5 w-48">
-              <option value="">Tous agriculteurs</option>
-              {(agriculteurs as string[]).map(a => <option key={a} value={a}>{a}</option>)}
-            </select>
+            <MultiSelect label="Fournisseurs" options={optFournisseurs} selected={filtFournisseurs} onChange={setFiltFournisseurs} />
+            <MultiSelect label="Produits" options={optProduits} selected={filtProduits} onChange={setFiltProduits} />
+            <MultiSelect label="Agriculteurs" options={optAgriculteurs} selected={filtAgriculteurs} onChange={setFiltAgriculteurs} />
             {hasFiltres && (
-              <button onClick={() => { setFiltFournisseur(''); setFiltProduit(''); setFiltAgriculteur('') }}
-                className="text-xs text-gray-400 hover:text-gray-600 underline">
-                Effacer
+              <button
+                onClick={() => { setFiltFournisseurs([]); setFiltProduits([]); setFiltAgriculteurs([]) }}
+                className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1"
+              >
+                <X size={12} /> Tout effacer {nbActifs > 0 && <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600 font-bold">{nbActifs}</span>}
               </button>
             )}
           </div>
