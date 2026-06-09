@@ -3,7 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, FileText, ShoppingCart, Truck, BookOpen, Search, LogOut, ShieldCheck, Eye, BarChart2, CalendarDays, FileWarning, Receipt, Archive, Grid3X3
+  LayoutDashboard, FileText, ShoppingCart, Truck, BookOpen, Search, LogOut, ShieldCheck, Eye, BarChart2, CalendarDays, FileWarning, Receipt, Archive, CreditCard
 } from 'lucide-react'
 import { useAdmin } from './AdminProvider'
 import { cn } from '@/lib/utils'
@@ -11,20 +11,6 @@ import { useEffect, useState } from 'react'
 
 const BRUN = '#7B2820'
 const BRUN_LIGHT = '#fdf5f3'
-
-const mainNav = [
-  { href: '/', label: 'Tableau de bord', icon: LayoutDashboard },
-  { href: '/contrats', label: 'Contrats achat', icon: FileText },
-  { href: '/ventes', label: 'Contrats vente', icon: ShoppingCart },
-  { href: '/transporteurs/factures', label: 'Transport & Factures', icon: Truck },
-  { href: '/tarifs-transport', label: 'Tarifs transport', icon: Truck },
-  { href: '/planning', label: 'Planning livraisons', icon: Grid3X3 },
-  { href: '/stats', label: 'Statistiques', icon: BarChart2 },
-  { href: '/agenda', label: 'Agenda', icon: CalendarDays, adminOnly: true },
-  { href: '/referentiels', label: 'Référentiels', icon: BookOpen, adminOnly: true },
-  { href: '/archives', label: 'Archives', icon: Archive },
-  { href: '/recherche', label: 'Recherche globale', icon: Search },
-]
 
 export default function Sidebar() {
   const pathname = usePathname()
@@ -47,12 +33,9 @@ export default function Sidebar() {
     fetchCounts()
   }, [pathname])
 
-  const suiviNav = [
-    { href: '/livraisons',  label: 'Livraisons à organiser', icon: Truck,        count: counts.livraisons,  color: BRUN },
-    { href: '/cmr',         label: 'CMR en attente',         icon: FileWarning,  count: counts.cmr,         color: '#dc2626' },
-    { href: '/facturation', label: 'Facturation en attente', icon: Receipt,      count: counts.facturation, color: '#448ab5' },
-    { href: '/rf',          label: 'RF à récupérer',         icon: FileWarning,  count: counts.rf,          color: '#dc2626' },
-  ]
+  function active(href: string) {
+    return pathname === href || (href !== '/' && pathname.startsWith(href + '/'))
+  }
 
   return (
     <aside className="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 flex flex-col z-40 shadow-sm">
@@ -77,34 +60,42 @@ export default function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
 
-        {/* Navigation principale */}
-        {mainNav.map(({ href, label, icon: Icon, adminOnly }) => {
-          if (adminOnly && !isAdmin) return null
-          const active = pathname === href || (href !== '/' && pathname.startsWith(href))
-          return (
-            <NavItem key={href} href={href} label={label} icon={<Icon size={18} />} active={active} />
-          )
-        })}
+        {/* PILOTAGE */}
+        <SectionLabel label="Pilotage" />
+        <NavItem href="/"              label="Tableau de bord"   icon={<LayoutDashboard size={18} />} active={active('/')} />
+        <NavItem href="/stats"         label="Statistiques"      icon={<BarChart2 size={18} />}       active={active('/stats')} />
+        <NavItem href="/recherche"     label="Recherche globale" icon={<Search size={18} />}          active={active('/recherche')} />
 
-        {/* Séparateur Suivi livraisons */}
-        <div className="pt-3 pb-1 px-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Suivi livraisons</p>
-        </div>
+        {/* CONTRATS */}
+        <SectionLabel label="Contrats" />
+        <NavItem href="/contrats"      label="Contrats achat"    icon={<FileText size={18} />}        active={active('/contrats')} />
+        <NavItem href="/ventes"        label="Contrats vente"    icon={<ShoppingCart size={18} />}    active={active('/ventes')} />
+        <NavItem href="/archives"      label="Archives"          icon={<Archive size={18} />}         active={active('/archives')} />
 
-        {suiviNav.map(({ href, label, icon: Icon, count, color }) => {
-          const active = pathname === href || pathname.startsWith(href + '/')
-          return (
-            <NavItem
-              key={href}
-              href={href}
-              label={label}
-              icon={<Icon size={18} />}
-              active={active}
-              badge={count > 0 ? count : undefined}
-              badgeColor={color}
-            />
-          )
-        })}
+        {/* LIVRAISONS */}
+        <SectionLabel label="Livraisons" />
+        <NavItem href="/livraisons"    label="À organiser"       icon={<Truck size={18} />}           active={active('/livraisons')} badge={counts.livraisons > 0 ? counts.livraisons : undefined} badgeColor={BRUN} />
+        <NavItem href="/cmr"           label="CMR en attente"    icon={<FileWarning size={18} />}     active={active('/cmr')}        badge={counts.cmr > 0 ? counts.cmr : undefined}               badgeColor="#dc2626" />
+        <NavItem href="/planning"      label="Planning"          icon={<LayoutDashboard size={18} />} active={active('/planning')} />
+
+        {/* FACTURATION */}
+        <SectionLabel label="Facturation" />
+        <NavItem href="/facturation"   label="En attente"        icon={<CreditCard size={18} />}      active={active('/facturation')} badge={counts.facturation > 0 ? counts.facturation : undefined} badgeColor="#448ab5" />
+        <NavItem href="/rf"            label="RF à récupérer"    icon={<FileWarning size={18} />}     active={active('/rf')}          badge={counts.rf > 0 ? counts.rf : undefined}                   badgeColor="#dc2626" />
+
+        {/* TRANSPORT */}
+        <SectionLabel label="Transport" />
+        <NavItem href="/transporteurs/factures" label="Transport & Factures" icon={<Truck size={18} />}     active={active('/transporteurs/factures')} />
+        <NavItem href="/tarifs-transport"       label="Tarifs transport"     icon={<CreditCard size={18} />} active={active('/tarifs-transport')} />
+
+        {/* ADMINISTRATION (admin uniquement) */}
+        {isAdmin && (
+          <>
+            <SectionLabel label="Administration" icon={<ShieldCheck size={12} style={{ color: '#C8941A' }} />} />
+            <NavItem href="/agenda"       label="Agenda"        icon={<CalendarDays size={18} />} active={active('/agenda')} />
+            <NavItem href="/referentiels" label="Référentiels"  icon={<BookOpen size={18} />}    active={active('/referentiels')} />
+          </>
+        )}
       </nav>
 
       {/* Statut connexion */}
@@ -133,6 +124,15 @@ export default function Sidebar() {
   )
 }
 
+function SectionLabel({ label, icon }: { label: string; icon?: React.ReactNode }) {
+  return (
+    <div className="pt-4 pb-1 px-3 flex items-center gap-1.5">
+      <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">{label}</p>
+      {icon}
+    </div>
+  )
+}
+
 function NavItem({
   href, label, icon, active, badge, badgeColor,
 }: {
@@ -143,6 +143,8 @@ function NavItem({
   badge?: number
   badgeColor?: string
 }) {
+  const BRUN = '#7B2820'
+  const BRUN_LIGHT = '#fdf5f3'
   return (
     <Link
       href={href}
