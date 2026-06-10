@@ -98,6 +98,7 @@ export default function LivraisonsPage() {
   const [filtFournisseurs, setFiltFournisseurs] = useState<string[]>([])
   const [filtProduits, setFiltProduits] = useState<string[]>([])
   const [filtAgriculteurs, setFiltAgriculteurs] = useState<string[]>([])
+  const [filtTransporteurs, setFiltTransporteurs] = useState<string[]>([])
 
   const reload = useCallback(async () => {
     const res = await fetch('/api/dashboard')
@@ -134,16 +135,18 @@ export default function LivraisonsPage() {
   const optFournisseurs = useMemo(() => [...new Set(planifiees.map((l: any) => l.contrat_achat?.fournisseur?.nom).filter(Boolean))].sort() as string[], [planifiees])
   const optProduits = useMemo(() => [...new Set(planifiees.map((l: any) => l.contrat_achat?.produit?.nom).filter(Boolean))].sort() as string[], [planifiees])
   const optAgriculteurs = useMemo(() => [...new Set(planifiees.map((l: any) => getAgriNom(l)).filter(Boolean))].sort() as string[], [planifiees])
+  const optTransporteurs = useMemo(() => [...new Set(planifiees.map((l: any) => l.contrat_achat?.transporteur?.nom).filter(Boolean))].sort() as string[], [planifiees])
 
   const filtrees = useMemo(() => planifiees.filter((l: any) => {
     if (filtFournisseurs.length > 0 && !filtFournisseurs.includes(l.contrat_achat?.fournisseur?.nom)) return false
     if (filtProduits.length > 0 && !filtProduits.includes(l.contrat_achat?.produit?.nom)) return false
     if (filtAgriculteurs.length > 0 && !filtAgriculteurs.includes(getAgriNom(l))) return false
+    if (filtTransporteurs.length > 0 && !filtTransporteurs.includes(l.contrat_achat?.transporteur?.nom)) return false
     return true
-  }), [planifiees, filtFournisseurs, filtProduits, filtAgriculteurs])
+  }), [planifiees, filtFournisseurs, filtProduits, filtAgriculteurs, filtTransporteurs])
 
-  const hasFiltres = filtFournisseurs.length > 0 || filtProduits.length > 0 || filtAgriculteurs.length > 0
-  const nbActifs = filtFournisseurs.length + filtProduits.length + filtAgriculteurs.length
+  const hasFiltres = filtFournisseurs.length > 0 || filtProduits.length > 0 || filtAgriculteurs.length > 0 || filtTransporteurs.length > 0
+  const nbActifs = filtFournisseurs.length + filtProduits.length + filtAgriculteurs.length + filtTransporteurs.length
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -170,11 +173,12 @@ export default function LivraisonsPage() {
         {planifiees.length > 0 && (
           <div className="flex gap-2 flex-wrap items-center">
             <MultiSelect label="Fournisseurs" options={optFournisseurs} selected={filtFournisseurs} onChange={setFiltFournisseurs} />
+            <MultiSelect label="Transporteurs" options={optTransporteurs} selected={filtTransporteurs} onChange={setFiltTransporteurs} />
             <MultiSelect label="Produits" options={optProduits} selected={filtProduits} onChange={setFiltProduits} />
             <MultiSelect label="Agriculteurs" options={optAgriculteurs} selected={filtAgriculteurs} onChange={setFiltAgriculteurs} />
             {hasFiltres && (
               <button
-                onClick={() => { setFiltFournisseurs([]); setFiltProduits([]); setFiltAgriculteurs([]) }}
+                onClick={() => { setFiltFournisseurs([]); setFiltProduits([]); setFiltAgriculteurs([]); setFiltTransporteurs([]) }}
                 className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1"
               >
                 <X size={12} /> Tout effacer {nbActifs > 0 && <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600 font-bold">{nbActifs}</span>}
