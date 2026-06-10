@@ -14,29 +14,27 @@ const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
   { key: 'produits', label: 'Produits', icon: <Package size={16} /> },
 ]
 
+const CIVILITES = [
+  { value: 'EARL', label: 'EARL' }, { value: 'GAEC', label: 'GAEC' },
+  { value: 'SAS', label: 'SAS' }, { value: 'SARL', label: 'SARL' },
+  { value: 'SCEA', label: 'SCEA' }, { value: 'EURL', label: 'EURL' },
+  { value: 'GFA', label: 'GFA' }, { value: 'GIE', label: 'GIE' },
+  { value: 'SCL', label: 'SCL' }, { value: 'SA', label: 'SA' },
+  { value: 'Ferme', label: 'Ferme' }, { value: 'M.', label: 'M.' },
+  { value: 'Mme', label: 'Mme' },
+]
+
 const FIELDS: Record<Tab, Array<{ key: string; label: string; required?: boolean; type?: string; options?: any[] }>> = {
   fournisseurs: [
-    { key: 'nom', label: 'Nom', required: true },
+    { key: 'civilite', label: 'Civilité (forme juridique)', type: 'select', options: CIVILITES },
+    { key: 'nom', label: 'Nom (sans civilité)', required: true },
     { key: 'telephone', label: 'Téléphone' },
     { key: 'email', label: 'Email', type: 'email' },
     { key: 'adresse', label: 'Adresse' },
     { key: 'notes', label: 'Notes' },
   ],
   agriculteurs: [
-    { key: 'civilite', label: 'Civilité (forme juridique)', type: 'select', options: [
-      { value: 'EARL', label: 'EARL' },
-      { value: 'GAEC', label: 'GAEC' },
-      { value: 'SAS', label: 'SAS' },
-      { value: 'SARL', label: 'SARL' },
-      { value: 'SCEA', label: 'SCEA' },
-      { value: 'GFA', label: 'GFA' },
-      { value: 'GIE', label: 'GIE' },
-      { value: 'SCL', label: 'SCL' },
-      { value: 'SA', label: 'SA' },
-      { value: 'Ferme', label: 'Ferme' },
-      { value: 'M.', label: 'M.' },
-      { value: 'Mme', label: 'Mme' },
-    ]},
+    { key: 'civilite', label: 'Civilité (forme juridique)', type: 'select', options: CIVILITES },
     { key: 'nom', label: 'Nom (sans civilité)', required: true },
     { key: 'adresse_livraison', label: 'Adresse livraison' },
     { key: 'ville_livraison', label: 'Ville livraison' },
@@ -47,12 +45,15 @@ const FIELDS: Record<Tab, Array<{ key: string; label: string; required?: boolean
     { key: 'note_transport', label: 'Note transport (PDF)' },
   ],
   courtiers: [
-    { key: 'nom', label: 'Nom', required: true },
+    { key: 'civilite', label: 'Civilité (forme juridique)', type: 'select', options: CIVILITES },
+    { key: 'nom', label: 'Nom (sans civilité)', required: true },
     { key: 'telephone', label: 'Téléphone' },
     { key: 'email', label: 'Email', type: 'email' },
+    { key: 'numero_courtier', label: 'N° courtier' },
   ],
   transporteurs: [
-    { key: 'nom', label: 'Nom', required: true },
+    { key: 'civilite', label: 'Civilité (forme juridique)', type: 'select', options: CIVILITES },
+    { key: 'nom', label: 'Nom (sans civilité)', required: true },
     { key: 'telephone', label: 'Téléphone' },
     { key: 'email', label: 'Email', type: 'email' },
   ],
@@ -166,11 +167,12 @@ function FournisseursList({ data, onEdit }: { data: any[]; onEdit: (item: any) =
   return (
     <table className="w-full">
       <thead className="bg-gray-50/50">
-        <tr>{['Nom', 'Téléphone', 'Email', 'Points de chargement', ''].map((h, i) => <th key={i} className="table-header">{h}</th>)}</tr>
+        <tr>{['Civilité', 'Nom', 'Téléphone', 'Email', 'Points de chargement', ''].map((h, i) => <th key={i} className="table-header">{h}</th>)}</tr>
       </thead>
       <tbody>
         {data.map(f => (
           <tr key={f.id} className="table-row">
+            <td className="table-cell text-gray-500 text-sm">{f.civilite ?? '—'}</td>
             <td className="table-cell font-medium">{f.nom}</td>
             <td className="table-cell text-gray-500">{f.telephone ?? '—'}</td>
             <td className="table-cell text-gray-500">{f.email ?? '—'}</td>
@@ -182,7 +184,7 @@ function FournisseursList({ data, onEdit }: { data: any[]; onEdit: (item: any) =
             <td className="table-cell w-10"><EditBtn onClick={() => onEdit(f)} /></td>
           </tr>
         ))}
-        {data.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Aucun fournisseur</td></tr>}
+        {data.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Aucun fournisseur</td></tr>}
       </tbody>
     </table>
   )
@@ -216,18 +218,20 @@ function CortiersList({ data, onEdit }: { data: any[]; onEdit: (item: any) => vo
   return (
     <table className="w-full">
       <thead className="bg-gray-50/50">
-        <tr>{['Nom', 'Téléphone', 'Email', ''].map((h, i) => <th key={i} className="table-header">{h}</th>)}</tr>
+        <tr>{['Civilité', 'Nom', 'Téléphone', 'Email', 'N° courtier', ''].map((h, i) => <th key={i} className="table-header">{h}</th>)}</tr>
       </thead>
       <tbody>
         {data.map(c => (
           <tr key={c.id} className="table-row">
+            <td className="table-cell text-gray-500 text-sm">{c.civilite ?? '—'}</td>
             <td className="table-cell font-medium">{c.nom}</td>
             <td className="table-cell text-gray-500">{c.telephone ?? '—'}</td>
             <td className="table-cell text-gray-500">{c.email ?? '—'}</td>
+            <td className="table-cell text-gray-400 text-xs">{c.numero_courtier ?? '—'}</td>
             <td className="table-cell w-10"><EditBtn onClick={() => onEdit(c)} /></td>
           </tr>
         ))}
-        {data.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">Aucun courtier</td></tr>}
+        {data.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Aucun courtier</td></tr>}
       </tbody>
     </table>
   )
@@ -237,18 +241,19 @@ function TransporteursList({ data, onEdit }: { data: any[]; onEdit: (item: any) 
   return (
     <table className="w-full">
       <thead className="bg-gray-50/50">
-        <tr>{['Nom', 'Téléphone', 'Email', ''].map((h, i) => <th key={i} className="table-header">{h}</th>)}</tr>
+        <tr>{['Civilité', 'Nom', 'Téléphone', 'Email', ''].map((h, i) => <th key={i} className="table-header">{h}</th>)}</tr>
       </thead>
       <tbody>
         {data.map(t => (
           <tr key={t.id} className="table-row">
+            <td className="table-cell text-gray-500 text-sm">{t.civilite ?? '—'}</td>
             <td className="table-cell font-medium">{t.nom}</td>
             <td className="table-cell text-gray-500">{t.telephone ?? '—'}</td>
             <td className="table-cell text-gray-500">{t.email ?? '—'}</td>
             <td className="table-cell w-10"><EditBtn onClick={() => onEdit(t)} /></td>
           </tr>
         ))}
-        {data.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">Aucun transporteur</td></tr>}
+        {data.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Aucun transporteur</td></tr>}
       </tbody>
     </table>
   )
