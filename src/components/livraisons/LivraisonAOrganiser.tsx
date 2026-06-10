@@ -98,7 +98,7 @@ export default function LivraisonAOrganiser({ livraison: l, moisCourant, moisSui
           <span className="text-gray-400">·</span>
           <span className="text-sm font-medium" style={{ color: '#7B2820' }}>{formatTonnes(l.quantite_prevue)}</span>
           <span className="text-gray-400">·</span>
-          <span className="text-sm text-gray-600">{agriDest?.nom ?? '—'}</span>
+          <span className="text-sm text-gray-600">{[agriDest?.civilite, agriDest?.nom].filter(Boolean).join(' ') || '—'}</span>
           <span className="text-gray-400">·</span>
           <span className="text-sm text-gray-500">{ca?.transporteur?.nom ?? '—'}</span>
         </div>

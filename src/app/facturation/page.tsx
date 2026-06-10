@@ -134,7 +134,7 @@ export default function FacturationPage() {
                     <td className="table-cell">
                       <a href={`/contrats/${ca?.id}`} className="text-green-700 hover:underline text-sm">{ca?.numero_contrat}</a>
                     </td>
-                    <td className="table-cell text-sm">{agri?.nom ?? (l.destination_silo ? 'Silo' : '—')}</td>
+                    <td className="table-cell text-sm">{[agri?.civilite, agri?.nom].filter(Boolean).join(' ') || (l.destination_silo ? 'Silo' : '—')}</td>
                     <td className="table-cell font-semibold">{formatTonnes(l.quantite_reelle)}</td>
                     <td className="table-cell text-center">
                       {l.transport_facture

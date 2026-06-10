@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
 
     supabase
       .from('contrats_vente')
-      .select('id,numero_contrat,produit:produits(nom),agriculteur:agriculteurs(nom)')
+      .select('id,numero_contrat,produit:produits(nom),agriculteur:agriculteurs(civilite,nom)')
       .or(`numero_contrat.ilike.${like},notes.ilike.${like}`)
       .limit(10),
 
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
         ville_chargement, ville_destination,
         date_reelle, mois_prevu,
         contrat_achat:contrats_achat(id, numero_contrat, famille, produit:produits(nom), fournisseur:fournisseurs(nom)),
-        contrat_vente:contrats_vente(id, numero_contrat, agriculteur:agriculteurs(nom))
+        contrat_vente:contrats_vente(id, numero_contrat, agriculteur:agriculteurs(civilite,nom))
       `)
       .or(livraisonsOrParts.join(','))
       .limit(15),
@@ -92,7 +92,7 @@ export async function GET(req: NextRequest) {
             piece_fournisseur_prefixe, piece_fournisseur_numero,
             piece_client_prefixe, piece_client_numero, numero_lettre_voiture,
             contrat_achat:contrats_achat(id, numero_contrat, famille, produit:produits(nom), fournisseur:fournisseurs(nom)),
-            contrat_vente:contrats_vente(id, numero_contrat, agriculteur:agriculteurs(nom))
+            contrat_vente:contrats_vente(id, numero_contrat, agriculteur:agriculteurs(civilite,nom))
           `)
           .eq('quantite_reelle', qNumber)
           .eq('type', 'realisee')

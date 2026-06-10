@@ -43,7 +43,7 @@ export default function LierVenteModal({ contratAchatId, onClose, onSaved }: Pro
             <option value="">Choisir...</option>
             {ventes.map((v: any) => (
               <option key={v.id} value={v.id}>
-                {v.numero_contrat} — {v.agriculteur?.nom ?? v.silo_nom ?? 'Silo'} — {v.produit?.nom}
+                {v.numero_contrat} — {[v.agriculteur?.civilite, v.agriculteur?.nom].filter(Boolean).join(' ') || v.silo_nom || 'Silo'} — {v.produit?.nom}
               </option>
             ))}
           </select>

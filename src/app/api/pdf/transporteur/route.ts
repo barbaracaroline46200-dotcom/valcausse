@@ -124,7 +124,7 @@ export async function GET(req: NextRequest) {
   page.drawText('ADRESSE DE DESTINATION', { x: 50, y, font: fontBold, size: 10, color: brun })
   y -= 18
   if (agriculteur) {
-    row('Nom', agriculteur.nom)
+    row('Nom', [agriculteur.civilite, agriculteur.nom].filter(Boolean).join(' ') || '—')
     if (agriculteur.adresse_livraison) row('Adresse', agriculteur.adresse_livraison)
     if (agriculteur.ville_livraison) row('Ville', agriculteur.ville_livraison)
   } else {

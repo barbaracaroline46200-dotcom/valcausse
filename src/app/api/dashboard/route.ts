@@ -36,7 +36,7 @@ export async function GET() {
         produit:produits(nom),
         fournisseur:fournisseurs(nom),
         transporteur:transporteurs(id,nom,telephone),
-        contrats_vente(id,agriculteur:agriculteurs(nom,ville_livraison,telephone))
+        contrats_vente(id,agriculteur:agriculteurs(civilite,nom,ville_livraison,telephone))
       )
     `)
     .eq('type', 'planifiee')
@@ -62,7 +62,7 @@ export async function GET() {
       id, numero_contrat, famille, prix_transport_prevu,
       produit:produits(nom),
       transporteur:transporteurs(id,nom,email,telephone),
-      contrats_vente(id, numero_contrat, quantite, agriculteur:agriculteurs(id,nom,ville_livraison))
+      contrats_vente(id, numero_contrat, quantite, agriculteur:agriculteurs(id,civilite,nom,ville_livraison))
     )
   `
 
@@ -99,7 +99,7 @@ export async function GET() {
       produit:produits(nom),
       transporteur:transporteurs(nom),
       fournisseur:fournisseurs(nom),
-      contrats_vente(id, numero_contrat, agriculteur:agriculteurs(nom))
+      contrats_vente(id, numero_contrat, agriculteur:agriculteurs(civilite,nom))
     )
   `
   const { data: livraisonsAFacturerRaw } = await supabase

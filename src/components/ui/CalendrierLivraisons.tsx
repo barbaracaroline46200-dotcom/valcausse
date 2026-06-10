@@ -93,7 +93,7 @@ export default function CalendrierLivraisons() {
           agriculteur: (() => {
             const cv = (l.contrat_achat?.contrats_vente ?? []).find((cv: any) => cv.id === l.contrat_vente_id)
             if (cv?.destination_silo) return cv.silo_nom ?? 'Silo'
-            return cv?.agriculteur?.nom ?? '—'
+            return [cv?.agriculteur?.civilite, cv?.agriculteur?.nom].filter(Boolean).join(' ') || '—'
           })(),
           transporteur: l.transporteur?.nom ?? l.contrat_achat?.transporteur?.nom ?? '—',
           destination_silo: l.destination_silo,

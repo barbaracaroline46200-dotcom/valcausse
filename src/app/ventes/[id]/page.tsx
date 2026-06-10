@@ -46,7 +46,7 @@ export default function VenteDetailPage() {
               <h1 className="text-2xl font-bold" style={{ color: '#7B2820' }}>{vente.numero_contrat}</h1>
               <BadgeStatut statut={vente.statut} />
             </div>
-            <p className="text-gray-500 text-sm">Contrat de vente · {vente.agriculteur?.nom}</p>
+            <p className="text-gray-500 text-sm">Contrat de vente · {[vente.agriculteur?.civilite, vente.agriculteur?.nom].filter(Boolean).join(' ') || '—'}</p>
           </div>
           {isAdmin && (
             <div className="flex gap-2 flex-wrap">
@@ -85,7 +85,7 @@ export default function VenteDetailPage() {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-5">
           {[
-            { label: 'Agriculteur', value: vente.agriculteur?.nom ?? '—' },
+            { label: 'Agriculteur', value: [vente.agriculteur?.civilite, vente.agriculteur?.nom].filter(Boolean).join(' ') || '—' ?? '—' },
             { label: 'Produit', value: vente.produit?.nom ?? '—' },
             { label: 'Quantité', value: formatTonnes(vente.quantite) },
             { label: 'Prix vente', value: formatEurosParTonne(vente.prix_vente) },
@@ -319,7 +319,7 @@ function RelierContratModal({ vente, onClose, onSaved }: { vente: any; onClose: 
     <Modal title="Relier à un contrat d'achat" onClose={onClose} size="md">
       <form onSubmit={submit} className="space-y-4">
         <div className="bg-blue-50 border border-blue-100 rounded-lg px-4 py-2 text-sm text-blue-700 mb-2">
-          Contrat de vente : <strong>{vente.numero_contrat}</strong> · {vente.agriculteur?.nom}
+          Contrat de vente : <strong>{vente.numero_contrat}</strong> · {[vente.agriculteur?.civilite, vente.agriculteur?.nom].filter(Boolean).join(' ') || '—'}
         </div>
         <div>
           <label className="label">Contrat d'achat à lier</label>

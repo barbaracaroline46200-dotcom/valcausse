@@ -28,3 +28,10 @@ export function joursDepuis(dateStr: string): number {
   const now = new Date()
   return Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24))
 }
+
+/** Affiche la civilité + nom d'un agriculteur. Ex: "GAEC LES AYGUES", "EARL DUPUY" */
+export function nomAgri(a: { nom?: string | null; civilite?: string | null } | null | undefined): string {
+  if (!a) return '—'
+  const parts = [a.civilite, a.nom].filter(Boolean)
+  return parts.length > 0 ? parts.join(' ') : '—'
+}

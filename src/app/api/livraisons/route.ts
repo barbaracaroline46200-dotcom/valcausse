@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
         produit:produits(*),
         fournisseur:fournisseurs(id,nom),
         transporteur:transporteurs(id,nom),
-        contrats_vente(id,agriculteur:agriculteurs(id,nom,ville_livraison))
+        contrats_vente(id,agriculteur:agriculteurs(id,civilite,nom,ville_livraison))
       )
     `)
     .order('mois_prevu', { ascending: false })

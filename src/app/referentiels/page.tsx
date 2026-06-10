@@ -23,7 +23,21 @@ const FIELDS: Record<Tab, Array<{ key: string; label: string; required?: boolean
     { key: 'notes', label: 'Notes' },
   ],
   agriculteurs: [
-    { key: 'nom', label: 'Nom', required: true },
+    { key: 'civilite', label: 'Civilité (forme juridique)', type: 'select', options: [
+      { value: 'EARL', label: 'EARL' },
+      { value: 'GAEC', label: 'GAEC' },
+      { value: 'SAS', label: 'SAS' },
+      { value: 'SARL', label: 'SARL' },
+      { value: 'SCEA', label: 'SCEA' },
+      { value: 'GFA', label: 'GFA' },
+      { value: 'GIE', label: 'GIE' },
+      { value: 'SCL', label: 'SCL' },
+      { value: 'SA', label: 'SA' },
+      { value: 'Ferme', label: 'Ferme' },
+      { value: 'M.', label: 'M.' },
+      { value: 'Mme', label: 'Mme' },
+    ]},
+    { key: 'nom', label: 'Nom (sans civilité)', required: true },
     { key: 'adresse_livraison', label: 'Adresse livraison' },
     { key: 'ville_livraison', label: 'Ville livraison' },
     { key: 'telephone', label: 'Téléphone' },
@@ -178,11 +192,12 @@ function AgriculteursList({ data, onEdit }: { data: any[]; onEdit: (item: any) =
   return (
     <table className="w-full">
       <thead className="bg-gray-50/50">
-        <tr>{['Nom', 'Ville livraison', 'Téléphone', 'Email', 'N° client', ''].map((h, i) => <th key={i} className="table-header">{h}</th>)}</tr>
+        <tr>{['Civilité', 'Nom', 'Ville livraison', 'Téléphone', 'Email', 'N° client', ''].map((h, i) => <th key={i} className="table-header">{h}</th>)}</tr>
       </thead>
       <tbody>
         {data.map(a => (
           <tr key={a.id} className="table-row">
+            <td className="table-cell text-gray-500 text-sm">{a.civilite ?? '—'}</td>
             <td className="table-cell font-medium">{a.nom}</td>
             <td className="table-cell">{a.ville_livraison ?? '—'}</td>
             <td className="table-cell text-gray-500">{a.telephone ?? '—'}</td>
@@ -191,7 +206,7 @@ function AgriculteursList({ data, onEdit }: { data: any[]; onEdit: (item: any) =
             <td className="table-cell w-10"><EditBtn onClick={() => onEdit(a)} /></td>
           </tr>
         ))}
-        {data.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Aucun agriculteur</td></tr>}
+        {data.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Aucun agriculteur</td></tr>}
       </tbody>
     </table>
   )

@@ -134,7 +134,7 @@ export default function CmrPage() {
                       </a>
                     </td>
                     <td className="table-cell font-medium">{l.contrat_achat?.produit?.nom ?? '—'}</td>
-                    <td className="table-cell text-sm">{agri?.nom ?? '—'}</td>
+                    <td className="table-cell text-sm">{[agri?.civilite, agri?.nom].filter(Boolean).join(' ') || '—'}</td>
                     <td className="table-cell">{l.contrat_achat?.transporteur?.nom ?? '—'}</td>
                     <td className="table-cell">
                       <span className={!isRealisee ? 'text-amber-700 font-medium' : ''}>{dateAffichee}</span>

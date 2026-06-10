@@ -163,7 +163,7 @@ export default function VentesPage() {
                   <td className="table-cell font-medium">
                     {v.destination_silo
                       ? <span className="inline-flex items-center gap-1 text-amber-700 text-xs font-medium">🏚 {v.silo_nom ?? 'Silo'}</span>
-                      : (v.agriculteur?.nom ?? '—')}
+                      : ([v.agriculteur?.civilite, v.agriculteur?.nom].filter(Boolean).join(' ') || '—')}
                   </td>
                   <td className="table-cell">{v.produit?.nom ?? '—'}</td>
                   <td className="table-cell">

@@ -26,7 +26,7 @@ export async function GET() {
         numero_contrat,
         destination_silo,
         silo_nom,
-        agriculteur:agriculteurs(nom)
+        agriculteur:agriculteurs(civilite,nom)
       )
     `)
     .order('mois_prevu', { ascending: true })
