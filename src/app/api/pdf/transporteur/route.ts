@@ -127,6 +127,7 @@ export async function GET(req: NextRequest) {
     row('Nom', [agriculteur.civilite, agriculteur.nom].filter(Boolean).join(' ') || '—')
     if (agriculteur.adresse_livraison) row('Adresse', agriculteur.adresse_livraison)
     if (agriculteur.ville_livraison) row('Ville', agriculteur.ville_livraison)
+    if (agriculteur.telephone) row('Téléphone', agriculteur.telephone)
   } else {
     row('Destination', liv.ville_destination ?? '—')
   }
