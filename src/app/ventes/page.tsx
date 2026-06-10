@@ -186,9 +186,9 @@ export default function VentesPage() {
                       <span className="badge-appro">Départ silo</span>
                     )}
                   </td>
-                  <td className="table-cell font-semibold">{formatTonnes(total)}</td>
                   <td className="table-cell text-sm text-gray-600">{v.contrat_achat?.fournisseur?.nom ?? '—'}</td>
                   <td className="table-cell text-sm text-gray-600">{v.contrat_achat?.transporteur?.nom ?? '—'}</td>
+                  <td className="table-cell font-semibold">{formatTonnes(total)}</td>
                   <td className="table-cell min-w-[120px]">
                     <ProgressBar value={livre} total={total} />
                   </td>
