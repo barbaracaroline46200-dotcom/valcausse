@@ -135,6 +135,7 @@ export default function VentesPage() {
                     <SortHeader label="Agriculteur"      col="agriculteur_id" sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
                     <SortHeader label="Produit"          col="produit_id"     sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
                     <th className="table-header">Contrat achat lié</th>
+                    <th className="table-header">Fournisseur</th>
                     <th className="table-header">Transporteur</th>
                     <SortHeader label="Total"            col="quantite"       sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
                     <th className="table-header">Livré</th>
@@ -146,7 +147,7 @@ export default function VentesPage() {
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={11} className="px-4 py-10 text-center text-gray-400">Aucun contrat trouvé</td></tr>
+                <tr><td colSpan={12} className="px-4 py-10 text-center text-gray-400">Aucun contrat trouvé</td></tr>
               )}
               {filtered.map(v => {
                 const livsRealisees = (v.livraisons ?? []).filter((l: any) => l.type === 'realisee')
@@ -179,9 +180,8 @@ export default function VentesPage() {
                     )}
                   </td>
                   <td className="table-cell font-semibold">{formatTonnes(total)}</td>
-                  <td className="table-cell text-sm text-gray-600">
-                    {v.contrat_achat?.transporteur?.nom ?? '—'}
-                  </td>
+                  <td className="table-cell text-sm text-gray-600">{v.contrat_achat?.fournisseur?.nom ?? '—'}</td>
+                  <td className="table-cell text-sm text-gray-600">{v.contrat_achat?.transporteur?.nom ?? '—'}</td>
                   <td className="table-cell min-w-[120px]">
                     <ProgressBar value={livre} total={total} />
                   </td>
