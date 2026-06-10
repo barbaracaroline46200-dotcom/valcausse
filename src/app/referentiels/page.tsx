@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { BookOpen, Plus, Loader2, Users, Wheat, Truck, UserCheck, Package, Pencil } from 'lucide-react'
+import { BookOpen, Plus, Loader2, Users, Wheat, Truck, UserCheck, Package, Pencil, Trash2 } from 'lucide-react'
 import { useAdmin } from '@/components/ui/AdminProvider'
 import Modal from '@/components/ui/Modal'
 
@@ -81,6 +81,17 @@ export default function ReferentielsPage() {
   const [showAdd, setShowAdd] = useState(false)
   const [editing, setEditing] = useState<any | null>(null)
 
+  async function deleteItem(id: string) {
+    if (!confirm('Supprimer cet élément ? Cette action est irréversible.')) return
+    const res = await fetch(`${URLS[tab]}/${id}`, { method: 'DELETE' })
+    if (res.ok) {
+      loadAll()
+    } else {
+      const d = await res.json()
+      alert('Impossible de supprimer : ' + (d.error ?? 'erreur'))
+    }
+  }
+
   async function loadAll() {
     const [f, a, c, t, p] = await Promise.all([
       fetch('/api/referentiels/fournisseurs').then(r => r.json()),
@@ -137,11 +148,11 @@ export default function ReferentielsPage() {
 
       <div className="card-section overflow-hidden">
         <div className="overflow-x-auto">
-          {tab === 'fournisseurs' && <FournisseursList data={data.fournisseurs} onEdit={setEditing} />}
-          {tab === 'agriculteurs' && <AgriculteursList data={data.agriculteurs} onEdit={setEditing} />}
-          {tab === 'courtiers' && <CortiersList data={data.courtiers} onEdit={setEditing} />}
-          {tab === 'transporteurs' && <TransporteursList data={data.transporteurs} onEdit={setEditing} />}
-          {tab === 'produits' && <ProduitsList data={data.produits} onEdit={setEditing} />}
+          {tab === 'fournisseurs' && <FournisseursList data={data.fournisseurs} onEdit={setEditing} onDelete={deleteItem} />}
+          {tab === 'agriculteurs' && <AgriculteursList data={data.agriculteurs} onEdit={setEditing} onDelete={deleteItem} />}
+          {tab === 'courtiers' && <CortiersList data={data.courtiers} onEdit={setEditing} onDelete={deleteItem} />}
+          {tab === 'transporteurs' && <TransporteursList data={data.transporteurs} onEdit={setEditing} onDelete={deleteItem} />}
+          {tab === 'produits' && <ProduitsList data={data.produits} onEdit={setEditing} onDelete={deleteItem} />}
         </div>
       </div>
 
@@ -163,7 +174,15 @@ function EditBtn({ onClick }: { onClick: () => void }) {
   )
 }
 
-function FournisseursList({ data, onEdit }: { data: any[]; onEdit: (item: any) => void }) {
+function DeleteBtn({ onClick }: { onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="p-1.5 rounded hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors" title="Supprimer">
+      <Trash2 size={14} />
+    </button>
+  )
+}
+
+function FournisseursList({ data, onEdit, onDelete }: { data: any[]; onEdit: (item: any) => void; onDelete: (id: string) => void }) {
   return (
     <table className="w-full">
       <thead className="bg-gray-50/50">
@@ -181,7 +200,7 @@ function FournisseursList({ data, onEdit }: { data: any[]; onEdit: (item: any) =
                 <div key={p.id} className="text-xs text-gray-600">{p.libelle} — {p.ville}</div>
               ))}
             </td>
-            <td className="table-cell w-10"><EditBtn onClick={() => onEdit(f)} /></td>
+            <td className="table-cell w-10"><div className="flex gap-1"><EditBtn onClick={() => onEdit(f)} /><DeleteBtn onClick={() => onDelete(f.id)} /></div></td>
           </tr>
         ))}
         {data.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Aucun fournisseur</td></tr>}
@@ -190,7 +209,7 @@ function FournisseursList({ data, onEdit }: { data: any[]; onEdit: (item: any) =
   )
 }
 
-function AgriculteursList({ data, onEdit }: { data: any[]; onEdit: (item: any) => void }) {
+function AgriculteursList({ data, onEdit, onDelete }: { data: any[]; onEdit: (item: any) => void; onDelete: (id: string) => void }) {
   return (
     <table className="w-full">
       <thead className="bg-gray-50/50">
@@ -205,7 +224,7 @@ function AgriculteursList({ data, onEdit }: { data: any[]; onEdit: (item: any) =
             <td className="table-cell text-gray-500">{a.telephone ?? '—'}</td>
             <td className="table-cell text-gray-500">{a.email ?? '—'}</td>
             <td className="table-cell text-xs text-gray-400">{a.numero_client_logiciel ?? '—'}</td>
-            <td className="table-cell w-10"><EditBtn onClick={() => onEdit(a)} /></td>
+            <td className="table-cell w-10"><div className="flex gap-1"><EditBtn onClick={() => onEdit(a)} /><DeleteBtn onClick={() => onDelete(a.id)} /></div></td>
           </tr>
         ))}
         {data.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Aucun agriculteur</td></tr>}
@@ -214,7 +233,7 @@ function AgriculteursList({ data, onEdit }: { data: any[]; onEdit: (item: any) =
   )
 }
 
-function CortiersList({ data, onEdit }: { data: any[]; onEdit: (item: any) => void }) {
+function CortiersList({ data, onEdit, onDelete }: { data: any[]; onEdit: (item: any) => void; onDelete: (id: string) => void }) {
   return (
     <table className="w-full">
       <thead className="bg-gray-50/50">
@@ -228,7 +247,7 @@ function CortiersList({ data, onEdit }: { data: any[]; onEdit: (item: any) => vo
             <td className="table-cell text-gray-500">{c.telephone ?? '—'}</td>
             <td className="table-cell text-gray-500">{c.email ?? '—'}</td>
             <td className="table-cell text-gray-400 text-xs">{c.numero_courtier ?? '—'}</td>
-            <td className="table-cell w-10"><EditBtn onClick={() => onEdit(c)} /></td>
+            <td className="table-cell w-10"><div className="flex gap-1"><EditBtn onClick={() => onEdit(c)} /><DeleteBtn onClick={() => onDelete(c.id)} /></div></td>
           </tr>
         ))}
         {data.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Aucun courtier</td></tr>}
@@ -237,7 +256,7 @@ function CortiersList({ data, onEdit }: { data: any[]; onEdit: (item: any) => vo
   )
 }
 
-function TransporteursList({ data, onEdit }: { data: any[]; onEdit: (item: any) => void }) {
+function TransporteursList({ data, onEdit, onDelete }: { data: any[]; onEdit: (item: any) => void; onDelete: (id: string) => void }) {
   return (
     <table className="w-full">
       <thead className="bg-gray-50/50">
@@ -250,7 +269,7 @@ function TransporteursList({ data, onEdit }: { data: any[]; onEdit: (item: any) 
             <td className="table-cell font-medium">{t.nom}</td>
             <td className="table-cell text-gray-500">{t.telephone ?? '—'}</td>
             <td className="table-cell text-gray-500">{t.email ?? '—'}</td>
-            <td className="table-cell w-10"><EditBtn onClick={() => onEdit(t)} /></td>
+            <td className="table-cell w-10"><div className="flex gap-1"><EditBtn onClick={() => onEdit(t)} /><DeleteBtn onClick={() => onDelete(t.id)} /></div></td>
           </tr>
         ))}
         {data.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Aucun transporteur</td></tr>}
@@ -259,7 +278,7 @@ function TransporteursList({ data, onEdit }: { data: any[]; onEdit: (item: any) 
   )
 }
 
-function ProduitsList({ data, onEdit }: { data: any[]; onEdit: (item: any) => void }) {
+function ProduitsList({ data, onEdit, onDelete }: { data: any[]; onEdit: (item: any) => void; onDelete: (id: string) => void }) {
   return (
     <table className="w-full">
       <thead className="bg-gray-50/50">
@@ -274,7 +293,7 @@ function ProduitsList({ data, onEdit }: { data: any[]; onEdit: (item: any) => vo
                 {p.famille === 'negoce' ? 'Négoce' : 'Appro'}
               </span>
             </td>
-            <td className="table-cell w-10"><EditBtn onClick={() => onEdit(p)} /></td>
+            <td className="table-cell w-10"><div className="flex gap-1"><EditBtn onClick={() => onEdit(p)} /><DeleteBtn onClick={() => onDelete(p.id)} /></div></td>
           </tr>
         ))}
         {data.length === 0 && <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-400">Aucun produit</td></tr>}
