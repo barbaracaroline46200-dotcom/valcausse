@@ -153,7 +153,9 @@ export default function VentesPage() {
                 const livre = livsRealisees.reduce((s: number, l: any) => s + (l.quantite_reelle ?? 0), 0)
                 const total = v.quantite ?? 0
                 const reliquat = total - livre
-                const depasse = v.date_fin && new Date(v.date_fin) < new Date() && reliquat > 0
+                // Pour les contrats silo sans date_fin propre, utiliser celle du contrat d'achat
+                const dateFin = v.date_fin || (v.destination_silo ? v.contrat_achat?.date_fin : null)
+                const depasse = dateFin && new Date(dateFin) < new Date() && reliquat > 0
                 return (
                 <tr key={v.id} className="table-row">
                   <td className="table-cell font-semibold">
@@ -190,8 +192,11 @@ export default function VentesPage() {
                   </td>
                   <td className="table-cell">{formatEurosParTonne(v.prix_vente)}</td>
                   <td className="table-cell text-sm">
-                    {v.date_fin
-                      ? <span className={depasse ? 'text-red-600 font-semibold' : 'text-gray-600'}>{formatDate(v.date_fin)}{depasse ? ' ⚠️' : ''}</span>
+                    {dateFin
+                      ? <span className={depasse ? 'text-red-600 font-semibold' : 'text-gray-600'}>
+                          {formatDate(dateFin)}{depasse ? ' ⚠️' : ''}
+                          {!v.date_fin && v.destination_silo && <span className="ml-1 text-xs text-gray-400">(achat)</span>}
+                        </span>
                       : <span className="text-gray-300">—</span>}
                   </td>
                   <td className="table-cell"><BadgeStatut statut={v.statut} /></td>
