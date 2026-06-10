@@ -197,6 +197,34 @@ export default function VentesPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Bilan totaux */}
+        {filtered.length > 0 && (() => {
+          const totalContrats = filtered.reduce((s, v) => s + (v.quantite ?? 0), 0)
+          const totalLivre = filtered.reduce((s, v) => {
+            const livsR = (v.livraisons ?? []).filter((l: any) => l.type === 'realisee')
+            return s + livsR.reduce((a: number, l: any) => a + (l.quantite_reelle ?? 0), 0)
+          }, 0)
+          const totalReliquat = totalContrats - totalLivre
+          return (
+            <div className="flex items-center gap-6 px-5 py-3 border-t-2 border-gray-100 bg-gray-50 text-sm flex-wrap">
+              <span className="font-semibold text-gray-500 uppercase tracking-wide text-xs">
+                Totaux — {filtered.length} contrat{filtered.length > 1 ? 's' : ''}
+              </span>
+              <span className="flex items-center gap-1.5 text-gray-700">
+                📋 Contracté : <strong className="text-gray-900">{formatTonnes(totalContrats)}</strong>
+              </span>
+              <span className="text-gray-300">|</span>
+              <span className="flex items-center gap-1.5 text-gray-700">
+                ✓ Livré : <strong className="text-green-700">{formatTonnes(totalLivre)}</strong>
+              </span>
+              <span className="text-gray-300">|</span>
+              <span className="flex items-center gap-1.5 text-gray-700">
+                ⏳ Restant : <strong className={totalReliquat > 0 ? 'text-orange-600' : 'text-green-600'}>{formatTonnes(totalReliquat)}</strong>
+              </span>
+            </div>
+          )
+        })()}
       </div>
 
       {showModal && (
