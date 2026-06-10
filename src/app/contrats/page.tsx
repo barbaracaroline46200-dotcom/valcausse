@@ -188,6 +188,7 @@ export default function ContratsPage() {
                 <SortHeader label="Famille"      col="famille"         sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
                 <SortHeader label="Produit"      col="produit_id"      sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
                 <SortHeader label="Fournisseur"  col="fournisseur_id"  sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
+                <th className="table-header">Transporteur</th>
                 <th className="table-header">Contrats de vente</th>
                 <SortHeader label="Total"        col="quantite_totale" sortKey={sortKey} sortDir={sortDir} onToggle={toggle} />
                 <th className="table-header">Livré</th>
@@ -202,7 +203,7 @@ export default function ContratsPage() {
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={14} className="px-4 py-10 text-center text-gray-400">Aucun contrat trouvé</td></tr>
+                <tr><td colSpan={15} className="px-4 py-10 text-center text-gray-400">Aucun contrat trouvé</td></tr>
               )}
               {filtered.map(c => {
                 const isSilo = !!c.gere_par_silo
@@ -224,6 +225,7 @@ export default function ContratsPage() {
                     <td className="table-cell"><BadgeFamille famille={c.famille} /></td>
                     <td className="table-cell font-medium">{c.produit?.nom ?? '—'}</td>
                     <td className="table-cell">{c.fournisseur?.nom ?? '—'}</td>
+                    <td className="table-cell text-sm text-gray-600">{c.transporteur?.nom ?? '—'}</td>
                     <td className="table-cell">
                       {(c.contrats_vente ?? []).length === 0
                         ? <span className="text-xs text-gray-300">—</span>
