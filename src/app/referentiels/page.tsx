@@ -15,12 +15,25 @@ const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
 ]
 
 const CIVILITES = [
-  { value: 'EARL', label: 'EARL' }, { value: 'GAEC', label: 'GAEC' },
-  { value: 'SAS', label: 'SAS' }, { value: 'SARL', label: 'SARL' },
-  { value: 'SCEA', label: 'SCEA' }, { value: 'EURL', label: 'EURL' },
-  { value: 'GFA', label: 'GFA' }, { value: 'GIE', label: 'GIE' },
-  { value: 'SCL', label: 'SCL' }, { value: 'SA', label: 'SA' },
-  { value: 'Ferme', label: 'Ferme' }, { value: 'M.', label: 'M.' },
+  { value: 'EARL', label: 'EARL' },
+  { value: 'GAEC', label: 'GAEC' },
+  { value: 'SCEA', label: 'SCEA' },
+  { value: 'SAS', label: 'SAS' },
+  { value: 'SASU', label: 'SASU' },
+  { value: 'SARL', label: 'SARL' },
+  { value: 'EURL', label: 'EURL' },
+  { value: 'SA', label: 'SA' },
+  { value: 'SNC', label: 'SNC' },
+  { value: 'SCI', label: 'SCI' },
+  { value: 'SCL', label: 'SCL' },
+  { value: 'GFA', label: 'GFA' },
+  { value: 'GIE', label: 'GIE' },
+  { value: 'CUMA', label: 'CUMA' },
+  { value: 'EI', label: 'EI' },
+  { value: 'ETS', label: 'ETS' },
+  { value: 'Ferme', label: 'Ferme' },
+  { value: 'Asso.', label: 'Asso.' },
+  { value: 'M.', label: 'M.' },
   { value: 'Mme', label: 'Mme' },
 ]
 
