@@ -20,7 +20,8 @@ export async function GET() {
         statut,
         famille,
         produit:produits(nom),
-        fournisseur:fournisseurs(nom)
+        fournisseur:fournisseurs(nom),
+        transporteur:transporteurs(nom)
       ),
       contrat_vente:contrats_vente(
         numero_contrat,

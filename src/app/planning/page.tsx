@@ -191,6 +191,7 @@ export default function PlanningPage() {
                 <th className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap w-32">Fournisseur</th>
                 <th className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap w-32">N° Contrat V.</th>
                 <th className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap w-44">Agriculteur</th>
+                <th className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap w-32">Transporteur</th>
                 {/* Colonnes mois */}
                 {moisRange.map(k => (
                   <th key={k} className="px-2 py-2.5 text-center font-semibold text-gray-600 whitespace-nowrap w-20" style={{ minWidth: 80 }}>
@@ -202,7 +203,7 @@ export default function PlanningPage() {
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6 + moisRange.length} className="px-4 py-10 text-center text-gray-400">
+                  <td colSpan={7 + moisRange.length} className="px-4 py-10 text-center text-gray-400">
                     Aucune livraison planifiée correspondant aux filtres
                   </td>
                 </tr>
@@ -239,6 +240,7 @@ export default function PlanningPage() {
                         : <span className="text-gray-800">{clientNom}</span>
                       }
                     </td>
+                    <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{ca.transporteur?.nom ?? '—'}</td>
                     {moisRange.map(k => (
                       <td key={k} className="px-2 py-2 text-center">
                         {moisRow === k
@@ -263,7 +265,7 @@ export default function PlanningPage() {
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-gray-200" style={{ backgroundColor: '#f3f0ee' }}>
-                <td colSpan={6} className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">
+                <td colSpan={7} className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">
                   Total / mois
                 </td>
                 {moisRange.map(k => {
