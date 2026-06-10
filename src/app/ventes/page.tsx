@@ -62,7 +62,14 @@ export default function VentesPage() {
     const base = ventes.filter(v => {
       if (v.statut === 'clos' || v.statut === 'annule') return false
       if (filtFamille && v.contrat_achat?.famille !== filtFamille) return false
-      if (filtStatut && v.statut !== filtStatut) return false
+      if (filtStatut === 'alerte') {
+        const dans30j = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        const dateFin = v.date_fin || (v.destination_silo ? v.contrat_achat?.date_fin : null)
+        const livsR = (v.livraisons ?? []).filter((l: any) => l.type === 'realisee')
+        const livre = livsR.reduce((s: number, l: any) => s + (l.quantite_reelle ?? 0), 0)
+        const rel = (v.quantite ?? 0) - livre
+        if (v.statut !== 'en_cours' || !dateFin || new Date(dateFin) > dans30j || rel <= 0) return false
+      } else if (filtStatut && v.statut !== filtStatut) return false
       if (filtProduit && v.produit_id !== filtProduit) return false
       if (filtAgriculteur && v.agriculteur_id !== filtAgriculteur) return false
       if (filtFournisseur && v.contrat_achat?.fournisseur?.id !== filtFournisseur) return false
@@ -89,7 +96,7 @@ export default function VentesPage() {
 
   const filters = [
     { key: 'famille', label: 'Famille', options: [{ value: 'negoce', label: 'Négoce' }, { value: 'appro', label: 'Appro' }], value: filtFamille, onChange: setFiltFamille },
-    { key: 'statut', label: 'Statut', options: [{ value: 'en_cours', label: 'En cours' }, { value: 'clos', label: 'Clos' }], value: filtStatut, onChange: setFiltStatut },
+    { key: 'statut', label: 'Statut', options: [{ value: 'en_cours', label: 'En cours' }, { value: 'clos', label: 'Clos' }, { value: 'alerte', label: '⚠️ En alerte' }], value: filtStatut, onChange: setFiltStatut },
     { key: 'produit', label: 'Produit', options: produits.map(p => ({ value: p.id, label: p.nom })), value: filtProduit, onChange: setFiltProduit },
     { key: 'fournisseur', label: 'Fournisseur', options: fournisseurs.map(f => ({ value: f.id, label: f.nom })), value: filtFournisseur, onChange: setFiltFournisseur },
     { key: 'transporteur', label: 'Transporteur', options: transporteurs.map(t => ({ value: t.id, label: t.nom })), value: filtTransporteur, onChange: setFiltTransporteur },

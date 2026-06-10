@@ -77,7 +77,12 @@ export default function ContratsPage() {
       .filter(c => {
         if (c.statut === 'clos' || c.statut === 'annule') return false
         if (filtFamille && c.famille !== filtFamille) return false
-        if (filtStatut && c.statut !== filtStatut) return false
+        if (filtStatut === 'alerte') {
+          // En alerte = en cours + date fin dans 30j ou dépassée + reliquat > 0
+          const dans30j = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+          const rel = c.gere_par_silo ? 0 : (c.quantite_totale ?? 0) - (c.livraisons ?? []).filter((l: any) => l.type === 'realisee').reduce((s: number, l: any) => s + (l.quantite_reelle ?? 0), 0)
+          if (c.statut !== 'en_cours' || !c.date_fin || new Date(c.date_fin) > dans30j || rel <= 0) return false
+        } else if (filtStatut && c.statut !== filtStatut) return false
         if (filtProduit && c.produit_id !== filtProduit) return false
         if (filtFournisseur && c.fournisseur_id !== filtFournisseur) return false
         if (filtTransporteur && c.transporteur_id !== filtTransporteur) return false
@@ -138,7 +143,7 @@ export default function ContratsPage() {
 
   const filters = [
     { key: 'famille', label: 'Famille', options: [{ value: 'negoce', label: 'Négoce' }, { value: 'appro', label: 'Appro' }], value: filtFamille, onChange: setFiltFamille },
-    { key: 'statut', label: 'Statut', options: [{ value: 'en_cours', label: 'En cours' }, { value: 'clos', label: 'Clos' }], value: filtStatut, onChange: setFiltStatut },
+    { key: 'statut', label: 'Statut', options: [{ value: 'en_cours', label: 'En cours' }, { value: 'clos', label: 'Clos' }, { value: 'alerte', label: '⚠️ En alerte' }], value: filtStatut, onChange: setFiltStatut },
     { key: 'produit', label: 'Produit', options: produits.map(p => ({ value: p.id, label: p.nom })), value: filtProduit, onChange: setFiltProduit },
     { key: 'fournisseur', label: 'Fournisseur', options: fournisseurs.map(f => ({ value: f.id, label: f.nom })), value: filtFournisseur, onChange: setFiltFournisseur },
     { key: 'transporteur', label: 'Transporteur', options: transporteurs.map(t => ({ value: t.id, label: t.nom })), value: filtTransporteur, onChange: setFiltTransporteur },
