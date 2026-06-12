@@ -62,7 +62,7 @@ export async function GET() {
       id, numero_contrat, famille, prix_transport_prevu,
       produit:produits(nom),
       transporteur:transporteurs(id,nom,email,telephone),
-      contrats_vente(id, numero_contrat, quantite, agriculteur:agriculteurs(id,civilite,nom,ville_livraison))
+      contrats_vente(id, numero_contrat, quantite, destination_silo, silo_nom, agriculteur:agriculteurs(id,civilite,nom,ville_livraison))
     )
   `
 
@@ -73,11 +73,20 @@ export async function GET() {
     .select(cmrSelect)
     .order('date_reelle', { ascending: true })
 
+  // Livraison au silo (pas silo gare) = pas de CMR requis
+  function estDestinationSilo(l: any) {
+    const cv = (l.contrat_achat?.contrats_vente ?? []).find((cv: any) => cv.id === l.contrat_vente_id)
+      ?? l.contrat_achat?.contrats_vente?.[0]
+    if (!cv?.destination_silo) return false
+    const nom = (cv.silo_nom ?? '').toLowerCase()
+    return !nom.includes('gare')
+  }
+
   const cmrRealisees = (toutesLivraisons ?? []).filter(
-    (l: any) => l.type === 'realisee' && !l.numero_lettre_voiture && !l.solde_ouverture
+    (l: any) => l.type === 'realisee' && !l.numero_lettre_voiture && !l.solde_ouverture && !estDestinationSilo(l)
   )
   const cmrPlanifiees = (toutesLivraisons ?? []).filter(
-    (l: any) => l.type === 'planifiee' && !!l.transporteur_contacte && !l.solde_ouverture
+    (l: any) => l.type === 'planifiee' && !!l.transporteur_contacte && !l.solde_ouverture && !estDestinationSilo(l)
   )
 
   // Fusion + dédoublonnage + tri : plus vieille date en premier
