@@ -41,13 +41,8 @@ export default function FacturationPage() {
     else alert('Erreur : impossible de supprimer')
   }
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <Loader2 className="animate-spin text-green-600" size={32} />
-    </div>
-  )
-
-  const total = aFacturer.length + facturesMq.length
+  const [filtFProduit, setFiltFProduit] = useState('')
+  const [filtFAgriculteur, setFiltFAgriculteur] = useState('')
 
   function getAgriFactu(l: any) {
     const ca = l.contrat_achat
@@ -55,8 +50,7 @@ export default function FacturationPage() {
       ?? ca?.contrats_vente?.[0]?.agriculteur
   }
 
-  const [filtFProduit, setFiltFProduit] = useState('')
-  const [filtFAgriculteur, setFiltFAgriculteur] = useState('')
+  const total = aFacturer.length + facturesMq.length
 
   const fProduits = useMemo(() => [...new Set(aFacturer.map((l: any) => l.contrat_achat?.produit?.nom).filter(Boolean))].sort(), [aFacturer])
   const fAgriculteurs = useMemo(() => [...new Set(aFacturer.map((l: any) => getAgriFactu(l)?.nom).filter(Boolean))].sort(), [aFacturer])
@@ -68,6 +62,12 @@ export default function FacturationPage() {
   }), [aFacturer, filtFProduit, filtFAgriculteur])
 
   const hasFiltresF = filtFProduit || filtFAgriculteur
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <Loader2 className="animate-spin text-green-600" size={32} />
+    </div>
+  )
 
   return (
     <div className="space-y-6 pb-10">
