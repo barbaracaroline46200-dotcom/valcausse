@@ -39,12 +39,6 @@ export default function CmrPage() {
     else alert('Erreur : impossible de supprimer')
   }
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <Loader2 className="animate-spin text-green-600" size={32} />
-    </div>
-  )
-
   function getAgri(l: any) {
     return l.contrat_achat?.contrats_vente?.find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur
       ?? l.contrat_achat?.contrats_vente?.[0]?.agriculteur
@@ -62,6 +56,12 @@ export default function CmrPage() {
   }), [cmr, filtTransporteur, filtProduit, filtAgriculteur])
 
   const hasFiltres = filtTransporteur || filtProduit || filtAgriculteur
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <Loader2 className="animate-spin text-green-600" size={32} />
+    </div>
+  )
 
   return (
     <div className="space-y-6 pb-10">
