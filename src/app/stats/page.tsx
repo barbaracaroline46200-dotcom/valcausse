@@ -70,6 +70,7 @@ export default function StatsPage() {
   const [filtAnnee, setFiltAnnee] = useState('')
   const [filtFamille, setFiltFamille] = useState('')
   const [filtAgriculteur, setFiltAgriculteur] = useState('')
+  const [filtProduit, setFiltProduit] = useState('')
 
   useEffect(() => {
     fetch('/api/stats', { cache: 'no-store' }).then(r => r.json()).then(d => {
@@ -79,6 +80,7 @@ export default function StatsPage() {
   }, [])
 
   const annees = useMemo(() => [...new Set(raw.map(c => c.annee).filter(a => a !== '—'))].sort().reverse(), [raw])
+  const produits = useMemo(() => [...new Set(raw.map(c => c.produit?.nom).filter(Boolean))].sort() as string[], [raw])
   const agriculteurs = useMemo(() => {
     const map = new Map<string, string>()
     raw.forEach(c => {
@@ -93,8 +95,9 @@ export default function StatsPage() {
     if (filtAnnee && c.annee !== filtAnnee) return false
     if (filtFamille && c.famille !== filtFamille) return false
     if (filtAgriculteur && !c.agriculteurs.includes(filtAgriculteur)) return false
+    if (filtProduit && c.produit?.nom !== filtProduit) return false
     return true
-  }), [raw, filtAnnee, filtFamille, filtAgriculteur])
+  }), [raw, filtAnnee, filtFamille, filtAgriculteur, filtProduit])
 
   // KPIs agrégés
   const kpis = useMemo(() => ({
@@ -163,15 +166,22 @@ export default function StatsPage() {
           </select>
         </div>
         <div>
+          <label className="label text-xs">Produit</label>
+          <select className="input w-40" value={filtProduit} onChange={e => setFiltProduit(e.target.value)}>
+            <option value="">Tous</option>
+            {produits.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+        <div>
           <label className="label text-xs">Agriculteur (client)</label>
           <select className="input w-48" value={filtAgriculteur} onChange={e => setFiltAgriculteur(e.target.value)}>
             <option value="">Tous</option>
             {agriculteurs.map(([id, nom]) => <option key={id} value={id}>{nom}</option>)}
           </select>
         </div>
-        {(filtAnnee || filtFamille || filtAgriculteur) && (
+        {(filtAnnee || filtFamille || filtAgriculteur || filtProduit) && (
           <button
-            onClick={() => { setFiltAnnee(''); setFiltFamille(''); setFiltAgriculteur('') }}
+            onClick={() => { setFiltAnnee(''); setFiltFamille(''); setFiltAgriculteur(''); setFiltProduit('') }}
             className="btn-secondary text-sm"
           >
             Effacer filtres
