@@ -71,6 +71,8 @@ export default function StatsPage() {
   const [filtFamille, setFiltFamille] = useState('')
   const [filtAgriculteur, setFiltAgriculteur] = useState('')
   const [filtProduit, setFiltProduit] = useState('')
+  const [filtFournisseur, setFiltFournisseur] = useState('')
+  const [filtTransporteur, setFiltTransporteur] = useState('')
 
   useEffect(() => {
     fetch('/api/stats', { cache: 'no-store' }).then(r => r.json()).then(d => {
@@ -81,6 +83,8 @@ export default function StatsPage() {
 
   const annees = useMemo(() => [...new Set(raw.map(c => c.annee).filter(a => a !== '—'))].sort().reverse(), [raw])
   const produits = useMemo(() => [...new Set(raw.map(c => c.produit?.nom).filter(Boolean))].sort() as string[], [raw])
+  const fournisseurs = useMemo(() => [...new Set(raw.map(c => c.fournisseur?.nom).filter(Boolean))].sort() as string[], [raw])
+  const transporteurs = useMemo(() => [...new Set(raw.map(c => c.transporteur?.nom).filter(Boolean))].sort() as string[], [raw])
   const agriculteurs = useMemo(() => {
     const map = new Map<string, string>()
     raw.forEach(c => {
@@ -96,8 +100,10 @@ export default function StatsPage() {
     if (filtFamille && c.famille !== filtFamille) return false
     if (filtAgriculteur && !c.agriculteurs.includes(filtAgriculteur)) return false
     if (filtProduit && c.produit?.nom !== filtProduit) return false
+    if (filtFournisseur && c.fournisseur?.nom !== filtFournisseur) return false
+    if (filtTransporteur && c.transporteur?.nom !== filtTransporteur) return false
     return true
-  }), [raw, filtAnnee, filtFamille, filtAgriculteur, filtProduit])
+  }), [raw, filtAnnee, filtFamille, filtAgriculteur, filtProduit, filtFournisseur, filtTransporteur])
 
   // KPIs agrégés
   const kpis = useMemo(() => ({
@@ -173,15 +179,29 @@ export default function StatsPage() {
           </select>
         </div>
         <div>
+          <label className="label text-xs">Fournisseur</label>
+          <select className="input w-44" value={filtFournisseur} onChange={e => setFiltFournisseur(e.target.value)}>
+            <option value="">Tous</option>
+            {fournisseurs.map(f => <option key={f} value={f}>{f}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="label text-xs">Transporteur</label>
+          <select className="input w-44" value={filtTransporteur} onChange={e => setFiltTransporteur(e.target.value)}>
+            <option value="">Tous</option>
+            {transporteurs.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+        <div>
           <label className="label text-xs">Agriculteur (client)</label>
           <select className="input w-48" value={filtAgriculteur} onChange={e => setFiltAgriculteur(e.target.value)}>
             <option value="">Tous</option>
             {agriculteurs.map(([id, nom]) => <option key={id} value={id}>{nom}</option>)}
           </select>
         </div>
-        {(filtAnnee || filtFamille || filtAgriculteur || filtProduit) && (
+        {(filtAnnee || filtFamille || filtAgriculteur || filtProduit || filtFournisseur || filtTransporteur) && (
           <button
-            onClick={() => { setFiltAnnee(''); setFiltFamille(''); setFiltAgriculteur(''); setFiltProduit('') }}
+            onClick={() => { setFiltAnnee(''); setFiltFamille(''); setFiltAgriculteur(''); setFiltProduit(''); setFiltFournisseur(''); setFiltTransporteur('') }}
             className="btn-secondary text-sm"
           >
             Effacer filtres
