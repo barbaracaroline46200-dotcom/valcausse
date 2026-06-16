@@ -91,8 +91,8 @@ export async function GET(req: NextRequest) {
   if (ca?.courtier) {
     row('Courtier', `${ca.courtier.nom}${ca.courtier.numero_courtier ? ` (n° ${ca.courtier.numero_courtier})` : ''}`)
   }
-  if (ca?.famille === 'appro' && ca?.numero_mise_a_disposition) {
-    row('N° mise à disposition', ca.numero_mise_a_disposition)
+  if (ca?.famille === 'appro' && liv.numero_mise_a_disposition) {
+    row('N° mise à disposition', liv.numero_mise_a_disposition)
   }
   y -= 5
 

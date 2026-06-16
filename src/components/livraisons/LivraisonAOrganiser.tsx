@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Trash2, AlertTriangle } from 'lucide-react'
 import { formatTonnes, formatMois } from '@/lib/annee-agricole'
 
 interface Props {
@@ -103,6 +103,11 @@ export default function LivraisonAOrganiser({ livraison: l, moisCourant, moisSui
           <span className="text-sm text-gray-500">{ca?.transporteur?.nom ?? '—'}</span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {ca?.famille === 'appro' && !l.numero_mise_a_disposition && (
+            <span className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700" title="N° de mise à disposition manquant — requis pour le transporteur">
+              <AlertTriangle size={11} /> N° MAD manquant
+            </span>
+          )}
           <a href={`/contrats/${ca?.id}`} className="text-xs text-green-700 hover:underline">{ca?.numero_contrat}</a>
           {isAdmin && onDelete && (
             <button onClick={onDelete} className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded" title="Supprimer la livraison">
