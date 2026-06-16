@@ -454,7 +454,7 @@ export default function DashboardPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
-                {['Contrat', 'Produit', 'Fournisseur', 'Date fin', 'Reliquat'].map(h => (
+                {['Contrat', 'Produit', 'Fournisseur', 'Vendu à', 'Date fin', 'Reliquat'].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
@@ -463,6 +463,7 @@ export default function DashboardPage() {
               {alertes.map((c: any) => {
                 const rel = reliquat(c.quantite_totale, c.livraisons ?? [])
                 const depasse = c.date_fin && new Date(c.date_fin) < new Date()
+                const acheteurs = (c.contrats_vente ?? []).map((cv: any) => cv.agriculteur?.nom).filter(Boolean)
                 return (
                   <tr key={c.id} className="table-row">
                     <td className="table-cell">
@@ -470,6 +471,9 @@ export default function DashboardPage() {
                     </td>
                     <td className="table-cell">{c.produit?.nom ?? '—'}</td>
                     <td className="table-cell">{c.fournisseur?.nom ?? '—'}</td>
+                    <td className="table-cell text-sm text-gray-600">
+                      {acheteurs.length > 0 ? acheteurs.join(', ') : <span className="text-gray-300">—</span>}
+                    </td>
                     <td className="table-cell">
                       <span className={depasse ? 'text-red-600 font-semibold' : 'text-orange-600 font-medium'}>
                         {formatDate(c.date_fin)}

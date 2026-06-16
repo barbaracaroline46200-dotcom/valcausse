@@ -184,7 +184,7 @@ export async function GET() {
   const dans30j = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   const { data: contratsAlerte } = await supabase
     .from('contrats_achat')
-    .select('*,produit:produits(nom),fournisseur:fournisseurs(nom),livraisons(type,quantite_reelle)')
+    .select('*,produit:produits(nom),fournisseur:fournisseurs(nom),livraisons(type,quantite_reelle),contrats_vente(id,quantite,agriculteur:agriculteurs(nom))')
     .eq('statut', 'en_cours')
     .lte('date_fin', dans30j)
 
