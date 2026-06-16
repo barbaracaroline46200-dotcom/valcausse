@@ -51,20 +51,28 @@ export default function FacturationPage() {
       ?? ca?.contrats_vente?.[0]?.agriculteur
   }
 
-  const total = aFacturer.length + facturesMq.length
+  const total = transportEnAttente.length + fournisseurEnAttente.length + facturesMq.length
+
+  const transportEnAttente = useMemo(() => aFacturer.filter((l: any) => !l.transport_facture), [aFacturer])
+  const fournisseurEnAttente = useMemo(() => aFacturer.filter((l: any) => !l.facture_fournisseur_id), [aFacturer])
 
   const fProduits = useMemo(() => [...new Set(aFacturer.map((l: any) => l.contrat_achat?.produit?.nom).filter(Boolean))].sort(), [aFacturer])
   const fAgriculteurs = useMemo(() => [...new Set(aFacturer.map((l: any) => getAgriFactu(l)?.nom).filter(Boolean))].sort(), [aFacturer])
 
-  const aFacturerFiltres = useMemo(() => aFacturer.filter((l: any) => {
-    if (filtFProduit && l.contrat_achat?.produit?.nom !== filtFProduit) return false
-    if (filtFAgriculteur && (getAgriFactu(l)?.nom ?? '—') !== filtFAgriculteur) return false
-    if (filtFPoids) {
-      const poids = String(l.quantite_reelle ?? '')
-      if (!poids.includes(filtFPoids.replace(',', '.'))) return false
-    }
-    return true
-  }), [aFacturer, filtFProduit, filtFAgriculteur, filtFPoids])
+  function applyFiltres(list: any[]) {
+    return list.filter((l: any) => {
+      if (filtFProduit && l.contrat_achat?.produit?.nom !== filtFProduit) return false
+      if (filtFAgriculteur && (getAgriFactu(l)?.nom ?? '—') !== filtFAgriculteur) return false
+      if (filtFPoids) {
+        const poids = String(l.quantite_reelle ?? '')
+        if (!poids.includes(filtFPoids.replace(',', '.'))) return false
+      }
+      return true
+    })
+  }
+
+  const transportFiltres = useMemo(() => applyFiltres(transportEnAttente), [transportEnAttente, filtFProduit, filtFAgriculteur, filtFPoids])
+  const fournisseurFiltres = useMemo(() => applyFiltres(fournisseurEnAttente), [fournisseurEnAttente, filtFProduit, filtFAgriculteur, filtFPoids])
 
   const hasFiltresF = filtFProduit || filtFAgriculteur || filtFPoids
 
@@ -89,54 +97,56 @@ export default function FacturationPage() {
         <p className="text-gray-500 text-sm mt-0.5">Transport &amp; fournisseur à facturer · Factures clients à récupérer dans Atys</p>
       </div>
 
-      {/* Transport & fournisseur */}
-      <div className="card-section overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2 flex-wrap">
-          <span className="font-semibold text-sm" style={{ color: '#448ab5' }}>Transport &amp; fournisseur à facturer</span>
-          {aFacturer.length > 0 && (
-            <span className="min-w-[20px] h-5 px-1.5 rounded-full text-white text-xs font-bold flex items-center justify-center" style={{ backgroundColor: '#448ab5' }}>
-              {hasFiltresF ? `${aFacturerFiltres.length}/${aFacturer.length}` : aFacturer.length}
-            </span>
-          )}
-          {aFacturer.length > 0 && (
-            <div className="ml-auto flex gap-2 items-center">
-              <input
-                type="text"
-                value={filtFPoids}
-                onChange={e => setFiltFPoids(e.target.value)}
-                placeholder="Recherche poids (t)..."
-                className="input text-xs py-1 w-36"
-              />
-              <select value={filtFProduit} onChange={e => setFiltFProduit(e.target.value)} className="input text-xs py-1 w-36">
-                <option value="">Tous produits</option>
-                {(fProduits as string[]).map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-              <select value={filtFAgriculteur} onChange={e => setFiltFAgriculteur(e.target.value)} className="input text-xs py-1 w-44">
-                <option value="">Tous agriculteurs</option>
-                {(fAgriculteurs as string[]).map(a => <option key={a} value={a}>{a}</option>)}
-              </select>
-              {hasFiltresF && (
-                <button onClick={() => { setFiltFProduit(''); setFiltFAgriculteur(''); setFiltFPoids('') }}
-                  className="text-xs text-gray-400 hover:text-gray-600 underline">Effacer</button>
-              )}
-            </div>
+      {/* Filtres communs */}
+      {aFacturer.length > 0 && (
+        <div className="card flex gap-2 items-center flex-wrap py-3">
+          <input
+            type="text"
+            value={filtFPoids}
+            onChange={e => setFiltFPoids(e.target.value)}
+            placeholder="Recherche poids (t)..."
+            className="input text-xs py-1 w-36"
+          />
+          <select value={filtFProduit} onChange={e => setFiltFProduit(e.target.value)} className="input text-xs py-1 w-36">
+            <option value="">Tous produits</option>
+            {(fProduits as string[]).map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+          <select value={filtFAgriculteur} onChange={e => setFiltFAgriculteur(e.target.value)} className="input text-xs py-1 w-44">
+            <option value="">Tous agriculteurs</option>
+            {(fAgriculteurs as string[]).map(a => <option key={a} value={a}>{a}</option>)}
+          </select>
+          {hasFiltresF && (
+            <button onClick={() => { setFiltFProduit(''); setFiltFAgriculteur(''); setFiltFPoids('') }}
+              className="text-xs text-gray-400 hover:text-gray-600 underline">Effacer</button>
           )}
         </div>
-        {aFacturer.length === 0 ? (
-          <div className="px-5 py-8 text-center text-gray-500 text-sm">Toutes les livraisons sont facturées 🎉</div>
-        ) : aFacturerFiltres.length === 0 ? (
+      )}
+
+      {/* Factures transport */}
+      <div className="card-section overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
+          <span className="font-semibold text-sm" style={{ color: '#d97706' }}>Factures transport à saisir</span>
+          {transportEnAttente.length > 0 && (
+            <span className="min-w-[20px] h-5 px-1.5 rounded-full text-white text-xs font-bold flex items-center justify-center bg-amber-500">
+              {hasFiltresF ? `${transportFiltres.length}/${transportEnAttente.length}` : transportEnAttente.length}
+            </span>
+          )}
+        </div>
+        {transportEnAttente.length === 0 ? (
+          <div className="px-5 py-8 text-center text-gray-500 text-sm">Toutes les factures transport sont saisies 🎉</div>
+        ) : transportFiltres.length === 0 ? (
           <div className="px-5 py-8 text-center text-gray-400 text-sm">Aucun résultat pour ces filtres</div>
         ) : (
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
-                {['Date', 'Produit', 'Contrat', 'Agriculteur', 'Tonnes', 'Transport', 'Fournisseur', ''].map(h => (
-                  <th key={h} className="table-header">{h}</th>
+                {['Date', 'Produit', 'Contrat', 'Agriculteur', 'Tonnes', '', ''].map((h, i) => (
+                  <th key={i} className="table-header">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {aFacturerFiltres.map((l: any) => {
+              {transportFiltres.map((l: any) => {
                 const ca = l.contrat_achat
                 const agri = getAgriFactu(l)
                 return (
@@ -149,16 +159,61 @@ export default function FacturationPage() {
                     <td className="table-cell text-sm">{[agri?.civilite, agri?.nom].filter(Boolean).join(' ') || (l.destination_silo ? 'Silo' : '—')}</td>
                     <td className="table-cell font-semibold">{formatTonnes(l.quantite_reelle)}</td>
                     <td className="table-cell text-center">
-                      {l.transport_facture
-                        ? <span className="badge-clos">✓ Facturé</span>
-                        : <button onClick={() => setFactureTransportModal(l)} className="badge-alerte cursor-pointer hover:opacity-80 transition-opacity">⏳ Saisir →</button>
-                      }
+                      <button onClick={() => setFactureTransportModal(l)} className="badge-alerte cursor-pointer hover:opacity-80 transition-opacity">⏳ Saisir →</button>
                     </td>
+                    {isAdmin && (
+                      <td className="table-cell text-center">
+                        <button onClick={() => deleteLivraison(l.id)} className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded" title="Supprimer">
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Factures fournisseur */}
+      <div className="card-section overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
+          <span className="font-semibold text-sm" style={{ color: '#7B2820' }}>Factures fournisseur à saisir</span>
+          {fournisseurEnAttente.length > 0 && (
+            <span className="min-w-[20px] h-5 px-1.5 rounded-full text-white text-xs font-bold flex items-center justify-center" style={{ backgroundColor: '#7B2820' }}>
+              {hasFiltresF ? `${fournisseurFiltres.length}/${fournisseurEnAttente.length}` : fournisseurEnAttente.length}
+            </span>
+          )}
+        </div>
+        {fournisseurEnAttente.length === 0 ? (
+          <div className="px-5 py-8 text-center text-gray-500 text-sm">Toutes les factures fournisseur sont saisies 🎉</div>
+        ) : fournisseurFiltres.length === 0 ? (
+          <div className="px-5 py-8 text-center text-gray-400 text-sm">Aucun résultat pour ces filtres</div>
+        ) : (
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-100">
+                {['Date', 'Produit', 'Contrat', 'Agriculteur', 'Tonnes', '', ''].map((h, i) => (
+                  <th key={i} className="table-header">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {fournisseurFiltres.map((l: any) => {
+                const ca = l.contrat_achat
+                const agri = getAgriFactu(l)
+                return (
+                  <tr key={l.id} className="table-row">
+                    <td className="table-cell text-sm">{formatDate(l.date_reelle)}</td>
+                    <td className="table-cell font-medium">{ca?.produit?.nom ?? '—'}</td>
+                    <td className="table-cell">
+                      <a href={`/contrats/${ca?.id}`} className="text-green-700 hover:underline text-sm">{ca?.numero_contrat}</a>
+                    </td>
+                    <td className="table-cell text-sm">{[agri?.civilite, agri?.nom].filter(Boolean).join(' ') || (l.destination_silo ? 'Silo' : '—')}</td>
+                    <td className="table-cell font-semibold">{formatTonnes(l.quantite_reelle)}</td>
                     <td className="table-cell text-center">
-                      {l.facture_fournisseur_id
-                        ? <span className="badge-clos">✓ Facturé</span>
-                        : <button onClick={() => setFactureFournisseurModal(l)} className="badge-alerte cursor-pointer hover:opacity-80 transition-opacity">⏳ Saisir →</button>
-                      }
+                      <button onClick={() => setFactureFournisseurModal(l)} className="badge-alerte cursor-pointer hover:opacity-80 transition-opacity">⏳ Saisir →</button>
                     </td>
                     {isAdmin && (
                       <td className="table-cell text-center">
