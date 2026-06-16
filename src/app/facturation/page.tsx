@@ -43,6 +43,7 @@ export default function FacturationPage() {
 
   const [filtFProduit, setFiltFProduit] = useState('')
   const [filtFAgriculteur, setFiltFAgriculteur] = useState('')
+  const [filtFPoids, setFiltFPoids] = useState('')
 
   function getAgriFactu(l: any) {
     const ca = l.contrat_achat
@@ -58,10 +59,14 @@ export default function FacturationPage() {
   const aFacturerFiltres = useMemo(() => aFacturer.filter((l: any) => {
     if (filtFProduit && l.contrat_achat?.produit?.nom !== filtFProduit) return false
     if (filtFAgriculteur && (getAgriFactu(l)?.nom ?? '—') !== filtFAgriculteur) return false
+    if (filtFPoids) {
+      const poids = String(l.quantite_reelle ?? '')
+      if (!poids.includes(filtFPoids.replace(',', '.'))) return false
+    }
     return true
-  }), [aFacturer, filtFProduit, filtFAgriculteur])
+  }), [aFacturer, filtFProduit, filtFAgriculteur, filtFPoids])
 
-  const hasFiltresF = filtFProduit || filtFAgriculteur
+  const hasFiltresF = filtFProduit || filtFAgriculteur || filtFPoids
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -95,6 +100,13 @@ export default function FacturationPage() {
           )}
           {aFacturer.length > 0 && (
             <div className="ml-auto flex gap-2 items-center">
+              <input
+                type="text"
+                value={filtFPoids}
+                onChange={e => setFiltFPoids(e.target.value)}
+                placeholder="Recherche poids (t)..."
+                className="input text-xs py-1 w-36"
+              />
               <select value={filtFProduit} onChange={e => setFiltFProduit(e.target.value)} className="input text-xs py-1 w-36">
                 <option value="">Tous produits</option>
                 {(fProduits as string[]).map(p => <option key={p} value={p}>{p}</option>)}
@@ -104,7 +116,7 @@ export default function FacturationPage() {
                 {(fAgriculteurs as string[]).map(a => <option key={a} value={a}>{a}</option>)}
               </select>
               {hasFiltresF && (
-                <button onClick={() => { setFiltFProduit(''); setFiltFAgriculteur('') }}
+                <button onClick={() => { setFiltFProduit(''); setFiltFAgriculteur(''); setFiltFPoids('') }}
                   className="text-xs text-gray-400 hover:text-gray-600 underline">Effacer</button>
               )}
             </div>
