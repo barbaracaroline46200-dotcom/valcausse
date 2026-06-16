@@ -107,7 +107,12 @@ export default function RecherchePage() {
                     <span className="font-semibold text-green-700">{c.numero_contrat}</span>
                     <BadgeFamille famille={c.famille} />
                   </div>
-                  <span className="text-gray-500 text-sm">{c.produit?.nom} · {c.fournisseur?.nom}</span>
+                  <span className="text-gray-500 text-sm">
+                    {[c.produit?.nom, c.fournisseur?.nom].filter(Boolean).join(' · ')}
+                  </span>
+                  {c.reference_fournisseur && (
+                    <span className="text-xs text-gray-400 italic">Réf. fournisseur : {c.reference_fournisseur}</span>
+                  )}
                 </ResultItem>
               ))}
             </ResultGroup>
@@ -116,9 +121,14 @@ export default function RecherchePage() {
           {results.ventes?.length > 0 && (
             <ResultGroup title="Contrats de vente" icon={<ShoppingCart size={16} />} count={results.ventes.length}>
               {results.ventes.map((v: any) => (
-                <ResultItem key={v.id} href={`/ventes`}>
-                  <span className="font-semibold text-green-700">{v.numero_contrat}</span>
-                  <span className="text-gray-500 text-sm">{v.produit?.nom} · {v.agriculteur?.nom}</span>
+                <ResultItem key={v.id} href={v.contrat_achat?.id ? `/contrats/${v.contrat_achat.id}` : `/ventes`}>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-green-700">{v.numero_contrat}</span>
+                    {v.contrat_achat && <BadgeFamille famille={v.contrat_achat.famille} />}
+                  </div>
+                  <span className="text-gray-500 text-sm">
+                    {[v.produit?.nom, v.agriculteur?.nom, v.contrat_achat?.numero_contrat].filter(Boolean).join(' · ')}
+                  </span>
                 </ResultItem>
               ))}
             </ResultGroup>
