@@ -51,10 +51,10 @@ export default function FacturationPage() {
       ?? ca?.contrats_vente?.[0]?.agriculteur
   }
 
-  const total = transportEnAttente.length + fournisseurEnAttente.length + facturesMq.length
-
   const transportEnAttente = useMemo(() => aFacturer.filter((l: any) => !l.transport_facture), [aFacturer])
   const fournisseurEnAttente = useMemo(() => aFacturer.filter((l: any) => !l.facture_fournisseur_id), [aFacturer])
+
+  const total = transportEnAttente.length + fournisseurEnAttente.length + facturesMq.length
 
   const fProduits = useMemo(() => [...new Set(aFacturer.map((l: any) => l.contrat_achat?.produit?.nom).filter(Boolean))].sort(), [aFacturer])
   const fAgriculteurs = useMemo(() => [...new Set(aFacturer.map((l: any) => getAgriFactu(l)?.nom).filter(Boolean))].sort(), [aFacturer])
