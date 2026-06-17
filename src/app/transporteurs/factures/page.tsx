@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react'
 import { Truck, Loader2 } from 'lucide-react'
 import { formatDate, formatTonnes, formatEuros, getAnneeAgricoleISO, getAnneeAgricoleLabel } from '@/lib/annee-agricole'
-import { ecartTransport } from '@/lib/utils'
 import { useAdmin } from '@/components/ui/AdminProvider'
 
 export default function FacturesTransporteurPage() {
@@ -63,16 +62,15 @@ export default function FacturesTransporteurPage() {
     setLivraisons(livs)
   }
 
-  const totalPrevu = livraisons.reduce((s, l) => s + (l.quantite_reelle ?? 0) * (l.contrat_achat?.prix_transport_prevu ?? 0), 0)
-  const totalReel = livraisons.reduce((s, l) => s + (l.montant_transport_reel ?? 0), 0)
-  const totalEcart = livraisons.reduce((s, l) => {
-    const e = ecartTransport(l.montant_transport_reel, l.quantite_reelle, l.contrat_achat?.prix_transport_prevu)
-    return s + (e ?? 0)
-  }, 0)
+  // montant_transport_reel = prix/tonne réel saisi
+  const totalTonnes = livraisons.reduce((s, l) => s + (l.quantite_reelle ?? 0), 0)
+  const totalMontantPrevu = livraisons.reduce((s, l) => s + (l.quantite_reelle ?? 0) * (l.contrat_achat?.prix_transport_prevu ?? 0), 0)
+  const totalMontantReel = livraisons.reduce((s, l) => s + (l.montant_transport_reel != null ? l.montant_transport_reel * (l.quantite_reelle ?? 0) : 0), 0)
+  const totalEcart = totalMontantReel - totalMontantPrevu
 
   // Annuel
   const annuelPrevu = annuelle.reduce((s, l) => s + (l.quantite_reelle ?? 0) * (l.contrat_achat?.prix_transport_prevu ?? 0), 0)
-  const annuelReel = annuelle.reduce((s, l) => s + (l.montant_transport_reel ?? 0), 0)
+  const annuelReel = annuelle.reduce((s, l) => s + (l.montant_transport_reel != null ? l.montant_transport_reel * (l.quantite_reelle ?? 0) : 0), 0)
 
   return (
     <div className="space-y-6 pb-10">
@@ -130,37 +128,41 @@ export default function FacturesTransporteurPage() {
             <table className="w-full">
               <thead className="bg-gray-50/50">
                 <tr>
-                  {['Enlèvement', 'Destination', 'Date', 'Tonnes', 'Prévu', 'Réel (€)', 'Écart', 'Facturé'].map(h => (
+                  {['Enlèvement', 'Destination', 'Date', 'Tonnes', 'Prévu (€/t)', 'Réel (€/t)', 'Montant facture', 'Écart (€)', 'Facturé'].map(h => (
                     <th key={h} className="table-header">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {livraisons.length === 0 && (
-                  <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Aucune livraison réalisée ce mois</td></tr>
+                  <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">Aucune livraison réalisée ce mois</td></tr>
                 )}
                 {[...livraisons].sort((a, b) => (b.quantite_reelle ?? 0) - (a.quantite_reelle ?? 0)).map(l => {
-                  const prevu = l.quantite_reelle != null ? l.quantite_reelle * (l.contrat_achat?.prix_transport_prevu ?? 0) : null
-                  const ecart = ecartTransport(l.montant_transport_reel, l.quantite_reelle, l.contrat_achat?.prix_transport_prevu)
+                  const prixPrev = l.contrat_achat?.prix_transport_prevu ?? null
+                  const prixReel = l.montant_transport_reel ?? null
+                  const montantFacture = prixReel != null && l.quantite_reelle != null ? prixReel * l.quantite_reelle : null
+                  const montantPrevu = prixPrev != null && l.quantite_reelle != null ? prixPrev * l.quantite_reelle : null
+                  const ecart = montantFacture != null && montantPrevu != null ? montantFacture - montantPrevu : null
                   return (
                     <tr key={l.id} className="table-row">
                       <td className="table-cell">{l.ville_chargement ?? '—'}</td>
                       <td className="table-cell">{l.ville_destination ?? '—'}</td>
                       <td className="table-cell">{formatDate(l.date_reelle)}</td>
                       <td className="table-cell font-semibold">{formatTonnes(l.quantite_reelle)}</td>
-                      <td className="table-cell text-gray-500">{formatEuros(prevu)}</td>
+                      <td className="table-cell text-gray-500">{prixPrev != null ? `${prixPrev.toFixed(2)} €/t` : '—'}</td>
                       <td className="table-cell">
                         {isAdmin ? (
                           <input
                             type="number"
-                            step="0.01"
-                            defaultValue={l.montant_transport_reel ?? ''}
+                            step="0.001"
+                            defaultValue={prixReel ?? ''}
                             onBlur={e => updateMontantReel(l.id, e.target.value)}
                             className="input w-28 py-1 text-sm"
-                            placeholder="Saisir..."
+                            placeholder="€/t..."
                           />
-                        ) : formatEuros(l.montant_transport_reel)}
+                        ) : (prixReel != null ? `${prixReel.toFixed(3)} €/t` : '—')}
                       </td>
+                      <td className="table-cell font-semibold">{formatEuros(montantFacture)}</td>
                       <td className="table-cell">
                         {ecart != null && (
                           <span className={`font-bold text-sm ${ecart <= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -187,9 +189,10 @@ export default function FacturesTransporteurPage() {
                 <tfoot>
                   <tr className="bg-gray-50 border-t-2 border-gray-200">
                     <td colSpan={3} className="px-4 py-3 text-sm font-bold text-gray-700">Total</td>
-                    <td className="px-4 py-3 text-sm font-bold">{formatTonnes(livraisons.reduce((s, l) => s + (l.quantite_reelle ?? 0), 0))}</td>
-                    <td className="px-4 py-3 text-sm font-bold text-gray-500">{formatEuros(totalPrevu)}</td>
-                    <td className="px-4 py-3 text-sm font-bold">{formatEuros(totalReel)}</td>
+                    <td className="px-4 py-3 text-sm font-bold">{formatTonnes(totalTonnes)}</td>
+                    <td className="px-4 py-3 text-sm font-bold text-gray-500">{formatEuros(totalMontantPrevu)}</td>
+                    <td className="px-4 py-3 text-sm font-bold text-gray-400 text-xs">—</td>
+                    <td className="px-4 py-3 text-sm font-bold">{formatEuros(totalMontantReel)}</td>
                     <td className="px-4 py-3 text-sm font-bold">
                       <span className={totalEcart <= 0 ? 'text-green-600' : 'text-red-600'}>
                         {totalEcart >= 0 ? '+' : ''}{formatEuros(totalEcart)}
