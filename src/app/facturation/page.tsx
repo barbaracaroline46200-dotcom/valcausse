@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { usePathname } from 'next/navigation'
 import { Receipt, Loader2, Trash2, CheckSquare, Square } from 'lucide-react'
 import SaisirFactureTransportModal from '@/components/livraisons/SaisirFactureTransportModal'
-import SaisirFactureFournisseurModal from '@/components/livraisons/SaisirFactureFournisseurModal'
+import SaisirFactureFournisseurGroupeModal from '@/components/livraisons/SaisirFactureFournisseurGroupeModal'
 import SaisirFactureClientModal from '@/components/livraisons/SaisirFactureClientModal'
 import { useAdmin } from '@/components/ui/AdminProvider'
 import { formatDate, formatTonnes } from '@/lib/annee-agricole'
@@ -17,8 +17,10 @@ export default function FacturationPage() {
   const [aFacturerClient, setAFacturerClient] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [factureTransportModal, setFactureTransportModal] = useState<any>(null)
-  const [factureFournisseurModal, setFactureFournisseurModal] = useState<any>(null)
+  const [factureFournisseurGroupeModal, setFactureFournisseurGroupeModal] = useState<any[] | null>(null)
   const [factureClientModal, setFactureClientModal] = useState<any[]| null>(null)
+  const [selectionFournisseur, setSelectionFournisseur] = useState<Set<string>>(new Set())
+  const [filtFournisseurActif, setFiltFournisseurActif] = useState('')
   const [cochage, setCochage] = useState<string | null>(null)
   const [selectionSaisie, setSelectionSaisie] = useState<Set<string>>(new Set())
 
@@ -241,41 +243,100 @@ export default function FacturationPage() {
         <div className="card-section overflow-hidden">
           {fournisseurEnAttente.length === 0 ? (
             <div className="px-5 py-8 text-center text-gray-500 text-sm">Toutes les factures fournisseur sont saisies 🎉</div>
-          ) : fournisseurFiltres.length === 0 ? (
-            <div className="px-5 py-8 text-center text-gray-400 text-sm">Aucun résultat pour ces filtres</div>
           ) : (
-            <table className="w-full">
-              <thead><tr className="border-b border-gray-100">
-                {['Date', 'Produit', 'Contrat', 'Agriculteur', 'Tonnes', '', ''].map((h, i) => (
-                  <th key={i} className="table-header">{h}</th>
-                ))}
-              </tr></thead>
-              <tbody>
-                {fournisseurFiltres.map((l: any) => {
-                  const ca = l.contrat_achat
-                  const agri = getAgriFactu(l)
-                  return (
-                    <tr key={l.id} className="table-row">
-                      <td className="table-cell text-sm">{formatDate(l.date_reelle)}</td>
-                      <td className="table-cell font-medium">{ca?.produit?.nom ?? '—'}</td>
-                      <td className="table-cell"><a href={`/contrats/${ca?.id}`} className="text-green-700 hover:underline text-sm">{ca?.numero_contrat}</a>{l.note_alerte && <span className="ml-1"><AlerteNote note={l.note_alerte} size={13} /></span>}{ca?.note_alerte && <span className="ml-1"><AlerteNote note={`Contrat : ${ca.note_alerte}`} size={13} /></span>}</td>
-                      <td className="table-cell text-sm">{[agri?.civilite, agri?.nom].filter(Boolean).join(' ') || (l.destination_silo ? 'Silo' : '—')}</td>
-                      <td className="table-cell font-semibold">{formatTonnes(l.quantite_reelle)}</td>
-                      <td className="table-cell text-center">
-                        <button onClick={() => setFactureFournisseurModal(l)} className="badge-alerte cursor-pointer hover:opacity-80 transition-opacity">⏳ Saisir →</button>
-                      </td>
-                      {isAdmin && (
-                        <td className="table-cell text-center">
-                          <button onClick={() => deleteLivraison(l.id)} className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded" title="Supprimer">
-                            <Trash2 size={14} />
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+            <>
+              {/* Sélecteur fournisseur + bouton action */}
+              <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-3 flex-wrap">
+                <select
+                  value={filtFournisseurActif}
+                  onChange={e => { setFiltFournisseurActif(e.target.value); setSelectionFournisseur(new Set()) }}
+                  className="input text-sm py-1.5 w-56"
+                >
+                  <option value="">— Choisir un fournisseur —</option>
+                  {optFournisseurs.map((f: string) => (
+                    <option key={f} value={f}>{f}</option>
+                  ))}
+                </select>
+                {filtFournisseurActif && (
+                  <span className="text-xs text-gray-500">
+                    {fournisseurFiltres.filter((l: any) => (l.contrat_achat?.fournisseur?.nom ?? '') === filtFournisseurActif).length} livraison(s) non facturée(s)
+                  </span>
+                )}
+                {selectionFournisseur.size > 0 && (
+                  <button
+                    onClick={() => {
+                      const livs = fournisseurEnAttente.filter(l => selectionFournisseur.has(l.id))
+                      setFactureFournisseurGroupeModal(livs)
+                    }}
+                    className="ml-auto px-4 py-1.5 rounded-lg text-white text-sm font-semibold"
+                    style={{ backgroundColor: '#7B2820' }}
+                  >
+                    Créer la facture ({selectionFournisseur.size})
+                  </button>
+                )}
+              </div>
+
+              {!filtFournisseurActif ? (
+                <div className="px-5 py-8 text-center text-gray-400 text-sm">Sélectionnez un fournisseur pour voir ses livraisons</div>
+              ) : (() => {
+                const livsF = fournisseurFiltres.filter((l: any) => (l.contrat_achat?.fournisseur?.nom ?? '') === filtFournisseurActif)
+                if (livsF.length === 0) return <div className="px-5 py-8 text-center text-gray-400 text-sm">Aucun résultat</div>
+                return (
+                  <table className="w-full">
+                    <thead><tr className="border-b border-gray-100">
+                      {['', 'Date', 'Famille', 'Produit', 'Contrat', 'Agriculteur', 'Tonnes', ''].map((h, i) => (
+                        <th key={i} className="table-header">{h}</th>
+                      ))}
+                    </tr></thead>
+                    <tbody>
+                      {livsF.map((l: any) => {
+                        const ca = l.contrat_achat
+                        const agri = getAgriFactu(l)
+                        const checked = selectionFournisseur.has(l.id)
+                        return (
+                          <tr
+                            key={l.id}
+                            className={`table-row cursor-pointer ${checked ? 'bg-red-50/60' : ''}`}
+                            onClick={() => setSelectionFournisseur(prev => {
+                              const next = new Set(prev)
+                              if (next.has(l.id)) next.delete(l.id); else next.add(l.id)
+                              return next
+                            })}
+                          >
+                            <td className="table-cell text-center">
+                              {checked
+                                ? <CheckSquare size={16} className="mx-auto" style={{ color: '#7B2820' }} />
+                                : <Square size={16} className="text-gray-300 mx-auto" />}
+                            </td>
+                            <td className="table-cell text-sm">{formatDate(l.date_reelle)}</td>
+                            <td className="table-cell text-xs">
+                              <span className={`px-2 py-0.5 rounded-full font-semibold ${ca?.famille === 'appro' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
+                                {ca?.famille === 'appro' ? 'Appro' : 'Négoce'}
+                              </span>
+                            </td>
+                            <td className="table-cell font-medium">{ca?.produit?.nom ?? '—'}</td>
+                            <td className="table-cell">
+                              <a href={`/contrats/${ca?.id}`} className="text-green-700 hover:underline text-sm" onClick={e => e.stopPropagation()}>{ca?.numero_contrat}</a>
+                              {l.note_alerte && <span className="ml-1"><AlerteNote note={l.note_alerte} size={13} /></span>}
+                              {ca?.note_alerte && <span className="ml-1"><AlerteNote note={`Contrat : ${ca.note_alerte}`} size={13} /></span>}
+                            </td>
+                            <td className="table-cell text-sm">{[agri?.civilite, agri?.nom].filter(Boolean).join(' ') || (l.destination_silo ? 'Silo' : '—')}</td>
+                            <td className="table-cell font-semibold">{formatTonnes(l.quantite_reelle)}</td>
+                            {isAdmin && (
+                              <td className="table-cell text-center">
+                                <button onClick={e => { e.stopPropagation(); deleteLivraison(l.id) }} className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded">
+                                  <Trash2 size={14} />
+                                </button>
+                              </td>
+                            )}
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                )
+              })()}
+            </>
           )}
         </div>
       )}
@@ -446,11 +507,11 @@ export default function FacturationPage() {
           onSaved={() => { setFactureTransportModal(null); reload() }}
         />
       )}
-      {factureFournisseurModal && (
-        <SaisirFactureFournisseurModal
-          livraison={factureFournisseurModal}
-          onClose={() => setFactureFournisseurModal(null)}
-          onSaved={() => { setFactureFournisseurModal(null); reload() }}
+      {factureFournisseurGroupeModal && (
+        <SaisirFactureFournisseurGroupeModal
+          livraisons={factureFournisseurGroupeModal}
+          onClose={() => setFactureFournisseurGroupeModal(null)}
+          onSaved={() => { setFactureFournisseurGroupeModal(null); setSelectionFournisseur(new Set()); reload() }}
         />
       )}
       {factureClientModal && (
