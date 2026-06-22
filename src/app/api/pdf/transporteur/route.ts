@@ -29,11 +29,7 @@ export async function GET(req: NextRequest) {
   const ca = liv.contrat_achat as any
   const contratVenteId = (liv as any).contrat_vente_id
   const contrats_vente: any[] = ca?.contrats_vente ?? []
-  // Priorité 1 : contrat de vente lié directement à cette livraison
-  // Priorité 2 : premier contrat de vente qui n'est pas un silo
-  const cv = contratVenteId
-    ? contrats_vente.find((v: any) => v.id === contratVenteId) ?? contrats_vente.find((v: any) => !v.destination_silo)
-    : contrats_vente.find((v: any) => !v.destination_silo) ?? contrats_vente[0]
+  const cv = contrats_vente.find((v: any) => v.id === contratVenteId)
   const agriculteur = cv?.agriculteur
 
   const pdfDoc = await PDFDocument.create()
