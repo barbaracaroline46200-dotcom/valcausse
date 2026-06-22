@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useMemo } from 'react'
-import { Loader2, Grid3X3 } from 'lucide-react'
+import { Loader2, Grid3X3, CheckCircle2, CalendarCheck, Clock } from 'lucide-react'
 
 const MOIS_NOMS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
 const MOIS_LONGS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
@@ -154,7 +154,20 @@ export default function PlanningPage() {
       </div>
 
       {/* Légende */}
-      <div className="flex items-center gap-4 text-xs text-gray-500">
+      <div className="flex items-center gap-4 text-xs text-gray-500 flex-wrap">
+        <span className="flex items-center gap-1.5">
+          <CheckCircle2 size={14} className="text-green-600" />
+          Réalisée
+        </span>
+        <span className="flex items-center gap-1.5">
+          <CalendarCheck size={14} className="text-blue-600" />
+          Planifiée (transporteur contacté)
+        </span>
+        <span className="flex items-center gap-1.5">
+          <Clock size={14} className="text-orange-500" />
+          À organiser
+        </span>
+        <span className="text-gray-300">|</span>
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: '#fdf5f3', border: '2px solid #7B2820' }} />
           Négoce
@@ -166,14 +179,6 @@ export default function PlanningPage() {
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: '#fffbeb', border: '2px solid #C8941A' }} />
           Silo
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="inline-flex items-center justify-center w-4 h-4 rounded text-white text-[10px] font-bold" style={{ backgroundColor: '#15803d' }}>✓</span>
-          Réalisée
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="inline-flex items-center justify-center w-4 h-4 rounded text-white text-[10px] font-bold" style={{ backgroundColor: '#7B2820' }}>✕</span>
-          Planifiée
         </span>
         <span className="ml-4 text-gray-400">{filtered.length} livraison{filtered.length > 1 ? 's' : ''}</span>
       </div>
@@ -223,9 +228,20 @@ export default function PlanningPage() {
                     style={rowStyle(ca.famille, isSilo)}
                   >
                     <td className="px-3 py-2 whitespace-nowrap">
-                      {ca.statut === 'en_cours'
-                        ? <span className="badge-en_cours text-[10px]">En cours</span>
-                        : <span className="badge-clos text-[10px]">Clos</span>
+                      {isRealisee
+                        ? <span className="flex items-center gap-1 text-green-700 font-semibold text-[11px]">
+                            <CheckCircle2 size={14} className="text-green-600 flex-shrink-0" />
+                            Livré
+                          </span>
+                        : row.transporteur_contacte
+                          ? <span className="flex items-center gap-1 text-blue-700 font-semibold text-[11px]">
+                              <CalendarCheck size={14} className="text-blue-600 flex-shrink-0" />
+                              Planifié
+                            </span>
+                          : <span className="flex items-center gap-1 text-orange-600 font-semibold text-[11px]">
+                              <Clock size={14} className="text-orange-500 flex-shrink-0" />
+                              À organiser
+                            </span>
                       }
                     </td>
                     <td className="px-3 py-2 font-medium text-gray-800 whitespace-nowrap">{ca.produit?.nom ?? '—'}</td>
