@@ -181,7 +181,8 @@ export default function ArchivesPage() {
                     <tr><td colSpan={10} className="px-4 py-10 text-center text-gray-400">Aucun contrat archivé</td></tr>
                   )}
                   {filteredContrats.map(c => {
-                    const livre = c.gere_par_silo ? c.quantite_totale : quantiteLivree(c.livraisons ?? [])
+                    const qte = c.quantite_totale ?? 0
+                    const livre = c.gere_par_silo ? qte : quantiteLivree(c.livraisons ?? [])
                     return (
                       <tr key={c.id} className="table-row opacity-80">
                         <td className="table-cell">
@@ -209,10 +210,10 @@ export default function ArchivesPage() {
                             )
                           }
                         </td>
-                        <td className="table-cell">{formatTonnes(c.quantite_totale)}</td>
+                        <td className="table-cell">{formatTonnes(qte)}</td>
                         <td className="table-cell">
                           <div className="min-w-[100px]">
-                            <ProgressBar value={livre} total={c.quantite_totale} showLabel={false} />
+                            <ProgressBar value={livre} total={qte} showLabel={false} />
                             <div className="text-xs text-gray-500 mt-0.5">{formatTonnes(livre)}</div>
                           </div>
                         </td>

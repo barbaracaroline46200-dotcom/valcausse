@@ -213,11 +213,12 @@ export default function ContratsPage() {
               )}
               {filtered.map(c => {
                 const isSilo = !!c.gere_par_silo
-                const livre = isSilo ? c.quantite_totale : quantiteLivree(c.livraisons ?? [])
-                const rel = isSilo ? 0 : reliquat(c.quantite_totale, c.livraisons ?? [])
+                const qte = c.quantite_totale ?? 0
+                const livre = isSilo ? qte : quantiteLivree(c.livraisons ?? [])
+                const rel = isSilo ? 0 : reliquat(qte, c.livraisons ?? [])
                 const depasse = !isSilo && c.date_fin && new Date(c.date_fin) < new Date() && c.statut === 'en_cours' && rel > 0
                 const totalVendu = (c.contrats_vente ?? []).reduce((s: number, cv: any) => s + (cv.quantite ?? 0), 0)
-                const nonReserve = Math.max(0, c.quantite_totale - totalVendu)
+                const nonReserve = Math.max(0, qte - totalVendu)
                 return (
                   <tr key={c.id} className="table-row">
                     <td className="table-cell">
@@ -254,10 +255,10 @@ export default function ContratsPage() {
                         )
                       }
                     </td>
-                    <td className="table-cell">{formatTonnes(c.quantite_totale)}</td>
+                    <td className="table-cell">{formatTonnes(qte)}</td>
                     <td className="table-cell">
                       <div className="min-w-[100px]">
-                        <ProgressBar value={livre} total={c.quantite_totale} showLabel={false} />
+                        <ProgressBar value={livre} total={qte} showLabel={false} />
                         <div className="text-xs text-gray-500 mt-0.5">{formatTonnes(livre)}</div>
                       </div>
                     </td>
