@@ -523,7 +523,7 @@ export default function DashboardPage() {
           color="orange"
           subtitle="Ces livraisons appro sont à organiser mais n'ont pas encore de n° de mise à disposition — requis pour le transporteur et le PDF"
         >
-          <MadTable livraisons={approSansMad} onSaved={reload} />
+          <MadTable livraisons={approSansMad} onSaved={reloadData} />
         </Section>
       )}
 
