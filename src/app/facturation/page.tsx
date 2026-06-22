@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { usePathname } from 'next/navigation'
 import { Receipt, Loader2, Trash2, CheckSquare, Square } from 'lucide-react'
-import SaisirFactureTransportModal from '@/components/livraisons/SaisirFactureTransportModal'
+import SaisirFactureTransportGroupeModal from '@/components/livraisons/SaisirFactureTransportGroupeModal'
 import SaisirFactureFournisseurGroupeModal from '@/components/livraisons/SaisirFactureFournisseurGroupeModal'
 import SaisirFactureClientModal from '@/components/livraisons/SaisirFactureClientModal'
 import { useAdmin } from '@/components/ui/AdminProvider'
@@ -16,8 +16,11 @@ export default function FacturationPage() {
   const [aVerifierClient, setAVerifierClient] = useState<any[]>([])
   const [aFacturerClient, setAFacturerClient] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [factureTransportModal, setFactureTransportModal] = useState<any>(null)
+  const [factureTransportGroupeModal, setFactureTransportGroupeModal] = useState<any[] | null>(null)
   const [factureFournisseurGroupeModal, setFactureFournisseurGroupeModal] = useState<any[] | null>(null)
+  const [selectionTransport, setSelectionTransport] = useState<Set<string>>(new Set())
+  const [prixTransport, setPrixTransport] = useState<Record<string, string>>({})
+  const [filtTransporteurActif, setFiltTransporteurActif] = useState('')
   const [factureClientModal, setFactureClientModal] = useState<any[]| null>(null)
   const [selectionFournisseur, setSelectionFournisseur] = useState<Set<string>>(new Set())
   const [filtFournisseurActif, setFiltFournisseurActif] = useState('')
@@ -199,41 +202,130 @@ export default function FacturationPage() {
         <div className="card-section overflow-hidden">
           {transportEnAttente.length === 0 ? (
             <div className="px-5 py-8 text-center text-gray-500 text-sm">Toutes les factures transport sont saisies 🎉</div>
-          ) : transportFiltres.length === 0 ? (
-            <div className="px-5 py-8 text-center text-gray-400 text-sm">Aucun résultat pour ces filtres</div>
           ) : (
-            <table className="w-full">
-              <thead><tr className="border-b border-gray-100">
-                {['Date', 'Produit', 'Contrat', 'Agriculteur', 'Tonnes', '', ''].map((h, i) => (
-                  <th key={i} className="table-header">{h}</th>
-                ))}
-              </tr></thead>
-              <tbody>
-                {transportFiltres.map((l: any) => {
-                  const ca = l.contrat_achat
-                  const agri = getAgriFactu(l)
-                  return (
-                    <tr key={l.id} className="table-row">
-                      <td className="table-cell text-sm">{formatDate(l.date_reelle)}</td>
-                      <td className="table-cell font-medium">{ca?.produit?.nom ?? '—'}</td>
-                      <td className="table-cell"><a href={`/contrats/${ca?.id}`} className="text-green-700 hover:underline text-sm">{ca?.numero_contrat}</a>{l.note_alerte && <span className="ml-1"><AlerteNote note={l.note_alerte} size={13} /></span>}{ca?.note_alerte && <span className="ml-1"><AlerteNote note={`Contrat : ${ca.note_alerte}`} size={13} /></span>}</td>
-                      <td className="table-cell text-sm">{[agri?.civilite, agri?.nom].filter(Boolean).join(' ') || (l.destination_silo ? 'Silo' : '—')}</td>
-                      <td className="table-cell font-semibold">{formatTonnes(l.quantite_reelle)}</td>
-                      <td className="table-cell text-center">
-                        <button onClick={() => setFactureTransportModal(l)} className="badge-alerte cursor-pointer hover:opacity-80 transition-opacity">⏳ Saisir →</button>
-                      </td>
-                      {isAdmin && (
-                        <td className="table-cell text-center">
-                          <button onClick={() => deleteLivraison(l.id)} className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded" title="Supprimer">
-                            <Trash2 size={14} />
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+            <>
+              {/* Sélecteur transporteur + bouton action */}
+              <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-3 flex-wrap">
+                <select
+                  value={filtTransporteurActif}
+                  onChange={e => { setFiltTransporteurActif(e.target.value); setSelectionTransport(new Set()); setPrixTransport({}) }}
+                  className="input text-sm py-1.5 w-56"
+                >
+                  <option value="">— Choisir un transporteur —</option>
+                  {optTransporteurs.map((t: string) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+                {selectionTransport.size > 0 && (
+                  <button
+                    onClick={() => {
+                      const livs = transportEnAttente.filter(l => selectionTransport.has(l.id))
+                      const selections = livs.map(l => ({ livraison: l, montant: prixTransport[l.id] ?? '' }))
+                      setFactureTransportGroupeModal(selections)
+                    }}
+                    className="ml-auto px-4 py-1.5 rounded-lg text-white text-sm font-semibold"
+                    style={{ backgroundColor: '#d97706' }}
+                  >
+                    Créer la facture ({selectionTransport.size})
+                  </button>
+                )}
+              </div>
+
+              {!filtTransporteurActif ? (
+                <div className="px-5 py-8 text-center text-gray-400 text-sm">Sélectionnez un transporteur pour voir ses livraisons</div>
+              ) : (() => {
+                const livsT = transportFiltres.filter((l: any) => {
+                  const nomT = l.contrat_achat?.transporteur?.nom ?? ''
+                  return nomT === filtTransporteurActif
+                })
+                if (livsT.length === 0) return <div className="px-5 py-8 text-center text-gray-400 text-sm">Aucune livraison non facturée pour ce transporteur</div>
+                return (
+                  <table className="w-full">
+                    <thead><tr className="border-b border-gray-100">
+                      {['', 'Date', 'Produit', 'Contrat', 'Agriculteur', 'Tonnes', 'Prix prévu', 'Prix réel *', ''].map((h, i) => (
+                        <th key={i} className="table-header">{h}</th>
+                      ))}
+                    </tr></thead>
+                    <tbody>
+                      {livsT.map((l: any) => {
+                        const ca = l.contrat_achat
+                        const agri = getAgriFactu(l)
+                        const prixPrevu = ca?.prix_transport_prevu && l.quantite_reelle
+                          ? (ca.prix_transport_prevu * l.quantite_reelle).toFixed(2)
+                          : null
+                        const prix = prixTransport[l.id] ?? ''
+                        const checked = selectionTransport.has(l.id)
+                        const peutCocher = prix.trim() !== '' && !isNaN(parseFloat(prix))
+
+                        function toggleLigne() {
+                          if (!peutCocher) return
+                          setSelectionTransport(prev => {
+                            const next = new Set(prev)
+                            if (next.has(l.id)) next.delete(l.id); else next.add(l.id)
+                            return next
+                          })
+                        }
+
+                        return (
+                          <tr key={l.id} className={`table-row ${checked ? 'bg-amber-50/60' : ''}`}>
+                            <td className="table-cell text-center">
+                              <button
+                                onClick={toggleLigne}
+                                disabled={!peutCocher}
+                                className="disabled:opacity-30"
+                                title={peutCocher ? '' : 'Saisir le prix réel d\'abord'}
+                              >
+                                {checked
+                                  ? <CheckSquare size={16} className="mx-auto text-amber-600" />
+                                  : <Square size={16} className="text-gray-300 mx-auto" />}
+                              </button>
+                            </td>
+                            <td className="table-cell text-sm">{formatDate(l.date_reelle)}</td>
+                            <td className="table-cell font-medium">{ca?.produit?.nom ?? '—'}</td>
+                            <td className="table-cell">
+                              <a href={`/contrats/${ca?.id}`} className="text-green-700 hover:underline text-sm" onClick={e => e.stopPropagation()}>{ca?.numero_contrat}</a>
+                              {l.note_alerte && <span className="ml-1"><AlerteNote note={l.note_alerte} size={13} /></span>}
+                              {ca?.note_alerte && <span className="ml-1"><AlerteNote note={`Contrat : ${ca.note_alerte}`} size={13} /></span>}
+                            </td>
+                            <td className="table-cell text-sm">{[agri?.civilite, agri?.nom].filter(Boolean).join(' ') || (l.destination_silo ? 'Silo' : '—')}</td>
+                            <td className="table-cell font-semibold">{formatTonnes(l.quantite_reelle)}</td>
+                            <td className="table-cell text-sm text-gray-400">{prixPrevu ? `${prixPrevu} €` : '—'}</td>
+                            <td className="table-cell">
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={prix}
+                                  onChange={e => {
+                                    const val = e.target.value
+                                    setPrixTransport(prev => ({ ...prev, [l.id]: val }))
+                                    // Décocher si on efface le prix
+                                    if (!val.trim()) {
+                                      setSelectionTransport(prev => { const n = new Set(prev); n.delete(l.id); return n })
+                                    }
+                                  }}
+                                  placeholder={prixPrevu ?? '0.00'}
+                                  className="input text-xs py-1 w-24"
+                                  onClick={e => e.stopPropagation()}
+                                />
+                                <span className="text-xs text-gray-400">€</span>
+                              </div>
+                            </td>
+                            {isAdmin && (
+                              <td className="table-cell text-center">
+                                <button onClick={() => deleteLivraison(l.id)} className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded">
+                                  <Trash2 size={14} />
+                                </button>
+                              </td>
+                            )}
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                )
+              })()}
+            </>
           )}
         </div>
       )}
@@ -500,11 +592,11 @@ export default function FacturationPage() {
         </div>
       )}
 
-      {factureTransportModal && (
-        <SaisirFactureTransportModal
-          livraison={factureTransportModal}
-          onClose={() => setFactureTransportModal(null)}
-          onSaved={() => { setFactureTransportModal(null); reload() }}
+      {factureTransportGroupeModal && (
+        <SaisirFactureTransportGroupeModal
+          selections={factureTransportGroupeModal}
+          onClose={() => setFactureTransportGroupeModal(null)}
+          onSaved={() => { setFactureTransportGroupeModal(null); setSelectionTransport(new Set()); setPrixTransport({}); reload() }}
         />
       )}
       {factureFournisseurGroupeModal && (
