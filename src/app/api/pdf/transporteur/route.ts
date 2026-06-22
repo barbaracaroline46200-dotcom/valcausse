@@ -156,6 +156,33 @@ export async function GET(req: NextRequest) {
   page.drawLine({ start: { x: 50, y }, end: { x: width - 50, y }, thickness: 1, color: brun })
   y -= 20
 
+  // Encadré d'avertissement transporteur
+  const noteLines = [
+    '⚠  RAPPELS IMPORTANTS',
+    '',
+    '• Appelez l\'agriculteur plusieurs heures avant la livraison pour',
+    '  convenir de l\'heure exacte et vous assurer de sa disponibilité.',
+    '',
+    '• Vérifiez que votre matériel est adapté au site de chargement',
+    '  ET au site de déchargement (benne, citerne, dimensions, accès…).',
+  ]
+  const noteBlockHeight = noteLines.length * 16 + 24
+  page.drawRectangle({ x: 50, y: y - noteBlockHeight + 16, width: width - 100, height: noteBlockHeight, color: rgb(1, 0.941, 0.902) })
+  page.drawRectangle({ x: 50, y: y - noteBlockHeight + 16, width: 5, height: noteBlockHeight, color: brun })
+  noteLines.forEach((line, i) => {
+    const isTitle = i === 0
+    page.drawText(line, {
+      x: 62,
+      y: y - i * 16,
+      font: isTitle ? fontBold : font,
+      size: isTitle ? 11 : 9.5,
+      color: isTitle ? brun : black,
+    })
+  })
+  y -= noteBlockHeight + 15
+  page.drawLine({ start: { x: 50, y }, end: { x: width - 50, y }, thickness: 0.5, color: gray })
+  y -= 15
+
   const nomTransporteur = ca?.transporteur?.nom ?? '—'
   const dateEnvoi = new Date().toLocaleDateString('fr-FR')
   page.drawText(`Transporteur : ${nomTransporteur} — Envoyé le ${dateEnvoi}`, {
