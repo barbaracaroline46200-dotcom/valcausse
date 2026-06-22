@@ -19,6 +19,7 @@ import NouvelleVenteModal from '@/components/contrats/NouvelleVenteModal'
 import AffecterSiloModal from '@/components/contrats/AffecterSiloModal'
 import { getPrefixes } from '@/lib/prefixes'
 import SoldeOuvertureModal from '@/components/livraisons/SoldeOuvertureModal'
+import AlerteNote from '@/components/ui/AlerteNote'
 
 export default function ContratDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -400,7 +401,7 @@ export default function ContratDetailPage() {
                 <tbody>
                   {livraisonsPlanifiees.map((l: any) => (
                     <tr key={l.id} className="table-row">
-                      <td className="table-cell font-medium">{formatDate(l.mois_prevu)}</td>
+                      <td className="table-cell font-medium">{formatDate(l.mois_prevu)}{l.note_alerte && <span className="ml-1"><AlerteNote note={l.note_alerte} size={13} /></span>}</td>
                       <td className="table-cell text-xs">
                         {(() => {
                           const cv = l.contrat_vente_id ? (contrat.contrats_vente ?? []).find((v: any) => v.id === l.contrat_vente_id) : null
@@ -487,7 +488,7 @@ export default function ContratDetailPage() {
                     const prevu = l.quantite_reelle != null ? l.quantite_reelle * contrat.prix_transport_prevu : null
                     return (
                       <tr key={l.id} className="table-row bg-green-50/40 hover:bg-green-50/80">
-                        <td className="table-cell font-medium">{formatDate(l.date_reelle)}</td>
+                        <td className="table-cell font-medium">{formatDate(l.date_reelle)}{l.note_alerte && <span className="ml-1"><AlerteNote note={l.note_alerte} size={13} /></span>}</td>
                         <td className="table-cell text-xs">
                           {(() => {
                             const cv = (contrat.contrats_vente ?? []).find((v: any) => v.id === l.contrat_vente_id)

@@ -19,6 +19,7 @@ export default function ModifierVenteModal({ vente, contrat, onClose, onSaved }:
     date_debut: vente.date_debut ?? '',
     date_fin: vente.date_fin ?? '',
     notes: vente.notes ?? '',
+    note_alerte: vente.note_alerte ?? '',
   })
   const [agriculteurs, setAgriculteurs] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
@@ -45,6 +46,7 @@ export default function ModifierVenteModal({ vente, contrat, onClose, onSaved }:
       date_debut: form.date_debut || null,
       date_fin: form.date_fin || null,
       notes: form.notes || null,
+      note_alerte: form.note_alerte || null,
     }
     const res = await fetch(`/api/ventes/${vente.id}`, {
       method: 'PATCH',
@@ -103,6 +105,13 @@ export default function ModifierVenteModal({ vente, contrat, onClose, onSaved }:
           <div className="col-span-2">
             <label className="label">Notes</label>
             <textarea className="input" rows={3} value={form.notes} onChange={f('notes')} placeholder="Informations complémentaires..." />
+          </div>
+          <div className="col-span-2">
+            <label className="label flex items-center gap-1.5">
+              <span className="text-amber-500">⚠</span> Note d'alerte
+              <span className="text-xs text-gray-400 font-normal">(affichée partout sous forme d'icône au survol)</span>
+            </label>
+            <textarea className="input border-amber-200 focus:border-amber-400" rows={2} value={form.note_alerte} onChange={f('note_alerte')} placeholder="Ex : prix à vérifier avec l'agriculteur avant facturation" />
           </div>
         </div>
         {error && <p className="text-red-600 text-sm">{error}</p>}

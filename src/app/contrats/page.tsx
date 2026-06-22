@@ -11,6 +11,7 @@ import Link from 'next/link'
 import NouveauContratModal from '@/components/contrats/NouveauContratModal'
 import { useAdmin } from '@/components/ui/AdminProvider'
 import { useSortable } from '@/lib/useSortable'
+import AlerteNote from '@/components/ui/AlerteNote'
 
 function SortHeader({ label, col, sortKey, sortDir, onToggle, className }: {
   label: string; col: string; sortKey: string; sortDir: 'asc'|'desc'; onToggle: (k: any) => void; className?: string
@@ -223,6 +224,7 @@ export default function ContratsPage() {
                       <Link href={`/contrats/${c.id}`} className="font-semibold text-green-700 hover:underline">
                         {c.numero_contrat}
                       </Link>
+                      {c.note_alerte && <span className="ml-1.5"><AlerteNote note={c.note_alerte} /></span>}
                       {isSilo && (
                         <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700">🏗 Silo</span>
                       )}
@@ -243,6 +245,7 @@ export default function ContratsPage() {
                                   : <>
                                       <span className="font-semibold text-green-700">{cv.numero_contrat}</span>
                                       {cv.agriculteur?.nom && <span className="text-gray-500"> · {cv.agriculteur.nom}</span>}
+                                      {cv.note_alerte && <span className="ml-1"><AlerteNote note={cv.note_alerte} size={13} /></span>}
                                     </>
                                 }
                               </span>

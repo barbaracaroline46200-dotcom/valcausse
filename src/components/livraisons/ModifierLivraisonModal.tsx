@@ -37,6 +37,7 @@ export default function ModifierLivraisonModal({ livraison, contrat, onClose, on
     numero_mise_a_disposition: livraison.numero_mise_a_disposition ?? '',
     contrat_vente_id: livraison.contrat_vente_id ?? '',
     destination_silo: livraison.destination_silo ?? false,
+    note_alerte: livraison.note_alerte ?? '',
   })
   const [agriculteurs, setAgriculteurs] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
@@ -82,6 +83,7 @@ export default function ModifierLivraisonModal({ livraison, contrat, onClose, on
       transporteur_id: form.transporteur_id || null,
       numero_mise_a_disposition: form.numero_mise_a_disposition || null,
       contrat_vente_id: form.destination_silo ? null : (form.contrat_vente_id || null),
+      note_alerte: form.note_alerte || null,
       destination_silo: form.destination_silo,
     }
     const res = await fetch(`/api/livraisons/${livraison.id}`, {
@@ -171,6 +173,15 @@ export default function ModifierLivraisonModal({ livraison, contrat, onClose, on
               <input className="input flex-1" value={form.piece_client_numero} onChange={f('piece_client_numero')} placeholder="Numéro..." />
             </div>
           </div>
+        </div>
+        <div>
+          <label className="label flex items-center gap-1.5">
+            <span className="text-amber-500">⚠</span> Note d'alerte
+            <span className="text-xs text-gray-400 font-normal">(affichée partout sous forme d'icône au survol)</span>
+          </label>
+          <textarea className="input border-amber-200 focus:border-amber-400" rows={2} value={form.note_alerte}
+            onChange={e => setForm(prev => ({ ...prev, note_alerte: e.target.value }))}
+            placeholder="Ex : vérifier le poids à réception" />
         </div>
         {error && <p className="text-red-600 text-sm">{error}</p>}
         <div className="flex justify-end gap-3">

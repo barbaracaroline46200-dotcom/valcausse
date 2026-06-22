@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { Trash2, AlertTriangle } from 'lucide-react'
 import { formatTonnes, formatMois } from '@/lib/annee-agricole'
+import AlerteNote from '@/components/ui/AlerteNote'
 
 interface Props {
   livraison: any
@@ -109,6 +110,8 @@ export default function LivraisonAOrganiser({ livraison: l, moisCourant, moisSui
             </span>
           )}
           <a href={`/contrats/${ca?.id}`} className="text-xs text-green-700 hover:underline">{ca?.numero_contrat}</a>
+          {l.note_alerte && <AlerteNote note={l.note_alerte} size={14} />}
+          {ca?.note_alerte && <AlerteNote note={`Contrat : ${ca.note_alerte}`} size={14} />}
           {isAdmin && onDelete && (
             <button onClick={onDelete} className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded" title="Supprimer la livraison">
               <Trash2 size={14} />

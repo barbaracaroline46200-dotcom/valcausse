@@ -28,6 +28,7 @@ export default function ModifierContratModal({ contrat, onClose, onSaved }: Prop
     date_debut: contrat.date_debut ?? '',
     date_fin: contrat.date_fin ?? '',
     notes: contrat.notes ?? '',
+    note_alerte: contrat.note_alerte ?? '',
     base_prix: contrat.base_prix ?? '',
     mbm_autorise: contrat.mbm_autorise ?? false,
     gere_par_silo: contrat.gere_par_silo ?? false,
@@ -222,6 +223,13 @@ export default function ModifierContratModal({ contrat, onClose, onSaved }: Prop
           <div className="col-span-2">
             <label className="label">Notes</label>
             <textarea className="input" rows={2} value={form.notes} onChange={f('notes')} />
+          </div>
+          <div className="col-span-2">
+            <label className="label flex items-center gap-1.5">
+              <span className="text-amber-500">⚠</span> Note d'alerte
+              <span className="text-xs text-gray-400 font-normal">(affichée partout sous forme d'icône au survol)</span>
+            </label>
+            <textarea className="input border-amber-200 focus:border-amber-400" rows={2} value={form.note_alerte} onChange={f('note_alerte')} placeholder="Ex : attention, le fournisseur facture à 180 € au lieu de 175 €" />
           </div>
         </div>
 

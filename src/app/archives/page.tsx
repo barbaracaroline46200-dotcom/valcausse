@@ -9,6 +9,7 @@ import ProgressBar from '@/components/ui/ProgressBar'
 import { formatDate, formatTonnes, formatEurosParTonne } from '@/lib/annee-agricole'
 import { quantiteLivree } from '@/lib/utils'
 import Link from 'next/link'
+import AlerteNote from '@/components/ui/AlerteNote'
 
 type Tab = 'achat' | 'vente'
 
@@ -187,6 +188,7 @@ export default function ArchivesPage() {
                           <Link href={`/contrats/${c.id}`} className="font-semibold text-green-700 hover:underline">
                             {c.numero_contrat}
                           </Link>
+                          {c.note_alerte && <span className="ml-1.5"><AlerteNote note={c.note_alerte} /></span>}
                         </td>
                         <td className="table-cell"><BadgeFamille famille={c.famille} /></td>
                         <td className="table-cell font-medium">{c.produit?.nom ?? '—'}</td>
@@ -200,6 +202,7 @@ export default function ArchivesPage() {
                                   <span key={cv.id} className="text-xs leading-tight">
                                     <span className="font-semibold text-green-700">{cv.numero_contrat}</span>
                                     {cv.agriculteur?.nom && <span className="text-gray-500"> · {cv.agriculteur.nom}</span>}
+                                    {cv.note_alerte && <span className="ml-1"><AlerteNote note={cv.note_alerte} size={13} /></span>}
                                   </span>
                                 ))}
                               </div>
