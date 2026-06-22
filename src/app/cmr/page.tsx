@@ -40,23 +40,42 @@ export default function CmrPage() {
     else alert('Erreur : impossible de supprimer')
   }
 
+  const [onglet, setOnglet] = useState<'normal' | 'negoce_silo' | 'appro_gare'>('normal')
+
   function getAgri(l: any) {
     return l.contrat_achat?.contrats_vente?.find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur
       ?? l.contrat_achat?.contrats_vente?.[0]?.agriculteur
   }
 
-  const transporteurs = useMemo(() => [...new Set(cmr.map((l: any) => l.contrat_achat?.transporteur?.nom).filter(Boolean))].sort(), [cmr])
-  const fournisseurs  = useMemo(() => [...new Set(cmr.map((l: any) => l.contrat_achat?.fournisseur?.nom).filter(Boolean))].sort(), [cmr])
-  const produits      = useMemo(() => [...new Set(cmr.map((l: any) => l.contrat_achat?.produit?.nom).filter(Boolean))].sort(), [cmr])
-  const agriculteurs  = useMemo(() => [...new Set(cmr.map((l: any) => getAgri(l)?.nom).filter(Boolean))].sort(), [cmr])
+  function getCv(l: any) {
+    return l.contrat_achat?.contrats_vente?.find((cv: any) => cv.id === l.contrat_vente_id)
+      ?? l.contrat_achat?.contrats_vente?.[0]
+  }
 
-  const cmrFiltres = useMemo(() => cmr.filter((l: any) => {
+  function categorise(l: any): 'normal' | 'negoce_silo' | 'appro_gare' {
+    const cv = getCv(l)
+    if (!cv?.destination_silo) return 'normal'
+    return (cv.silo_nom ?? '').toLowerCase().includes('gare') ? 'appro_gare' : 'negoce_silo'
+  }
+
+  const cmrNormal     = useMemo(() => cmr.filter(l => categorise(l) === 'normal'),      [cmr])
+  const cmrNegoSilo   = useMemo(() => cmr.filter(l => categorise(l) === 'negoce_silo'), [cmr])
+  const cmrApproGare  = useMemo(() => cmr.filter(l => categorise(l) === 'appro_gare'),  [cmr])
+
+  const listeActive = onglet === 'normal' ? cmrNormal : onglet === 'negoce_silo' ? cmrNegoSilo : cmrApproGare
+
+  const transporteurs = useMemo(() => [...new Set(listeActive.map((l: any) => l.contrat_achat?.transporteur?.nom).filter(Boolean))].sort(), [listeActive])
+  const fournisseurs  = useMemo(() => [...new Set(listeActive.map((l: any) => l.contrat_achat?.fournisseur?.nom).filter(Boolean))].sort(), [listeActive])
+  const produits      = useMemo(() => [...new Set(listeActive.map((l: any) => l.contrat_achat?.produit?.nom).filter(Boolean))].sort(), [listeActive])
+  const agriculteurs  = useMemo(() => [...new Set(listeActive.map((l: any) => getAgri(l)?.nom).filter(Boolean))].sort(), [listeActive])
+
+  const cmrFiltres = useMemo(() => listeActive.filter((l: any) => {
     if (filtTransporteur && l.contrat_achat?.transporteur?.nom !== filtTransporteur) return false
     if (filtFournisseur  && l.contrat_achat?.fournisseur?.nom  !== filtFournisseur)  return false
     if (filtProduit      && l.contrat_achat?.produit?.nom      !== filtProduit)      return false
     if (filtAgriculteur  && (getAgri(l)?.nom ?? '—')           !== filtAgriculteur)  return false
     return true
-  }), [cmr, filtTransporteur, filtFournisseur, filtProduit, filtAgriculteur])
+  }), [listeActive, filtTransporteur, filtFournisseur, filtProduit, filtAgriculteur])
 
   const hasFiltres = filtTransporteur || filtFournisseur || filtProduit || filtAgriculteur
 
@@ -79,9 +98,44 @@ export default function CmrPage() {
               </span>
             )}
           </h1>
-          <p className="text-gray-500 text-sm mt-0.5">Livraisons sans lettre de voiture — cliquer pour saisir le CMR</p>
+          <p className="text-gray-500 text-sm mt-0.5">Cliquer sur une ligne pour saisir le CMR / BA</p>
         </div>
-        {cmr.length > 0 && (
+      </div>
+
+      {/* Onglets */}
+      <div className="flex gap-1 border-b border-gray-200">
+        {([
+          { key: 'normal',      label: 'Livraisons',        count: cmrNormal.length,    color: '#dc2626', desc: 'CMR manquant' },
+          { key: 'negoce_silo', label: 'Silo Négoce',       count: cmrNegoSilo.length,  color: '#7B2820', desc: 'BA manquant' },
+          { key: 'appro_gare',  label: 'Silo gare Appro',   count: cmrApproGare.length, color: '#d97706', desc: 'CMR manquant' },
+        ] as const).map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => { setOnglet(tab.key); setFiltTransporteur(''); setFiltFournisseur(''); setFiltProduit(''); setFiltAgriculteur('') }}
+            className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              onglet === tab.key ? 'border-current' : 'border-transparent text-gray-400 hover:text-gray-600'
+            }`}
+            style={onglet === tab.key ? { color: tab.color } : {}}
+          >
+            {tab.label}
+            {tab.count > 0 && (
+              <span className="min-w-[20px] h-5 px-1.5 rounded-full text-white text-xs font-bold flex items-center justify-center"
+                style={{ backgroundColor: tab.color }}>
+                {tab.count}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Filtres + description */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <p className="text-xs text-gray-400">
+          {onglet === 'normal' && 'Livraisons classiques — N° CMR (lettre de voiture) manquant'}
+          {onglet === 'negoce_silo' && 'Négoce vers silo — BA (pièce fournisseur) manquant, pas de CMR'}
+          {onglet === 'appro_gare' && 'Appro vers silo gare — N° CMR manquant'}
+        </p>
+        {listeActive.length > 0 && (
           <div className="flex gap-2 flex-wrap items-center">
             <select value={filtTransporteur} onChange={e => setFiltTransporteur(e.target.value)} className="input text-sm py-1.5 w-40">
               <option value="">Tous transporteurs</option>
@@ -108,8 +162,8 @@ export default function CmrPage() {
       </div>
 
       <div className="card-section overflow-hidden">
-        {cmr.length === 0 ? (
-          <div className="px-5 py-12 text-center text-gray-500 text-sm">Aucun CMR en attente 🎉</div>
+        {listeActive.length === 0 ? (
+          <div className="px-5 py-12 text-center text-gray-500 text-sm">Aucune entrée dans cette catégorie 🎉</div>
         ) : cmrFiltres.length === 0 ? (
           <div className="px-5 py-10 text-center text-gray-400 text-sm">Aucun résultat pour ces filtres</div>
         ) : (
@@ -158,7 +212,7 @@ export default function CmrPage() {
                     </td>
                     <td className="table-cell">
                       {isRealisee
-                        ? <span className="text-xs text-orange-600 font-medium underline">N° CMR manquant →</span>
+                        ? <span className="text-xs text-orange-600 font-medium underline">{onglet === 'negoce_silo' ? 'N° BA manquant →' : 'N° CMR manquant →'}</span>
                         : <span className="text-xs text-red-600 font-medium underline">Saisir CMR →</span>
                       }
                     </td>
