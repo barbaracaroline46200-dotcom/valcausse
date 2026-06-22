@@ -158,6 +158,14 @@ export default function ModifierLivraisonModal({ livraison, contrat, onClose, on
                 <option key={t.id} value={t.id}>{t.nom}</option>
               ))}
             </select>
+            {(() => {
+              const t = form.transporteur_id
+                ? transporteurs.find(t => t.id === form.transporteur_id)
+                : contrat.transporteur
+              return t?.telephone
+                ? <a href={`tel:${t.telephone}`} className="mt-1 flex items-center gap-1 text-xs text-green-700 hover:underline">📞 {t.telephone}</a>
+                : null
+            })()}
           </div>
           <div>
             <label className="label">Pièce fournisseur ({prefixes.fournisseur})</label>
