@@ -75,6 +75,7 @@ export default function FacturationPage() {
   const fournisseurFiltres = useMemo(() => applyFiltres(fournisseurEnAttente), [fournisseurEnAttente, filtFProduit, filtFAgriculteur, filtFPoids])
 
   const hasFiltresF = filtFProduit || filtFAgriculteur || filtFPoids
+  const [onglet, setOnglet] = useState<'transport' | 'fournisseur' | 'client'>('transport')
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -97,8 +98,38 @@ export default function FacturationPage() {
         <p className="text-gray-500 text-sm mt-0.5">Transport &amp; fournisseur à facturer · Factures clients à récupérer dans Atys</p>
       </div>
 
-      {/* Filtres communs */}
-      {aFacturer.length > 0 && (
+      {/* Onglets */}
+      <div className="flex gap-1 border-b border-gray-200">
+        {([
+          { key: 'transport',    label: 'Transport',    count: transportEnAttente.length,  color: '#d97706' },
+          { key: 'fournisseur',  label: 'Fournisseur',  count: fournisseurEnAttente.length, color: '#7B2820' },
+          { key: 'client',       label: 'Client',       count: facturesMq.length,           color: '#448ab5' },
+        ] as const).map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setOnglet(tab.key)}
+            className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              onglet === tab.key
+                ? 'border-current text-current'
+                : 'border-transparent text-gray-400 hover:text-gray-600'
+            }`}
+            style={onglet === tab.key ? { color: tab.color } : {}}
+          >
+            {tab.label}
+            {tab.count > 0 && (
+              <span
+                className="min-w-[20px] h-5 px-1.5 rounded-full text-white text-xs font-bold flex items-center justify-center"
+                style={{ backgroundColor: tab.color }}
+              >
+                {tab.count}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Filtres communs (transport + fournisseur) */}
+      {onglet !== 'client' && aFacturer.length > 0 && (
         <div className="card flex gap-2 items-center flex-wrap py-3">
           <input
             type="text"
@@ -122,163 +153,145 @@ export default function FacturationPage() {
         </div>
       )}
 
-      {/* Factures transport */}
-      <div className="card-section overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-          <span className="font-semibold text-sm" style={{ color: '#d97706' }}>Factures transport à saisir</span>
-          {transportEnAttente.length > 0 && (
-            <span className="min-w-[20px] h-5 px-1.5 rounded-full text-white text-xs font-bold flex items-center justify-center bg-amber-500">
-              {hasFiltresF ? `${transportFiltres.length}/${transportEnAttente.length}` : transportEnAttente.length}
-            </span>
-          )}
-        </div>
-        {transportEnAttente.length === 0 ? (
-          <div className="px-5 py-8 text-center text-gray-500 text-sm">Toutes les factures transport sont saisies 🎉</div>
-        ) : transportFiltres.length === 0 ? (
-          <div className="px-5 py-8 text-center text-gray-400 text-sm">Aucun résultat pour ces filtres</div>
-        ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100">
-                {['Date', 'Produit', 'Contrat', 'Agriculteur', 'Tonnes', '', ''].map((h, i) => (
-                  <th key={i} className="table-header">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {transportFiltres.map((l: any) => {
-                const ca = l.contrat_achat
-                const agri = getAgriFactu(l)
-                return (
-                  <tr key={l.id} className="table-row">
-                    <td className="table-cell text-sm">{formatDate(l.date_reelle)}</td>
-                    <td className="table-cell font-medium">{ca?.produit?.nom ?? '—'}</td>
-                    <td className="table-cell">
-                      <a href={`/contrats/${ca?.id}`} className="text-green-700 hover:underline text-sm">{ca?.numero_contrat}</a>
-                    </td>
-                    <td className="table-cell text-sm">{[agri?.civilite, agri?.nom].filter(Boolean).join(' ') || (l.destination_silo ? 'Silo' : '—')}</td>
-                    <td className="table-cell font-semibold">{formatTonnes(l.quantite_reelle)}</td>
-                    <td className="table-cell text-center">
-                      <button onClick={() => setFactureTransportModal(l)} className="badge-alerte cursor-pointer hover:opacity-80 transition-opacity">⏳ Saisir →</button>
-                    </td>
-                    {isAdmin && (
-                      <td className="table-cell text-center">
-                        <button onClick={() => deleteLivraison(l.id)} className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded" title="Supprimer">
-                          <Trash2 size={14} />
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {/* Factures fournisseur */}
-      <div className="card-section overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-          <span className="font-semibold text-sm" style={{ color: '#7B2820' }}>Factures fournisseur à saisir</span>
-          {fournisseurEnAttente.length > 0 && (
-            <span className="min-w-[20px] h-5 px-1.5 rounded-full text-white text-xs font-bold flex items-center justify-center" style={{ backgroundColor: '#7B2820' }}>
-              {hasFiltresF ? `${fournisseurFiltres.length}/${fournisseurEnAttente.length}` : fournisseurEnAttente.length}
-            </span>
-          )}
-        </div>
-        {fournisseurEnAttente.length === 0 ? (
-          <div className="px-5 py-8 text-center text-gray-500 text-sm">Toutes les factures fournisseur sont saisies 🎉</div>
-        ) : fournisseurFiltres.length === 0 ? (
-          <div className="px-5 py-8 text-center text-gray-400 text-sm">Aucun résultat pour ces filtres</div>
-        ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100">
-                {['Date', 'Produit', 'Contrat', 'Agriculteur', 'Tonnes', '', ''].map((h, i) => (
-                  <th key={i} className="table-header">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {fournisseurFiltres.map((l: any) => {
-                const ca = l.contrat_achat
-                const agri = getAgriFactu(l)
-                return (
-                  <tr key={l.id} className="table-row">
-                    <td className="table-cell text-sm">{formatDate(l.date_reelle)}</td>
-                    <td className="table-cell font-medium">{ca?.produit?.nom ?? '—'}</td>
-                    <td className="table-cell">
-                      <a href={`/contrats/${ca?.id}`} className="text-green-700 hover:underline text-sm">{ca?.numero_contrat}</a>
-                    </td>
-                    <td className="table-cell text-sm">{[agri?.civilite, agri?.nom].filter(Boolean).join(' ') || (l.destination_silo ? 'Silo' : '—')}</td>
-                    <td className="table-cell font-semibold">{formatTonnes(l.quantite_reelle)}</td>
-                    <td className="table-cell text-center">
-                      <button onClick={() => setFactureFournisseurModal(l)} className="badge-alerte cursor-pointer hover:opacity-80 transition-opacity">⏳ Saisir →</button>
-                    </td>
-                    {isAdmin && (
-                      <td className="table-cell text-center">
-                        <button onClick={() => deleteLivraison(l.id)} className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded" title="Supprimer">
-                          <Trash2 size={14} />
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {/* Factures clients */}
-      <div className="card-section overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-          <span className="font-semibold text-sm" style={{ color: '#7B2820' }}>Factures clients à récupérer dans Atys</span>
-          {facturesMq.length > 0 && (
-            <span className="min-w-[20px] h-5 px-1.5 rounded-full text-white text-xs font-bold flex items-center justify-center" style={{ backgroundColor: '#7B2820' }}>
-              {facturesMq.length}
-            </span>
-          )}
-        </div>
-        {facturesMq.length === 0 ? (
-          <div className="px-5 py-8 text-center text-gray-500 text-sm">Toutes les factures clients sont à jour 🎉</div>
-        ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100">
-                {['Agriculteur', 'Produit', 'Contrat vente', 'Dernière livraison', 'Mois concernés', ''].map(h => (
-                  <th key={h} className="table-header">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {facturesMq.map((item: any) => (
-                <tr key={item.contrat_vente_id} className="table-row">
-                  <td className="table-cell font-medium">{item.agriculteur?.nom ?? '—'}</td>
-                  <td className="table-cell">{item.produit?.nom ?? '—'}</td>
-                  <td className="table-cell">
-                    <a href={`/contrats/${item.contrat_achat_id}`} className="text-green-700 hover:underline text-sm font-medium">
-                      {item.contrat_vente_numero}
-                    </a>
-                  </td>
-                  <td className="table-cell">{formatDate(item.derniere_livraison)}</td>
-                  <td className="table-cell text-sm text-gray-600">
-                    {item.mois_livraison.map((m: string) => formatMois(m + '-01')).join(', ')}
-                  </td>
-                  <td className="table-cell text-center">
-                    <button
-                      onClick={() => setFacturesClientModal(item)}
-                      className="badge-alerte cursor-pointer hover:opacity-80 transition-opacity"
-                    >
-                      ⏳ Saisir factures →
-                    </button>
-                  </td>
+      {/* Contenu onglet Transport */}
+      {onglet === 'transport' && (
+        <div className="card-section overflow-hidden">
+          {transportEnAttente.length === 0 ? (
+            <div className="px-5 py-8 text-center text-gray-500 text-sm">Toutes les factures transport sont saisies 🎉</div>
+          ) : transportFiltres.length === 0 ? (
+            <div className="px-5 py-8 text-center text-gray-400 text-sm">Aucun résultat pour ces filtres</div>
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  {['Date', 'Produit', 'Contrat', 'Agriculteur', 'Tonnes', '', ''].map((h, i) => (
+                    <th key={i} className="table-header">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+              </thead>
+              <tbody>
+                {transportFiltres.map((l: any) => {
+                  const ca = l.contrat_achat
+                  const agri = getAgriFactu(l)
+                  return (
+                    <tr key={l.id} className="table-row">
+                      <td className="table-cell text-sm">{formatDate(l.date_reelle)}</td>
+                      <td className="table-cell font-medium">{ca?.produit?.nom ?? '—'}</td>
+                      <td className="table-cell">
+                        <a href={`/contrats/${ca?.id}`} className="text-green-700 hover:underline text-sm">{ca?.numero_contrat}</a>
+                      </td>
+                      <td className="table-cell text-sm">{[agri?.civilite, agri?.nom].filter(Boolean).join(' ') || (l.destination_silo ? 'Silo' : '—')}</td>
+                      <td className="table-cell font-semibold">{formatTonnes(l.quantite_reelle)}</td>
+                      <td className="table-cell text-center">
+                        <button onClick={() => setFactureTransportModal(l)} className="badge-alerte cursor-pointer hover:opacity-80 transition-opacity">⏳ Saisir →</button>
+                      </td>
+                      {isAdmin && (
+                        <td className="table-cell text-center">
+                          <button onClick={() => deleteLivraison(l.id)} className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded" title="Supprimer">
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* Contenu onglet Fournisseur */}
+      {onglet === 'fournisseur' && (
+        <div className="card-section overflow-hidden">
+          {fournisseurEnAttente.length === 0 ? (
+            <div className="px-5 py-8 text-center text-gray-500 text-sm">Toutes les factures fournisseur sont saisies 🎉</div>
+          ) : fournisseurFiltres.length === 0 ? (
+            <div className="px-5 py-8 text-center text-gray-400 text-sm">Aucun résultat pour ces filtres</div>
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  {['Date', 'Produit', 'Contrat', 'Agriculteur', 'Tonnes', '', ''].map((h, i) => (
+                    <th key={i} className="table-header">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {fournisseurFiltres.map((l: any) => {
+                  const ca = l.contrat_achat
+                  const agri = getAgriFactu(l)
+                  return (
+                    <tr key={l.id} className="table-row">
+                      <td className="table-cell text-sm">{formatDate(l.date_reelle)}</td>
+                      <td className="table-cell font-medium">{ca?.produit?.nom ?? '—'}</td>
+                      <td className="table-cell">
+                        <a href={`/contrats/${ca?.id}`} className="text-green-700 hover:underline text-sm">{ca?.numero_contrat}</a>
+                      </td>
+                      <td className="table-cell text-sm">{[agri?.civilite, agri?.nom].filter(Boolean).join(' ') || (l.destination_silo ? 'Silo' : '—')}</td>
+                      <td className="table-cell font-semibold">{formatTonnes(l.quantite_reelle)}</td>
+                      <td className="table-cell text-center">
+                        <button onClick={() => setFactureFournisseurModal(l)} className="badge-alerte cursor-pointer hover:opacity-80 transition-opacity">⏳ Saisir →</button>
+                      </td>
+                      {isAdmin && (
+                        <td className="table-cell text-center">
+                          <button onClick={() => deleteLivraison(l.id)} className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded" title="Supprimer">
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* Contenu onglet Client */}
+      {onglet === 'client' && (
+        <div className="card-section overflow-hidden">
+          {facturesMq.length === 0 ? (
+            <div className="px-5 py-8 text-center text-gray-500 text-sm">Toutes les factures clients sont à jour 🎉</div>
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  {['Agriculteur', 'Produit', 'Contrat vente', 'Dernière livraison', 'Mois concernés', ''].map(h => (
+                    <th key={h} className="table-header">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {facturesMq.map((item: any) => (
+                  <tr key={item.contrat_vente_id} className="table-row">
+                    <td className="table-cell font-medium">{item.agriculteur?.nom ?? '—'}</td>
+                    <td className="table-cell">{item.produit?.nom ?? '—'}</td>
+                    <td className="table-cell">
+                      <a href={`/contrats/${item.contrat_achat_id}`} className="text-green-700 hover:underline text-sm font-medium">
+                        {item.contrat_vente_numero}
+                      </a>
+                    </td>
+                    <td className="table-cell">{formatDate(item.derniere_livraison)}</td>
+                    <td className="table-cell text-sm text-gray-600">
+                      {item.mois_livraison.map((m: string) => formatMois(m + '-01')).join(', ')}
+                    </td>
+                    <td className="table-cell text-center">
+                      <button
+                        onClick={() => setFacturesClientModal(item)}
+                        className="badge-alerte cursor-pointer hover:opacity-80 transition-opacity"
+                      >
+                        ⏳ Saisir factures →
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
       {factureTransportModal && (
         <SaisirFactureTransportModal
