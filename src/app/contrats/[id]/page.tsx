@@ -20,6 +20,7 @@ import AffecterSiloModal from '@/components/contrats/AffecterSiloModal'
 import { getPrefixes } from '@/lib/prefixes'
 import SoldeOuvertureModal from '@/components/livraisons/SoldeOuvertureModal'
 import AlerteNote from '@/components/ui/AlerteNote'
+import CalendrierContrat from '@/components/ui/CalendrierContrat'
 
 export default function ContratDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -102,7 +103,9 @@ export default function ContratDetailPage() {
   const depassementVente = totalVentes > qteTotale
 
   const livraisonsPlanifiees = (contrat.livraisons ?? []).filter((l: any) => l.type === 'planifiee')
-  const livraisonsRealisees = (contrat.livraisons ?? []).filter((l: any) => l.type === 'realisee')
+  const livraisonsRealisees = (contrat.livraisons ?? [])
+    .filter((l: any) => l.type === 'realisee')
+    .sort((a: any, b: any) => (a.date_reelle ?? '').localeCompare(b.date_reelle ?? ''))
 
   return (
     <div className="space-y-6 pb-10 max-w-7xl">
@@ -365,6 +368,14 @@ export default function ContratDetailPage() {
           </table>
         </div>
       </div>
+
+      {/* Calendrier */}
+      {(contrat.livraisons ?? []).length > 0 && (
+        <CalendrierContrat
+          livraisons={contrat.livraisons ?? []}
+          produitNom={contrat.produit?.nom}
+        />
+      )}
 
       {/* Planning des livraisons */}
       <div className="card-section">

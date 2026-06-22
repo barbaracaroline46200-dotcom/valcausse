@@ -7,6 +7,7 @@ import { BadgeStatut } from '@/components/ui/Badge'
 import { useAdmin } from '@/components/ui/AdminProvider'
 import Link from 'next/link'
 import Modal from '@/components/ui/Modal'
+import CalendrierContrat from '@/components/ui/CalendrierContrat'
 
 export default function VenteDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -136,6 +137,11 @@ export default function VenteDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Calendrier */}
+      {livraisons.length > 0 && (
+        <CalendrierContrat livraisons={livraisons} />
+      )}
 
       {/* Avancement livraisons */}
       <div className="card">
