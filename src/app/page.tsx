@@ -11,6 +11,75 @@ import { useAdmin } from '@/components/ui/AdminProvider'
 import Link from 'next/link'
 import NouveauContratModal from '@/components/contrats/NouveauContratModal'
 
+function MadTable({ livraisons, onSaved }: { livraisons: any[], onSaved: () => void }) {
+  const [vals, setVals] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState<string | null>(null)
+
+  async function saveMad(livraisonId: string) {
+    const num = (vals[livraisonId] ?? '').trim()
+    if (!num) return
+    setSaving(livraisonId)
+    await fetch(`/api/livraisons/${livraisonId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ numero_mise_a_disposition: num }),
+    })
+    setSaving(null)
+    onSaved()
+  }
+
+  return (
+    <table className="w-full">
+      <thead>
+        <tr className="border-b border-gray-100">
+          {['Contrat', 'Produit', 'Fournisseur', 'Mois prévu', 'Transporteur', 'N° Mise à dispo'].map(h => (
+            <th key={h} className="table-header">{h}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {livraisons.map((l: any) => {
+          const ca = l.contrat_achat
+          const mois = l.mois_prevu
+            ? new Date(l.mois_prevu.slice(0, 7) + '-02').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+            : '—'
+          return (
+            <tr key={l.id} className="table-row">
+              <td className="table-cell">
+                <a href={`/contrats/${ca?.id}`} className="font-medium text-green-700 hover:underline">{ca?.numero_contrat}</a>
+              </td>
+              <td className="table-cell">{ca?.produit?.nom ?? '—'}</td>
+              <td className="table-cell">{ca?.fournisseur?.nom ?? '—'}</td>
+              <td className="table-cell text-orange-600 font-medium">{mois}</td>
+              <td className="table-cell">{ca?.transporteur?.nom ?? '—'}</td>
+              <td className="table-cell">
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={vals[l.id] ?? ''}
+                    onChange={e => setVals(prev => ({ ...prev, [l.id]: e.target.value }))}
+                    onKeyDown={e => { if (e.key === 'Enter') saveMad(l.id) }}
+                    placeholder="Saisir N°..."
+                    className="input text-xs py-1 w-32"
+                  />
+                  <button
+                    onClick={() => saveMad(l.id)}
+                    disabled={!vals[l.id]?.trim() || saving === l.id}
+                    className="px-2 py-1 rounded-lg text-xs font-semibold text-white disabled:opacity-40 transition-colors"
+                    style={{ backgroundColor: '#d97706' }}
+                  >
+                    {saving === l.id ? '…' : '✓'}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
+  )
+}
+
 function todayStr() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -454,31 +523,7 @@ export default function DashboardPage() {
           color="orange"
           subtitle="Ces livraisons appro sont à organiser mais n'ont pas encore de n° de mise à disposition — requis pour le transporteur et le PDF"
         >
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100">
-                {['Contrat', 'Produit', 'Fournisseur', 'Mois prévu', 'Transporteur'].map(h => (
-                  <th key={h} className="table-header">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {approSansMad.map((l: any) => {
-                const ca = l.contrat_achat
-                return (
-                  <tr key={l.id} className="table-row">
-                    <td className="table-cell">
-                      <a href={`/contrats/${ca?.id}`} className="font-medium text-green-700 hover:underline">{ca?.numero_contrat}</a>
-                    </td>
-                    <td className="table-cell">{ca?.produit?.nom ?? '—'}</td>
-                    <td className="table-cell">{ca?.fournisseur?.nom ?? '—'}</td>
-                    <td className="table-cell text-orange-600 font-medium">{l.mois_prevu ? new Date(l.mois_prevu + '-01').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—'}</td>
-                    <td className="table-cell">{ca?.transporteur?.nom ?? '—'}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+          <MadTable livraisons={approSansMad} onSaved={reload} />
         </Section>
       )}
 
