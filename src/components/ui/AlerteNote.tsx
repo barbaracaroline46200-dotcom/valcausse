@@ -10,7 +10,10 @@ interface Props {
 
 export default function AlerteNote({ note, size = 15 }: Props) {
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+  const [mounted, setMounted] = useState(false)
   const btnRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => { setMounted(true) }, [])
 
   function show() {
     if (!btnRef.current) return
@@ -20,7 +23,7 @@ export default function AlerteNote({ note, size = 15 }: Props) {
 
   function hide() { setPos(null) }
 
-  const tooltip = pos ? createPortal(
+  const tooltip = (mounted && pos) ? createPortal(
     <span
       style={{ position: 'absolute', top: pos.top - 8, left: pos.left, transform: 'translate(-50%, -100%)', zIndex: 9999 }}
       className="w-72 bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded-xl px-3 py-2 shadow-lg whitespace-pre-wrap pointer-events-none block"
