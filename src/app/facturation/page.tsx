@@ -70,9 +70,11 @@ export default function FacturationPage() {
     setFactureClientModal(livs)
   }
 
-  const [filtFProduit, setFiltFProduit] = useState('')
-  const [filtFAgriculteur, setFiltFAgriculteur] = useState('')
-  const [filtFPoids, setFiltFPoids] = useState('')
+  const [filtProduit, setFiltProduit] = useState('')
+  const [filtAgriculteur, setFiltAgriculteur] = useState('')
+  const [filtTransporteur, setFiltTransporteur] = useState('')
+  const [filtFournisseur, setFiltFournisseur] = useState('')
+  const [filtPoids, setFiltPoids] = useState('')
 
   function getAgriFactu(l: any) {
     const ca = l.contrat_achat
@@ -85,24 +87,34 @@ export default function FacturationPage() {
 
   const total = transportEnAttente.length + fournisseurEnAttente.length + aVerifierClient.length + aFacturerClient.length
 
-  const fProduits = useMemo(() => [...new Set(aFacturer.map((l: any) => l.contrat_achat?.produit?.nom).filter(Boolean))].sort(), [aFacturer])
-  const fAgriculteurs = useMemo(() => [...new Set(aFacturer.map((l: any) => getAgriFactu(l)?.nom).filter(Boolean))].sort(), [aFacturer])
+  // Options de filtre construites à partir de toutes les listes combinées
+  const toutesLivraisons = useMemo(() => [...aFacturer, ...aVerifierClient, ...aFacturerClient], [aFacturer, aVerifierClient, aFacturerClient])
+  const optProduits      = useMemo(() => [...new Set(toutesLivraisons.map((l: any) => l.contrat_achat?.produit?.nom).filter(Boolean))].sort(), [toutesLivraisons])
+  const optAgriculteurs  = useMemo(() => [...new Set(toutesLivraisons.map((l: any) => getAgriFactu(l)?.nom).filter(Boolean))].sort(), [toutesLivraisons])
+  const optTransporteurs = useMemo(() => [...new Set(toutesLivraisons.map((l: any) => l.contrat_achat?.transporteur?.nom).filter(Boolean))].sort(), [toutesLivraisons])
+  const optFournisseurs  = useMemo(() => [...new Set(toutesLivraisons.map((l: any) => l.contrat_achat?.fournisseur?.nom).filter(Boolean))].sort(), [toutesLivraisons])
 
   function applyFiltres(list: any[]) {
     return list.filter((l: any) => {
-      if (filtFProduit && l.contrat_achat?.produit?.nom !== filtFProduit) return false
-      if (filtFAgriculteur && (getAgriFactu(l)?.nom ?? '—') !== filtFAgriculteur) return false
-      if (filtFPoids) {
+      if (filtProduit      && l.contrat_achat?.produit?.nom !== filtProduit) return false
+      if (filtAgriculteur  && (getAgriFactu(l)?.nom ?? '—') !== filtAgriculteur) return false
+      if (filtTransporteur && (l.contrat_achat?.transporteur?.nom ?? '—') !== filtTransporteur) return false
+      if (filtFournisseur  && (l.contrat_achat?.fournisseur?.nom ?? '—') !== filtFournisseur) return false
+      if (filtPoids) {
         const poids = String(l.quantite_reelle ?? '')
-        if (!poids.includes(filtFPoids.replace(',', '.'))) return false
+        if (!poids.includes(filtPoids.replace(',', '.'))) return false
       }
       return true
     })
   }
 
-  const hasFiltresF = filtFProduit || filtFAgriculteur || filtFPoids
-  const transportFiltres = useMemo(() => applyFiltres(transportEnAttente), [transportEnAttente, filtFProduit, filtFAgriculteur, filtFPoids])
-  const fournisseurFiltres = useMemo(() => applyFiltres(fournisseurEnAttente), [fournisseurEnAttente, filtFProduit, filtFAgriculteur, filtFPoids])
+  function resetFiltres() { setFiltProduit(''); setFiltAgriculteur(''); setFiltTransporteur(''); setFiltFournisseur(''); setFiltPoids('') }
+  const hasFiltres = filtProduit || filtAgriculteur || filtTransporteur || filtFournisseur || filtPoids
+
+  const transportFiltres    = useMemo(() => applyFiltres(transportEnAttente),  [transportEnAttente,  filtProduit, filtAgriculteur, filtTransporteur, filtFournisseur, filtPoids])
+  const fournisseurFiltres  = useMemo(() => applyFiltres(fournisseurEnAttente), [fournisseurEnAttente, filtProduit, filtAgriculteur, filtTransporteur, filtFournisseur, filtPoids])
+  const verifClientFiltres  = useMemo(() => applyFiltres(aVerifierClient),      [aVerifierClient,     filtProduit, filtAgriculteur, filtTransporteur, filtFournisseur, filtPoids])
+  const saisirClientFiltres = useMemo(() => applyFiltres(aFacturerClient),      [aFacturerClient,     filtProduit, filtAgriculteur, filtTransporteur, filtFournisseur, filtPoids])
 
   const [onglet, setOnglet] = useState<'transport' | 'fournisseur' | 'client'>('transport')
   const [sousOngletClient, setSousOngletClient] = useState<'verif' | 'saisir'>('verif')
@@ -154,25 +166,30 @@ export default function FacturationPage() {
         ))}
       </div>
 
-      {/* Filtres (transport + fournisseur) */}
-      {onglet !== 'client' && aFacturer.length > 0 && (
-        <div className="card flex gap-2 items-center flex-wrap py-3">
-          <input type="text" value={filtFPoids} onChange={e => setFiltFPoids(e.target.value)}
-            placeholder="Recherche poids (t)..." className="input text-xs py-1 w-36" />
-          <select value={filtFProduit} onChange={e => setFiltFProduit(e.target.value)} className="input text-xs py-1 w-36">
-            <option value="">Tous produits</option>
-            {(fProduits as string[]).map(p => <option key={p} value={p}>{p}</option>)}
-          </select>
-          <select value={filtFAgriculteur} onChange={e => setFiltFAgriculteur(e.target.value)} className="input text-xs py-1 w-44">
-            <option value="">Tous agriculteurs</option>
-            {(fAgriculteurs as string[]).map(a => <option key={a} value={a}>{a}</option>)}
-          </select>
-          {hasFiltresF && (
-            <button onClick={() => { setFiltFProduit(''); setFiltFAgriculteur(''); setFiltFPoids('') }}
-              className="text-xs text-gray-400 hover:text-gray-600 underline">Effacer</button>
-          )}
-        </div>
-      )}
+      {/* Filtres communs à tous les onglets */}
+      <div className="card flex gap-2 items-center flex-wrap py-3">
+        <input type="text" value={filtPoids} onChange={e => setFiltPoids(e.target.value)}
+          placeholder="Poids (t)..." className="input text-xs py-1 w-28" />
+        <select value={filtProduit} onChange={e => setFiltProduit(e.target.value)} className="input text-xs py-1 w-36">
+          <option value="">Tous produits</option>
+          {optProduits.map((p: string) => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <select value={filtAgriculteur} onChange={e => setFiltAgriculteur(e.target.value)} className="input text-xs py-1 w-44">
+          <option value="">Tous agriculteurs</option>
+          {optAgriculteurs.map((a: string) => <option key={a} value={a}>{a}</option>)}
+        </select>
+        <select value={filtTransporteur} onChange={e => setFiltTransporteur(e.target.value)} className="input text-xs py-1 w-40">
+          <option value="">Tous transporteurs</option>
+          {optTransporteurs.map((t: string) => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select value={filtFournisseur} onChange={e => setFiltFournisseur(e.target.value)} className="input text-xs py-1 w-40">
+          <option value="">Tous fournisseurs</option>
+          {optFournisseurs.map((f: string) => <option key={f} value={f}>{f}</option>)}
+        </select>
+        {hasFiltres && (
+          <button onClick={resetFiltres} className="text-xs text-gray-400 hover:text-gray-600 underline">Effacer</button>
+        )}
+      </div>
 
       {/* Onglet Transport */}
       {onglet === 'transport' && (
@@ -304,6 +321,8 @@ export default function FacturationPage() {
               </div>
               {aVerifierClient.length === 0 ? (
                 <div className="px-5 py-8 text-center text-gray-500 text-sm">Aucune livraison en attente de vérification 🎉</div>
+              ) : verifClientFiltres.length === 0 ? (
+                <div className="px-5 py-8 text-center text-gray-400 text-sm">Aucun résultat pour ces filtres</div>
               ) : (
                 <table className="w-full">
                   <thead><tr className="border-b border-gray-100">
@@ -312,7 +331,7 @@ export default function FacturationPage() {
                     ))}
                   </tr></thead>
                   <tbody>
-                    {aVerifierClient.map((l: any) => {
+                    {verifClientFiltres.map((l: any) => {
                       const ca = l.contrat_achat
                       const cv = ca?.contrats_vente?.find((v: any) => v.id === l.contrat_vente_id)
                       const agri = cv?.agriculteur
@@ -368,6 +387,8 @@ export default function FacturationPage() {
               </div>
               {aFacturerClient.length === 0 ? (
                 <div className="px-5 py-8 text-center text-gray-500 text-sm">Aucune facture à saisir pour l'instant 🎉</div>
+              ) : saisirClientFiltres.length === 0 ? (
+                <div className="px-5 py-8 text-center text-gray-400 text-sm">Aucun résultat pour ces filtres</div>
               ) : (
                 <table className="w-full">
                   <thead><tr className="border-b border-gray-100">
@@ -376,7 +397,7 @@ export default function FacturationPage() {
                     ))}
                   </tr></thead>
                   <tbody>
-                    {aFacturerClient.map((l: any) => {
+                    {saisirClientFiltres.map((l: any) => {
                       const ca = l.contrat_achat
                       const cv = ca?.contrats_vente?.find((v: any) => v.id === l.contrat_vente_id)
                       const agri = cv?.agriculteur
