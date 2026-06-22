@@ -46,7 +46,7 @@ export async function getDashboardData() {
     return da < db ? -1 : da > db ? 1 : 0
   })
 
-  const facturationSelect = `*,contrat_achat:contrats_achat(id,numero_contrat,famille,produit:produits(nom),transporteur:transporteurs(nom),fournisseur:fournisseurs(nom),contrats_vente(id,numero_contrat,agriculteur:agriculteurs(nom)))`
+  const facturationSelect = `*,contrat_achat:contrats_achat(id,numero_contrat,famille,produit:produits(nom),transporteur:transporteurs(nom),fournisseur:fournisseurs(nom),contrats_vente(id,numero_contrat,destination_silo,agriculteur:agriculteurs(id,civilite,nom)))`
   const { data: livraisonsAFacturerRaw } = await supabase
     .from('livraisons')
     .select(facturationSelect)
@@ -55,35 +55,21 @@ export async function getDashboardData() {
     (l: any) => l.type === 'realisee' && (!l.transport_facture || !l.facture_fournisseur_id)
   )
 
+  // Livraisons réalisées non-silo pour facturation client
+  const livraisonsClientRaw = (livraisonsAFacturerRaw ?? []).filter((l: any) => {
+    if (l.type !== 'realisee') return false
+    const cv = l.contrat_achat?.contrats_vente?.find((v: any) => v.id === l.contrat_vente_id)
+    return cv && !cv.destination_silo
+  })
+  const livraisonsAVerifierClient = livraisonsClientRaw.filter((l: any) => !l.verifie_client && !l.facture_client_saisie)
+  const livraisonsAFacturerClient = livraisonsClientRaw.filter((l: any) => l.verifie_client && !l.facture_client_saisie)
+
   const { data: rfManquants } = await supabase
     .from('factures_fournisseur')
     .select(`*,contrat_achat:contrats_achat(id,numero_contrat,famille,produit:produits(nom),fournisseur:fournisseurs(nom))`)
     .is('numero_piece_logiciel', null)
     .not('numero_facture', 'is', null)
     .order('date_facture', { ascending: false })
-
-  const cutoff30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-  const { data: contratsAvecVentes } = await supabase
-    .from('contrats_achat')
-    .select(`id,numero_contrat,produit:produits(nom),contrats_vente(id,numero_contrat,statut,agriculteur:agriculteurs(nom),factures_client(id,numero_facture_logiciel,montant_ht,montant_ttc,mode_paiement,date_paiement,created_at)),livraisons(id,type,date_reelle,contrat_vente_id)`)
-
-  const facturesManquantes: any[] = []
-  for (const ca of (contratsAvecVentes ?? [])) {
-    for (const cv of (ca.contrats_vente ?? [])) {
-      if (cv.statut === 'clos') continue
-      const livsCv = (ca.livraisons ?? []).filter((l: any) => l.contrat_vente_id === cv.id && l.type === 'realisee')
-      if (livsCv.length === 0) continue
-      const derniere = livsCv.map((l: any) => l.date_reelle).filter(Boolean).sort().at(-1)
-      if (!derniere || derniere > cutoff30) continue
-      const moisDistincts = new Set(livsCv.map((l: any) => l.date_reelle?.slice(0, 7)).filter(Boolean))
-      facturesManquantes.push({
-        contrat_achat_id: ca.id, contrat_achat_numero: ca.numero_contrat, produit: ca.produit,
-        contrat_vente_id: cv.id, contrat_vente_numero: cv.numero_contrat, agriculteur: cv.agriculteur,
-        factures_client: cv.factures_client ?? [], derniere_livraison: derniere,
-        nb_factures_attendues: moisDistincts.size, mois_livraison: [...moisDistincts].sort(),
-      })
-    }
-  }
 
   const dans30j = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   const { data: contratsAlerte } = await supabase
@@ -100,7 +86,8 @@ export async function getDashboardData() {
     cmrEnAttente,
     livraisonsAFacturer,
     rfManquants: rfManquants ?? [],
-    facturesManquantes,
+    livraisonsAVerifierClient,
+    livraisonsAFacturerClient,
     contratsAlerte: contratsAlerte ?? [],
     annee: { debut, fin },
     moisCourant,

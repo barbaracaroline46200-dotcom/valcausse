@@ -25,7 +25,7 @@ export default function Sidebar() {
         setCounts({
           livraisons: (d.livraisonsPlanifiees ?? []).length,
           cmr: (d.cmrEnAttente ?? []).length,
-          facturation: (d.livraisonsAFacturer ?? []).length + (d.facturesManquantes ?? []).length,
+          facturation: (d.livraisonsAFacturer ?? []).length + (d.livraisonsAVerifierClient ?? []).length + (d.livraisonsAFacturerClient ?? []).length,
           rf: (d.rfManquants ?? []).length,
         })
       } catch {}

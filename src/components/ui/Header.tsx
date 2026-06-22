@@ -43,7 +43,7 @@ export default function Header() {
         const d = await res.json()
         const livraisons  = (d.livraisonsPlanifiees ?? []).length
         const cmr         = (d.cmrEnAttente ?? []).length
-        const facturation = (d.livraisonsAFacturer ?? []).length + (d.facturesManquantes ?? []).length
+        const facturation = (d.livraisonsAFacturer ?? []).length + (d.livraisonsAVerifierClient ?? []).length + (d.livraisonsAFacturerClient ?? []).length
         const rf          = (d.rfManquants ?? []).length
         const alerte      = (d.contratsAlerte ?? []).filter((c: any) => {
           const rel = (c.quantite_totale ?? 0) - (c.livraisons ?? []).filter((l: any) => l.type === 'realisee').reduce((s: number, l: any) => s + (l.quantite_reelle ?? 0), 0)

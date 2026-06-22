@@ -109,15 +109,30 @@ export async function GET() {
       produit:produits(nom),
       transporteur:transporteurs(nom),
       fournisseur:fournisseurs(nom),
-      contrats_vente(id, numero_contrat, agriculteur:agriculteurs(civilite,nom))
+      contrats_vente(id, numero_contrat, destination_silo, prix_vente, agriculteur:agriculteurs(id,civilite,nom))
     )
   `
   const { data: livraisonsAFacturerRaw } = await supabase
     .from('livraisons')
     .select(facturationSelect)
     .order('date_reelle', { ascending: false })
-  const livraisonsAFacturer = (livraisonsAFacturerRaw ?? []).filter(
-    (l: any) => l.type === 'realisee' && !l.solde_ouverture && (!l.transport_facture || !l.facture_fournisseur_id)
+  const livraisonsRealisees = (livraisonsAFacturerRaw ?? []).filter(
+    (l: any) => l.type === 'realisee' && !l.solde_ouverture
+  )
+  const livraisonsAFacturer = livraisonsRealisees.filter(
+    (l: any) => !l.transport_facture || !l.facture_fournisseur_id
+  )
+
+  // Facturation client : livraisons réalisées non-silo, par étape de workflow
+  const livraisonsClientBase = livraisonsRealisees.filter((l: any) => {
+    const cv = l.contrat_achat?.contrats_vente?.find((v: any) => v.id === l.contrat_vente_id)
+    return cv && !cv.destination_silo
+  })
+  const livraisonsAVerifierClient = livraisonsClientBase.filter(
+    (l: any) => !l.verifie_client && !l.facture_client_saisie
+  )
+  const livraisonsAFacturerClient = livraisonsClientBase.filter(
+    (l: any) => l.verifie_client && !l.facture_client_saisie
   )
 
   // RF à récupérer : factures fournisseur sans numéro RF (numero_piece_logiciel null)
@@ -130,55 +145,6 @@ export async function GET() {
     .is('numero_piece_logiciel', null)
     .not('numero_facture', 'is', null)
     .order('date_facture', { ascending: false })
-
-  // Factures clients à récupérer :
-  // Contrats de vente dont toutes les livraisons sont réalisées
-  // ET la dernière livraison date de plus de 30 jours
-  // ET pas encore de facture client saisie
-  const cutoff30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-
-  const { data: contratsAvecVentes } = await supabase
-    .from('contrats_achat')
-    .select(`
-      id, numero_contrat,
-      produit:produits(nom),
-      contrats_vente(id, numero_contrat, statut, agriculteur:agriculteurs(nom), factures_client(id,numero_facture_logiciel,montant_ht,montant_ttc,mode_paiement,date_paiement,created_at)),
-      livraisons(id, type, date_reelle, contrat_vente_id)
-    `)
-
-  const facturesManquantes: any[] = []
-  for (const ca of (contratsAvecVentes ?? [])) {
-    for (const cv of (ca.contrats_vente ?? [])) {
-      // Contrat déjà clos → plus besoin
-      if (cv.statut === 'clos') continue
-      // Livraisons réalisées affectées à ce contrat de vente
-      const livsCv = (ca.livraisons ?? []).filter(
-        (l: any) => l.contrat_vente_id === cv.id && l.type === 'realisee'
-      )
-      if (livsCv.length === 0) continue
-      // Dernière livraison réalisée > 30 jours ?
-      const derniere = livsCv
-        .map((l: any) => l.date_reelle)
-        .filter(Boolean)
-        .sort()
-        .at(-1)
-      if (!derniere || derniere > cutoff30) continue
-      // Mois distincts de livraison
-      const moisDistincts = new Set(livsCv.map((l: any) => l.date_reelle?.slice(0, 7)).filter(Boolean))
-      facturesManquantes.push({
-        contrat_achat_id: ca.id,
-        contrat_achat_numero: ca.numero_contrat,
-        produit: ca.produit,
-        contrat_vente_id: cv.id,
-        contrat_vente_numero: cv.numero_contrat,
-        agriculteur: cv.agriculteur,
-        factures_client: cv.factures_client ?? [],
-        derniere_livraison: derniere,
-        nb_factures_attendues: moisDistincts.size,
-        mois_livraison: [...moisDistincts].sort(),
-      })
-    }
-  }
 
   // Contrats en alerte (date_fin < 30j avec reliquat)
   const dans30j = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
@@ -194,7 +160,8 @@ export async function GET() {
     cmrEnAttente: cmrEnAttente ?? [],
     livraisonsAFacturer: livraisonsAFacturer ?? [],
     rfManquants: rfManquants ?? [],
-    facturesManquantes: facturesManquantes ?? [],
+    livraisonsAVerifierClient,
+    livraisonsAFacturerClient,
     contratsAlerte: contratsAlerte ?? [],
     annee: { debut, fin },
     moisCourant,
