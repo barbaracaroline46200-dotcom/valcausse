@@ -89,9 +89,16 @@ export default function RealiserLivraisonModal({ livraison, contrat, onClose, on
 
   return (
     <Modal title="Réaliser la livraison" onClose={onClose} size="md">
-      <div className="bg-orange-50 border border-orange-100 rounded-lg px-4 py-2 text-sm text-orange-700 mb-4">
-        Livraison planifiée : <strong>{formatTonnes(livraison.quantite_prevue)}</strong>
-        {prevu != null && <span className="ml-2 text-gray-500">· Transport prévu : {prevu.toFixed(2)} €</span>}
+      <div className="bg-orange-50 border border-orange-100 rounded-lg px-4 py-2.5 text-sm text-orange-700 mb-4 space-y-0.5">
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="font-bold text-green-700">{contrat.numero_contrat ?? '—'}</span>
+          {contrat.fournisseur?.nom && <span className="text-gray-600">· {contrat.fournisseur.nom}</span>}
+          {contrat.produit?.nom && <span className="text-gray-500">· {contrat.produit.nom}</span>}
+        </div>
+        <div className="text-xs text-orange-600">
+          Livraison planifiée : <strong>{formatTonnes(livraison.quantite_prevue)}</strong>
+          {prevu != null && <span className="ml-2 text-gray-500">· Transport prévu : {prevu.toFixed(2)} €</span>}
+        </div>
       </div>
       <form onSubmit={submit} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
