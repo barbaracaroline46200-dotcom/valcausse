@@ -95,10 +95,11 @@ export default function ContratDetailPage() {
   if (!contrat) return <div className="text-red-600 p-6">Contrat introuvable</div>
 
   const livre = quantiteLivree(contrat.livraisons ?? [])
-  const rel = reliquat(contrat.quantite_totale, contrat.livraisons ?? [])
+  const qteTotale: number = contrat.quantite_totale ?? 0
+  const rel = reliquat(qteTotale, contrat.livraisons ?? [])
   const prefixes = getPrefixes(contrat.famille)
-  const totalVentes = (contrat.contrats_vente ?? []).reduce((s: number, cv: any) => s + cv.quantite, 0)
-  const depassementVente = totalVentes > contrat.quantite_totale
+  const totalVentes = (contrat.contrats_vente ?? []).reduce((s: number, cv: any) => s + (cv.quantite ?? 0), 0)
+  const depassementVente = totalVentes > qteTotale
 
   const livraisonsPlanifiees = (contrat.livraisons ?? []).filter((l: any) => l.type === 'planifiee')
   const livraisonsRealisees = (contrat.livraisons ?? []).filter((l: any) => l.type === 'realisee')
@@ -150,7 +151,7 @@ export default function ContratDetailPage() {
           <div>
             <span className="font-bold text-red-700">Alerte dépassement :</span>
             <span className="text-red-600 ml-1">
-              Les contrats de vente ({formatTonnes(totalVentes)}) dépassent la quantité achetée ({formatTonnes(contrat.quantite_totale)}).
+              Les contrats de vente ({formatTonnes(totalVentes)}) dépassent la quantité achetée ({formatTonnes(qteTotale)}).
             </span>
           </div>
         </div>
@@ -204,20 +205,20 @@ export default function ContratDetailPage() {
           <h2 className="font-bold text-gray-800 text-base">Avancement</h2>
           <div className="text-center">
             <div className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Contrat total</div>
-            <div className="text-3xl font-extrabold text-gray-900">{formatTonnes(contrat.quantite_totale)}</div>
+            <div className="text-3xl font-extrabold text-gray-900">{formatTonnes(qteTotale)}</div>
             <div className="mt-2 text-sm text-gray-500">dont <span className="font-semibold text-gray-700">{formatTonnes(livre)}</span> livrées</div>
           </div>
-          <ProgressBar value={livre} total={contrat.quantite_totale} />
+          <ProgressBar value={livre} total={qteTotale} />
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-center">
             <div className="text-2xl font-bold text-orange-600">{formatTonnes(rel)}</div>
             <div className="text-xs text-orange-700 font-medium">Reliquat à livrer</div>
           </div>
-          <div className={`border rounded-lg p-3 text-center ${totalVentes > contrat.quantite_totale ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}>
-            <div className={`text-2xl font-bold ${totalVentes > contrat.quantite_totale ? 'text-red-600' : 'text-blue-700'}`}>
-              {formatTonnes(Math.max(0, contrat.quantite_totale - totalVentes))}
+          <div className={`border rounded-lg p-3 text-center ${totalVentes > qteTotale ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}>
+            <div className={`text-2xl font-bold ${totalVentes > qteTotale ? 'text-red-600' : 'text-blue-700'}`}>
+              {formatTonnes(Math.max(0, qteTotale - totalVentes))}
             </div>
-            <div className={`text-xs font-medium ${totalVentes > contrat.quantite_totale ? 'text-red-600' : 'text-blue-700'}`}>
-              {totalVentes > contrat.quantite_totale ? '⚠ Dépassement ventes' : 'Non réservé par un contrat de vente'}
+            <div className={`text-xs font-medium ${totalVentes > qteTotale ? 'text-red-600' : 'text-blue-700'}`}>
+              {totalVentes > qteTotale ? '⚠ Dépassement ventes' : 'Non réservé par un contrat de vente'}
             </div>
             <div className="text-xs text-gray-400 mt-0.5">Vendu : {formatTonnes(totalVentes)}</div>
           </div>
@@ -717,7 +718,7 @@ export default function ContratDetailPage() {
         <SoldeOuvertureModal
           contratId={id}
           contratNumero={contrat.numero_contrat}
-          quantiteTotale={contrat.quantite_totale ?? 0}
+          quantiteTotale={qteTotale ?? 0}
           quantiteDejaLivree={quantiteLivree(contrat.livraisons ?? [])}
           onClose={() => setShowSoldeOuverture(false)}
           onSaved={() => { setShowSoldeOuverture(false); chargerContrat() }}
