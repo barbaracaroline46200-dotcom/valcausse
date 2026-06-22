@@ -63,5 +63,32 @@ export async function POST(req: NextRequest) {
   const supabase = getServiceClient()
   const { data, error } = await supabase.from('livraisons').insert(body).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+  if (data.type === 'realisee' && data.contrat_achat_id) {
+    // Même logique de clôture automatique que dans PATCH
+    const { data: ca } = await supabase
+      .from('contrats_achat')
+      .select('id,statut,quantite_totale,contrats_vente(id,statut,quantite),livraisons(id,type,quantite_reelle,contrat_vente_id)')
+      .eq('id', data.contrat_achat_id)
+      .single()
+    if (ca) {
+      const livreesCA = (ca.livraisons ?? [])
+        .filter((l: any) => l.type === 'realisee' && l.quantite_reelle != null)
+        .reduce((s: number, l: any) => s + l.quantite_reelle, 0)
+      if (Math.max(0, ca.quantite_totale - livreesCA) < 10 && ca.statut !== 'clos') {
+        await supabase.from('contrats_achat').update({ statut: 'clos' }).eq('id', ca.id)
+      }
+      for (const cv of (ca.contrats_vente ?? [])) {
+        if (cv.statut === 'clos') continue
+        const livreeCV = (ca.livraisons ?? [])
+          .filter((l: any) => l.type === 'realisee' && l.quantite_reelle != null && l.contrat_vente_id === cv.id)
+          .reduce((s: number, l: any) => s + l.quantite_reelle, 0)
+        if (Math.max(0, cv.quantite - livreeCV) < 10) {
+          await supabase.from('contrats_vente').update({ statut: 'clos' }).eq('id', cv.id)
+        }
+      }
+    }
+  }
+
   return NextResponse.json(data, { status: 201 })
 }
