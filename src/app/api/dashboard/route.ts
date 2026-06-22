@@ -61,6 +61,7 @@ export async function GET() {
     contrat_achat:contrats_achat(
       id, numero_contrat, famille, prix_transport_prevu,
       produit:produits(nom),
+      fournisseur:fournisseurs(nom),
       transporteur:transporteurs(id,nom,email,telephone),
       contrats_vente(id, numero_contrat, quantite, destination_silo, silo_nom, agriculteur:agriculteurs(id,civilite,nom,ville_livraison))
     )
