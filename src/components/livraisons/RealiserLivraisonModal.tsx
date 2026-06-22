@@ -83,6 +83,10 @@ export default function RealiserLivraisonModal({ livraison, contrat, onClose, on
   const prevu = livraison.quantite_prevue ? livraison.quantite_prevue * contrat.prix_transport_prevu : null
   const ventesLiees = contrat.contrats_vente ?? []
 
+  const siloActif = form.destination_silo
+  const desactiverCMR = siloActif && contrat.famille !== 'appro'
+  const desactiverLC  = siloActif
+
   return (
     <Modal title="Réaliser la livraison" onClose={onClose} size="md">
       <div className="bg-orange-50 border border-orange-100 rounded-lg px-4 py-2 text-sm text-orange-700 mb-4">
@@ -100,8 +104,17 @@ export default function RealiserLivraisonModal({ livraison, contrat, onClose, on
             <input type="number" step="0.001" className="input" value={form.quantite_reelle} onChange={f('quantite_reelle')} required />
           </div>
           <div className="col-span-2">
-            <label className="label">N° lettre de voiture (CMR)</label>
-            <input className="input" value={form.numero_lettre_voiture} onChange={f('numero_lettre_voiture')} placeholder="CMR..." />
+            <label className={`label flex items-center gap-2 ${desactiverCMR ? 'opacity-40' : ''}`}>
+              N° lettre de voiture (CMR)
+              {desactiverCMR && <span className="text-xs font-normal text-gray-400">— non applicable (négoce silo)</span>}
+            </label>
+            <input
+              className={`input ${desactiverCMR ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
+              value={desactiverCMR ? '' : form.numero_lettre_voiture}
+              onChange={desactiverCMR ? undefined : f('numero_lettre_voiture')}
+              placeholder={desactiverCMR ? 'N/A' : 'CMR...'}
+              disabled={desactiverCMR}
+            />
           </div>
           <div>
             <label className="label">Ville d'enlèvement</label>
@@ -115,7 +128,23 @@ export default function RealiserLivraisonModal({ livraison, contrat, onClose, on
             <label className="label">Affectation de cette livraison</label>
             <div className="flex gap-3 items-center mb-2">
               <label className="flex items-center gap-2 cursor-pointer text-sm">
-                <input type="checkbox" checked={form.destination_silo} onChange={e => setForm(prev => ({ ...prev, destination_silo: e.target.checked, contrat_vente_id: '' }))} className="w-4 h-4 rounded" />
+                <input
+                  type="checkbox"
+                  checked={form.destination_silo}
+                  onChange={e => {
+                    const silo = e.target.checked
+                    setForm(prev => ({
+                      ...prev,
+                      destination_silo: silo,
+                      contrat_vente_id: '',
+                      // Vider CMR si négoce → silo
+                      numero_lettre_voiture: (silo && contrat.famille !== 'appro') ? '' : prev.numero_lettre_voiture,
+                      // Vider LC dans tous les cas silo
+                      piece_client_numero: silo ? '' : prev.piece_client_numero,
+                    }))
+                  }}
+                  className="w-4 h-4 rounded"
+                />
                 Livraison vers notre silo (Silo / Silo Gare)
               </label>
             </div>
@@ -153,10 +182,19 @@ export default function RealiserLivraisonModal({ livraison, contrat, onClose, on
             </div>
           </div>
           <div>
-            <label className="label">Pièce client ({prefixes.client})</label>
-            <div className="flex gap-1">
-              <input className="input w-16 text-center" value={form.piece_client_prefixe} onChange={f('piece_client_prefixe')} />
-              <input className="input flex-1" value={form.piece_client_numero} onChange={f('piece_client_numero')} placeholder="Numéro..." />
+            <label className={`label flex items-center gap-2 ${desactiverLC ? 'opacity-40' : ''}`}>
+              Pièce client ({prefixes.client})
+              {desactiverLC && <span className="text-xs font-normal text-gray-400">— pas de client à facturer (silo)</span>}
+            </label>
+            <div className={`flex gap-1 ${desactiverLC ? 'opacity-40' : ''}`}>
+              <input className="input w-16 text-center" value={form.piece_client_prefixe} onChange={f('piece_client_prefixe')} disabled={desactiverLC} />
+              <input
+                className={`input flex-1 ${desactiverLC ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
+                value={desactiverLC ? '' : form.piece_client_numero}
+                onChange={desactiverLC ? undefined : f('piece_client_numero')}
+                placeholder={desactiverLC ? 'N/A' : 'Numéro...'}
+                disabled={desactiverLC}
+              />
             </div>
           </div>
           <div>
