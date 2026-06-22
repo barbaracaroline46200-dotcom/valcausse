@@ -14,6 +14,7 @@ export default function CmrPage() {
   const [loading, setLoading] = useState(true)
   const [cmrModal, setCmrModal] = useState<any>(null)
   const [filtTransporteur, setFiltTransporteur] = useState('')
+  const [filtFournisseur, setFiltFournisseur] = useState('')
   const [filtProduit, setFiltProduit] = useState('')
   const [filtAgriculteur, setFiltAgriculteur] = useState('')
 
@@ -45,17 +46,19 @@ export default function CmrPage() {
   }
 
   const transporteurs = useMemo(() => [...new Set(cmr.map((l: any) => l.contrat_achat?.transporteur?.nom).filter(Boolean))].sort(), [cmr])
-  const produits = useMemo(() => [...new Set(cmr.map((l: any) => l.contrat_achat?.produit?.nom).filter(Boolean))].sort(), [cmr])
-  const agriculteurs = useMemo(() => [...new Set(cmr.map((l: any) => getAgri(l)?.nom).filter(Boolean))].sort(), [cmr])
+  const fournisseurs  = useMemo(() => [...new Set(cmr.map((l: any) => l.contrat_achat?.fournisseur?.nom).filter(Boolean))].sort(), [cmr])
+  const produits      = useMemo(() => [...new Set(cmr.map((l: any) => l.contrat_achat?.produit?.nom).filter(Boolean))].sort(), [cmr])
+  const agriculteurs  = useMemo(() => [...new Set(cmr.map((l: any) => getAgri(l)?.nom).filter(Boolean))].sort(), [cmr])
 
   const cmrFiltres = useMemo(() => cmr.filter((l: any) => {
     if (filtTransporteur && l.contrat_achat?.transporteur?.nom !== filtTransporteur) return false
-    if (filtProduit && l.contrat_achat?.produit?.nom !== filtProduit) return false
-    if (filtAgriculteur && (getAgri(l)?.nom ?? '—') !== filtAgriculteur) return false
+    if (filtFournisseur  && l.contrat_achat?.fournisseur?.nom  !== filtFournisseur)  return false
+    if (filtProduit      && l.contrat_achat?.produit?.nom      !== filtProduit)      return false
+    if (filtAgriculteur  && (getAgri(l)?.nom ?? '—')           !== filtAgriculteur)  return false
     return true
-  }), [cmr, filtTransporteur, filtProduit, filtAgriculteur])
+  }), [cmr, filtTransporteur, filtFournisseur, filtProduit, filtAgriculteur])
 
-  const hasFiltres = filtTransporteur || filtProduit || filtAgriculteur
+  const hasFiltres = filtTransporteur || filtFournisseur || filtProduit || filtAgriculteur
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -84,6 +87,10 @@ export default function CmrPage() {
               <option value="">Tous transporteurs</option>
               {(transporteurs as string[]).map(t => <option key={t} value={t}>{t}</option>)}
             </select>
+            <select value={filtFournisseur} onChange={e => setFiltFournisseur(e.target.value)} className="input text-sm py-1.5 w-40">
+              <option value="">Tous fournisseurs</option>
+              {(fournisseurs as string[]).map(f => <option key={f} value={f}>{f}</option>)}
+            </select>
             <select value={filtProduit} onChange={e => setFiltProduit(e.target.value)} className="input text-sm py-1.5 w-40">
               <option value="">Tous produits</option>
               {(produits as string[]).map(p => <option key={p} value={p}>{p}</option>)}
@@ -93,7 +100,7 @@ export default function CmrPage() {
               {(agriculteurs as string[]).map(a => <option key={a} value={a}>{a}</option>)}
             </select>
             {hasFiltres && (
-              <button onClick={() => { setFiltTransporteur(''); setFiltProduit(''); setFiltAgriculteur('') }}
+              <button onClick={() => { setFiltTransporteur(''); setFiltFournisseur(''); setFiltProduit(''); setFiltAgriculteur('') }}
                 className="text-xs text-gray-400 hover:text-gray-600 underline">Effacer</button>
             )}
           </div>
@@ -109,7 +116,7 @@ export default function CmrPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
-                {['Contrat', 'Produit', 'Agriculteur', 'Transporteur', 'Date livraison', 'Contact', 'Délai', '', ''].map(h => (
+                {['Contrat', 'Fournisseur', 'Produit', 'Agriculteur', 'Transporteur', 'Date livraison', 'Contact', 'Délai', '', ''].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
@@ -133,6 +140,7 @@ export default function CmrPage() {
                         {l.contrat_achat?.numero_contrat ?? '—'}
                       </a>
                     </td>
+                    <td className="table-cell text-sm">{l.contrat_achat?.fournisseur?.nom ?? '—'}</td>
                     <td className="table-cell font-medium">{l.contrat_achat?.produit?.nom ?? '—'}</td>
                     <td className="table-cell text-sm">{[agri?.civilite, agri?.nom].filter(Boolean).join(' ') || '—'}</td>
                     <td className="table-cell">{l.contrat_achat?.transporteur?.nom ?? '—'}</td>
