@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
         fournisseur:fournisseurs(*,points_chargement(*)),
         courtier:courtiers(*),
         transporteur:transporteurs(nom),
-        contrats_vente(agriculteur:agriculteurs(*))
+        contrats_vente(id,destination_silo,agriculteur:agriculteurs(*))
       )
     `)
     .eq('id', livraisonId)
@@ -27,7 +27,14 @@ export async function GET(req: NextRequest) {
   if (error || !liv) return NextResponse.json({ error: 'Livraison not found' }, { status: 404 })
 
   const ca = liv.contrat_achat as any
-  const agriculteur = ca?.contrats_vente?.[0]?.agriculteur
+  const contratVenteId = (liv as any).contrat_vente_id
+  const contrats_vente: any[] = ca?.contrats_vente ?? []
+  // Priorité 1 : contrat de vente lié directement à cette livraison
+  // Priorité 2 : premier contrat de vente qui n'est pas un silo
+  const cv = contratVenteId
+    ? contrats_vente.find((v: any) => v.id === contratVenteId) ?? contrats_vente.find((v: any) => !v.destination_silo)
+    : contrats_vente.find((v: any) => !v.destination_silo) ?? contrats_vente[0]
+  const agriculteur = cv?.agriculteur
 
   const pdfDoc = await PDFDocument.create()
   const page = pdfDoc.addPage([595, 842]) // A4
