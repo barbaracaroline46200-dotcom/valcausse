@@ -78,8 +78,24 @@ export default function ContratDetailPage() {
   }
 
   async function supprimerFactureFournisseur(factureId: string) {
-    if (!confirm('Supprimer cette facture fournisseur ?')) return
+    if (!confirm('Supprimer cette facture fournisseur ? Les livraisons liées repasse­ront en attente de facturation.')) return
     await fetch(`/api/factures/fournisseur/${factureId}`, { method: 'DELETE' })
+    window.location.reload()
+  }
+
+  async function supprimerFactureTransport(livId: string) {
+    if (!confirm('Supprimer la facture transport de cette livraison ? Elle repassera en attente de facturation.')) return
+    await fetch(`/api/livraisons/${livId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transport_facture: false, numero_facture_transport: null, date_facture_transport: null }),
+    })
+    window.location.reload()
+  }
+
+  async function supprimerFactureClient(factureId: string) {
+    if (!confirm('Supprimer cette facture client ? Les livraisons concernées repasseront dans "à saisir".')) return
+    await fetch(`/api/factures/client/${factureId}`, { method: 'DELETE' })
     window.location.reload()
   }
 
@@ -313,7 +329,18 @@ export default function ContratDetailPage() {
                   <td className="table-cell"><BadgeStatut statut={cv.statut} /></td>
                   <td className="table-cell text-xs">
                     {cv.factures_client?.length > 0
-                      ? cv.factures_client.map((f: any) => f.numero_facture_atys ?? f.numero_facture).join(', ')
+                      ? <div className="flex flex-col gap-0.5">
+                          {cv.factures_client.map((f: any) => (
+                            <div key={f.id} className="flex items-center gap-1.5">
+                              <span className="font-medium text-green-700">{f.numero_facture_logiciel ?? f.numero_facture ?? '—'}</span>
+                              {isAdmin && (
+                                <button onClick={() => supprimerFactureClient(f.id)} className="text-gray-300 hover:text-red-500 transition-colors p-0.5 rounded" title="Supprimer cette facture client">
+                                  <Trash2 size={11} />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       : (() => {
                           const livsCv = (contrat.livraisons ?? []).filter((l: any) => l.contrat_vente_id === cv.id)
                           if (livsCv.length === 0) return <span className="text-gray-400">—</span>
@@ -537,9 +564,18 @@ export default function ContratDetailPage() {
                           )}
                         </td>
                         <td className="table-cell">
-                          {l.transport_facture
-                            ? <span className="badge-clos text-xs">✓</span>
-                            : <span className="badge-en_cours text-xs">Non</span>}
+                          {l.transport_facture ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="badge-clos text-xs">✓</span>
+                              {isAdmin && (
+                                <button onClick={() => supprimerFactureTransport(l.id)} className="text-gray-300 hover:text-red-500 transition-colors p-0.5 rounded" title="Supprimer la facture transport">
+                                  <Trash2 size={12} />
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="badge-en_cours text-xs">Non</span>
+                          )}
                         </td>
                         <td className="table-cell">
                           {isAdmin && (
