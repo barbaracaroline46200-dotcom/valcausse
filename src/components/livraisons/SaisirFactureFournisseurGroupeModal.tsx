@@ -29,7 +29,8 @@ export default function SaisirFactureFournisseurGroupeModal({ livraisons, onClos
   }, 0)
 
   const [form, setForm] = useState({
-    numero_facture: '',
+    numero_facture_fournisseur: '',   // N° que le fournisseur met sur sa facture
+    numero_piece_logiciel: '',        // N° FAN / FAF dans Atys
     date_facture: '',
     montant_ht: '',
     montant_ttc: '',
@@ -45,17 +46,18 @@ export default function SaisirFactureFournisseurGroupeModal({ livraisons, onClos
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.numero_facture.trim()) { setError('Le N° de facture est obligatoire'); return }
+    if (!form.numero_facture_fournisseur.trim()) { setError('Le N° de facture fournisseur est obligatoire'); return }
     setSaving(true)
     setError('')
 
     // Créer la facture fournisseur
     const factureBody = {
       contrat_achat_id: livraisons[0].contrat_achat?.id,
-      livraison_id: livraisons[0].id, // première livraison comme référence
-      numero_facture: form.numero_facture.trim(),
-      date_facture: form.date_facture || null,
+      livraison_id: livraisons[0].id,
+      numero_facture: form.numero_facture_fournisseur.trim(),
+      numero_piece_logiciel: form.numero_piece_logiciel.trim() ? `${prefixe}${form.numero_piece_logiciel.trim()}` : null,
       prefixe,
+      date_facture: form.date_facture || null,
       montant_ht: form.montant_ht ? parseFloat(form.montant_ht) : null,
       montant_ttc: form.montant_ttc ? parseFloat(form.montant_ttc) : null,
       mode_paiement: (!isAppro && form.mode_paiement) ? form.mode_paiement : null,
@@ -142,9 +144,22 @@ export default function SaisirFactureFournisseurGroupeModal({ livraisons, onClos
       <form onSubmit={submit} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="col-span-2">
-            <label className="label">N° facture {isAppro ? 'FAF' : 'FAN'} *</label>
-            <input className="input" value={form.numero_facture} onChange={f('numero_facture')}
-              placeholder={isAppro ? 'Ex: FAF-2026-0042' : 'Ex: FAN-2026-0042'} autoFocus />
+            <label className="label">N° facture fournisseur *
+              <span className="text-xs text-gray-400 font-normal ml-1">(numéro indiqué sur la facture reçue)</span>
+            </label>
+            <input className="input" value={form.numero_facture_fournisseur} onChange={f('numero_facture_fournisseur')}
+              placeholder="Ex: 2026-FA-0042" autoFocus />
+          </div>
+
+          <div className="col-span-2">
+            <label className="label">{isAppro ? 'N° FAF' : 'N° FAN'} dans Atys
+              <span className="text-xs text-gray-400 font-normal ml-1">(optionnel — à saisir si disponible)</span>
+            </label>
+            <div className="flex gap-1 items-center">
+              <span className="input w-16 text-center bg-gray-50 text-gray-500 font-mono text-sm flex items-center justify-center">{prefixe}</span>
+              <input className="input flex-1" value={form.numero_piece_logiciel} onChange={f('numero_piece_logiciel')}
+                placeholder="numéro dans logiciel compta" />
+            </div>
           </div>
 
           {!isAppro && (
