@@ -140,7 +140,7 @@ export async function GET(req: NextRequest) {
   if (agriculteur?.note_transport) {
     y -= 10
     page.drawRectangle({ x: 50, y: y - 8, width: width - 100, height: 20 + Math.ceil(agriculteur.note_transport.length / 60) * 16, color: rgb(1, 0.973, 0.882) })
-    page.drawText('⚠ NOTE TRANSPORT', { x: 55, y, font: fontBold, size: 9, color: or })
+    page.drawText('! NOTE TRANSPORT', { x: 55, y, font: fontBold, size: 9, color: or })
     y -= 16
     const noteLines = agriculteur.note_transport.split('\n').flatMap((line: string) => {
       const maxLen = 75
@@ -162,13 +162,13 @@ export async function GET(req: NextRequest) {
 
   // Encadré d'avertissement transporteur
   const noteLines = [
-    '⚠  RAPPELS IMPORTANTS',
+    '!  RAPPELS IMPORTANTS',
     '',
-    '• Appelez l\'agriculteur plusieurs heures avant la livraison pour',
-    '  convenir de l\'heure exacte et vous assurer de sa disponibilité.',
+    '- Appelez l\'agriculteur plusieurs heures avant la livraison pour',
+    '  convenir de l\'heure exacte et vous assurer de sa disponibilite.',
     '',
-    '• Vérifiez que votre matériel est adapté au site de chargement',
-    '  ET au site de déchargement (benne, citerne, dimensions, accès…).',
+    '- Verifiez que votre materiel est adapte au site de chargement',
+    '  ET au site de dechargement (benne, citerne, dimensions, acces...).',
   ]
   const noteBlockHeight = noteLines.length * 16 + 24
   page.drawRectangle({ x: 50, y: y - noteBlockHeight + 16, width: width - 100, height: noteBlockHeight, color: rgb(1, 0.941, 0.902) })
