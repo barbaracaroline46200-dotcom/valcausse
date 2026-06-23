@@ -121,11 +121,14 @@ export default function FacturationPage() {
   function resetFiltres() { setFiltProduit(''); setFiltAgriculteur(''); setFiltTransporteur(''); setFiltFournisseur(''); setFiltPoids(''); setFiltDateDebut(''); setFiltDateFin('') }
   const hasFiltres = filtProduit || filtAgriculteur || filtTransporteur || filtFournisseur || filtPoids || filtDateDebut || filtDateFin
 
-  const deps = [filtProduit, filtAgriculteur, filtTransporteur, filtFournisseur, filtPoids, filtDateDebut, filtDateFin] as const
-  const transportFiltres    = useMemo(() => applyFiltres(transportEnAttente),  [transportEnAttente,  ...deps])
-  const fournisseurFiltres  = useMemo(() => applyFiltres(fournisseurEnAttente), [fournisseurEnAttente, ...deps])
-  const verifClientFiltres  = useMemo(() => applyFiltres(aVerifierClient),      [aVerifierClient,     ...deps])
-  const saisirClientFiltres = useMemo(() => applyFiltres(aFacturerClient),      [aFacturerClient,     ...deps])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const transportFiltres    = useMemo(() => applyFiltres(transportEnAttente),  [transportEnAttente,  filtProduit, filtAgriculteur, filtTransporteur, filtFournisseur, filtPoids, filtDateDebut, filtDateFin])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const fournisseurFiltres  = useMemo(() => applyFiltres(fournisseurEnAttente), [fournisseurEnAttente, filtProduit, filtAgriculteur, filtTransporteur, filtFournisseur, filtPoids, filtDateDebut, filtDateFin])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const verifClientFiltres  = useMemo(() => applyFiltres(aVerifierClient),      [aVerifierClient,     filtProduit, filtAgriculteur, filtTransporteur, filtFournisseur, filtPoids, filtDateDebut, filtDateFin])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const saisirClientFiltres = useMemo(() => applyFiltres(aFacturerClient),      [aFacturerClient,     filtProduit, filtAgriculteur, filtTransporteur, filtFournisseur, filtPoids, filtDateDebut, filtDateFin])
 
   const [onglet, setOnglet] = useState<'transport' | 'fournisseur' | 'client'>('transport')
   const [sousOngletClient, setSousOngletClient] = useState<'verif' | 'saisir'>('verif')
