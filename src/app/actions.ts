@@ -51,7 +51,7 @@ export async function getDashboardData() {
     return dateRef && dateRef <= cutoff7
   })
 
-  const facturationSelect = `*,contrat_achat:contrats_achat(id,numero_contrat,famille,produit:produits(nom),transporteur:transporteurs(nom),fournisseur:fournisseurs(nom),contrats_vente(id,numero_contrat,destination_silo,agriculteur:agriculteurs(id,civilite,nom)))`
+  const facturationSelect = `*,contrat_achat:contrats_achat(id,numero_contrat,famille,prix_achat,produit:produits(nom),transporteur:transporteurs(nom),fournisseur:fournisseurs(nom),contrats_vente(id,numero_contrat,destination_silo,agriculteur:agriculteurs(id,civilite,nom)))`
   const { data: livraisonsAFacturerRaw } = await supabase
     .from('livraisons')
     .select(facturationSelect)

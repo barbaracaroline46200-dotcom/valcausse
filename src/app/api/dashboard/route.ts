@@ -112,7 +112,7 @@ export async function GET() {
   const facturationSelect = `
     *,
     contrat_achat:contrats_achat(
-      id, numero_contrat, famille,
+      id, numero_contrat, famille, prix_achat,
       produit:produits(nom),
       transporteur:transporteurs(nom),
       fournisseur:fournisseurs(nom),

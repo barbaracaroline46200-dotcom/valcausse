@@ -23,6 +23,10 @@ export default function SaisirFactureFournisseurGroupeModal({ livraisons, onClos
 
   const fournisseurNom = livraisons[0]?.contrat_achat?.fournisseur?.nom ?? '—'
   const totalTonnes = livraisons.reduce((s, l) => s + (l.quantite_reelle ?? 0), 0)
+  const totalAttendu = livraisons.reduce((s, l) => {
+    const prix = l.contrat_achat?.prix_achat ?? 0
+    return s + prix * (l.quantite_reelle ?? 0)
+  }, 0)
 
   const [form, setForm] = useState({
     numero_facture: '',
@@ -94,20 +98,44 @@ export default function SaisirFactureFournisseurGroupeModal({ livraisons, onClos
           <span className="text-xs font-bold text-gray-700">{formatTonnes(totalTonnes)} au total</span>
         </div>
         <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-100 bg-gray-50/60 text-xs text-gray-400">
+              <th className="px-4 py-1.5 text-left font-medium">Date</th>
+              <th className="px-4 py-1.5 text-left font-medium">Produit</th>
+              <th className="px-4 py-1.5 text-left font-medium">Destinataire</th>
+              <th className="px-4 py-1.5 text-right font-medium">Tonnes</th>
+              <th className="px-4 py-1.5 text-right font-medium">Prix achat</th>
+              <th className="px-4 py-1.5 text-right font-medium">Montant attendu</th>
+            </tr>
+          </thead>
           <tbody>
             {livraisons.map(l => {
               const ca = l.contrat_achat
               const agri = ca?.contrats_vente?.find((v: any) => v.id === l.contrat_vente_id)?.agriculteur
+              const prixAchat = ca?.prix_achat
+              const montantAttendu = prixAchat != null ? prixAchat * (l.quantite_reelle ?? 0) : null
               return (
                 <tr key={l.id} className="border-b border-gray-50 last:border-0">
                   <td className="px-4 py-1.5 text-gray-500">{formatDate(l.date_reelle)}</td>
                   <td className="px-4 py-1.5">{ca?.produit?.nom ?? '—'}</td>
                   <td className="px-4 py-1.5 text-gray-500">{agri?.nom ?? ca?.numero_contrat ?? '—'}</td>
                   <td className="px-4 py-1.5 font-semibold text-right">{formatTonnes(l.quantite_reelle)}</td>
+                  <td className="px-4 py-1.5 text-right text-gray-500 text-xs">{prixAchat != null ? `${prixAchat} €/t` : '—'}</td>
+                  <td className="px-4 py-1.5 text-right font-semibold text-amber-700">{montantAttendu != null ? `${montantAttendu.toFixed(2)} €` : '—'}</td>
                 </tr>
               )
             })}
           </tbody>
+          {totalAttendu > 0 && (
+            <tfoot>
+              <tr className="border-t-2 border-amber-200 bg-amber-50/50">
+                <td colSpan={3} className="px-4 py-2 text-xs font-semibold text-amber-800 uppercase tracking-wide">Total attendu</td>
+                <td className="px-4 py-2 text-right font-bold text-gray-700">{formatTonnes(totalTonnes)}</td>
+                <td className="px-4 py-2"></td>
+                <td className="px-4 py-2 text-right font-bold text-amber-700 text-base">{totalAttendu.toFixed(2)} €</td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
 
@@ -126,9 +154,21 @@ export default function SaisirFactureFournisseurGroupeModal({ livraisons, onClos
             </div>
           )}
 
-          <div className={isAppro ? '' : ''}>
+          <div>
             <label className="label">Montant HT (€) *</label>
             <input type="number" step="0.01" className="input" value={form.montant_ht} onChange={f('montant_ht')} required />
+            {form.montant_ht && totalAttendu > 0 && (() => {
+              const saisi = parseFloat(form.montant_ht)
+              const ecart = saisi - totalAttendu
+              const pct = Math.abs(ecart / totalAttendu * 100)
+              if (Math.abs(ecart) < 0.01) return <p className="text-xs text-green-600 mt-1 font-medium">✓ Correspond au montant attendu</p>
+              return (
+                <p className={`text-xs mt-1 font-medium ${ecart > 0 ? 'text-red-600' : 'text-orange-600'}`}>
+                  {ecart > 0 ? '⚠ Facturé ' : '⚠ Facturé '}
+                  <strong>{ecart > 0 ? '+' : ''}{ecart.toFixed(2)} €</strong> vs attendu {totalAttendu.toFixed(2)} € ({pct.toFixed(1)}%)
+                </p>
+              )
+            })()}
           </div>
           <div>
             <label className="label">Montant TTC (€)</label>
