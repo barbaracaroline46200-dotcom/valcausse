@@ -52,7 +52,7 @@ export default function RfPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
-                {['Fournisseur', 'Produit', 'Contrat', 'N° Facture', 'Date', 'Montant HT', 'Saisir RF'].map(h => (
+                {['Fournisseur', 'Produit', 'Contrat', 'N° Facture', 'Date', 'Montant TTC', 'Saisir RF'].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
@@ -67,7 +67,7 @@ export default function RfPage() {
                   </td>
                   <td className="table-cell">{f.numero_facture ?? '—'}</td>
                   <td className="table-cell">{formatDate(f.date_facture)}</td>
-                  <td className="table-cell">{f.montant_ht ? `${f.montant_ht} €` : '—'}</td>
+                  <td className="table-cell">{f.montant_ttc ? `${f.montant_ttc} €` : (f.montant_ht ? `${f.montant_ht} € (HT)` : '—')}</td>
                   <td className="table-cell">
                     <SaisirRFInline factureId={f.id} onSaved={reload} />
                   </td>
