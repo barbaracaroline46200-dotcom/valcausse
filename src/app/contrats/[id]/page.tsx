@@ -20,6 +20,7 @@ import AffecterSiloModal from '@/components/contrats/AffecterSiloModal'
 import { getPrefixes } from '@/lib/prefixes'
 import SoldeOuvertureModal from '@/components/livraisons/SoldeOuvertureModal'
 import AlerteNote from '@/components/ui/AlerteNote'
+import ModifierFactureFournisseurModal from '@/components/livraisons/ModifierFactureFournisseurModal'
 import CalendrierContrat from '@/components/ui/CalendrierContrat'
 
 export default function ContratDetailPage() {
@@ -40,6 +41,7 @@ export default function ContratDetailPage() {
   const [showAffecterSilo, setShowAffecterSilo] = useState(false)
   const [modifierSilo, setModifierSilo] = useState<any>(null)
   const [showAffecterVenteMasse, setShowAffecterVenteMasse] = useState(false)
+  const [modifierFactureFourn, setModifierFactureFourn] = useState<any>(null)
 
   async function chargerContrat() {
     const data = await fetch(`/api/contrats/${id}?t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json())
@@ -679,11 +681,16 @@ export default function ContratDetailPage() {
                   <td className="table-cell">{f.mode_paiement ?? '—'}</td>
                   <td className="table-cell">{formatDate(f.date_paiement)}</td>
                   <td className="table-cell">
-                    {isAdmin && (
-                      <button onClick={() => supprimerFactureFournisseur(f.id)} className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded" title="Supprimer cette facture">
-                        <Trash2 size={14} />
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => setModifierFactureFourn(f)} className="text-gray-300 hover:text-blue-500 transition-colors p-1 rounded" title="Modifier cette facture">
+                        <Pencil size={14} />
                       </button>
-                    )}
+                      {isAdmin && (
+                        <button onClick={() => supprimerFactureFournisseur(f.id)} className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded" title="Supprimer cette facture">
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -777,6 +784,13 @@ export default function ContratDetailPage() {
           livraisonsNonAffectees={(contrat.livraisons ?? []).filter((l: any) => l.type === 'planifiee' && !l.contrat_vente_id)}
           onClose={() => setShowAffecterVenteMasse(false)}
           onSaved={() => { setShowAffecterVenteMasse(false); chargerContrat() }}
+        />
+      )}
+      {modifierFactureFourn && (
+        <ModifierFactureFournisseurModal
+          facture={modifierFactureFourn}
+          onClose={() => setModifierFactureFourn(null)}
+          onSaved={() => { setModifierFactureFourn(null); chargerContrat() }}
         />
       )}
     </div>
