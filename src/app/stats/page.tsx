@@ -114,6 +114,23 @@ export default function StatsPage() {
     tonnes: filtered.reduce((s, c) => s + c.tonnesRealisees, 0),
   }), [filtered])
 
+  // Stats par transporteur
+  const statsTransporteurs = useMemo(() => {
+    const map = new Map<string, { nom: string; livraisons: number; tonnes: number; transport: number; avecCmr: number; sansCmr: number }>()
+    filtered.forEach(c => {
+      const nomT = c.transporteur?.nom ?? 'Sans transporteur'
+      ;(c.livraisons ?? []).filter((l: any) => l.type === 'realisee').forEach((l: any) => {
+        const entry = map.get(nomT) ?? { nom: nomT, livraisons: 0, tonnes: 0, transport: 0, avecCmr: 0, sansCmr: 0 }
+        entry.livraisons++
+        entry.tonnes += l.quantite_reelle ?? 0
+        entry.transport += l.montant_transport_reel ?? 0
+        if (l.numero_lettre_voiture) entry.avecCmr++; else entry.sansCmr++
+        map.set(nomT, entry)
+      })
+    })
+    return [...map.values()].sort((a, b) => b.tonnes - a.tonnes)
+  }, [filtered])
+
   // Vue par mois
   const parMois = useMemo(() => {
     const map = new Map<string, { ca: number; fournisseur: number; transport: number; tonnes: number }>()
@@ -389,6 +406,53 @@ export default function StatsPage() {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* Stats par transporteur */}
+      {statsTransporteurs.length > 0 && (
+        <div className="card-section overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
+            <Truck size={15} className="text-gray-500" />
+            <span className="font-semibold text-sm text-gray-700">Statistiques par transporteur</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50/50">
+                <tr>
+                  {['Transporteur', 'Livraisons', 'Tonnes', 'Coût transport', '€/t moy.', 'CMR saisis', 'CMR manquants', '% retard CMR'].map(h => (
+                    <th key={h} className="table-header">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {statsTransporteurs.map(t => {
+                  const pct = t.livraisons > 0 ? Math.round(t.sansCmr / t.livraisons * 100) : 0
+                  const ept = t.tonnes > 0 ? t.transport / t.tonnes : 0
+                  return (
+                    <tr key={t.nom} className="table-row">
+                      <td className="table-cell font-semibold">{t.nom}</td>
+                      <td className="table-cell">{t.livraisons}</td>
+                      <td className="table-cell">{formatTonnes(t.tonnes)}</td>
+                      <td className="table-cell">{t.transport > 0 ? formatEuros(t.transport) : <span className="text-gray-300">—</span>}</td>
+                      <td className="table-cell text-gray-600">{ept > 0 ? formatEurosParTonne(ept) : <span className="text-gray-300">—</span>}</td>
+                      <td className="table-cell text-green-700 font-medium">{t.avecCmr}</td>
+                      <td className="table-cell">
+                        {t.sansCmr > 0
+                          ? <span className="text-red-600 font-semibold">{t.sansCmr}</span>
+                          : <span className="text-gray-300">0</span>}
+                      </td>
+                      <td className="table-cell">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${pct === 0 ? 'bg-green-100 text-green-700' : pct < 20 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                          {pct} %
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

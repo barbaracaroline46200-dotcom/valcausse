@@ -36,7 +36,10 @@ export async function GET(req: NextRequest) {
     livraisonsOrParts.push(`numero_lettre_voiture.ilike.${likeAfterDot}`)
   }
 
-  const [contrats, ventes, livraisons, fournisseurs, agriculteurs, transporteurs, livraisonsParPoids] = await Promise.all([
+  // Ajouter numero_facture_transport dans la recherche livraisons
+  livraisonsOrParts.push(`numero_facture_transport.ilike.${like}`)
+
+  const [contrats, ventes, livraisons, fournisseurs, agriculteurs, transporteurs, livraisonsParPoids, facturesFourn, facturesClient] = await Promise.all([
     supabase
       .from('contrats_achat')
       .select('id,numero_contrat,famille,reference_fournisseur,produit:produits(nom),fournisseur:fournisseurs(nom)')
@@ -82,6 +85,20 @@ export async function GET(req: NextRequest) {
       .or(`nom.ilike.${like},email.ilike.${like},telephone.ilike.${like}`)
       .limit(10),
 
+    // Factures fournisseur par numéro
+    supabase
+      .from('factures_fournisseur')
+      .select('id,numero_facture,numero_piece_logiciel,montant_ht,montant_ttc,date_facture,contrat_achat:contrats_achat(id,numero_contrat,famille,produit:produits(nom),fournisseur:fournisseurs(nom))')
+      .or(`numero_facture.ilike.${like},numero_piece_logiciel.ilike.${like}`)
+      .limit(10),
+
+    // Factures client par numéro
+    supabase
+      .from('factures_client')
+      .select('id,numero_facture_logiciel,montant_ht,montant_ttc,created_at,contrat_vente:contrats_vente(id,numero_contrat,agriculteur:agriculteurs(nom),contrat_achat:contrats_achat(id,numero_contrat,famille,produit:produits(nom)))')
+      .ilike('numero_facture_logiciel', like)
+      .limit(10),
+
     // Recherche par poids exact
     isWeightSearch
       ? supabase
@@ -109,5 +126,7 @@ export async function GET(req: NextRequest) {
     agriculteurs: agriculteurs.data ?? [],
     transporteurs: transporteurs.data ?? [],
     livraisonsParPoids: livraisonsParPoids.data ?? [],
+    facturesFournisseur: facturesFourn.data ?? [],
+    facturesClient: facturesClient.data ?? [],
   })
 }

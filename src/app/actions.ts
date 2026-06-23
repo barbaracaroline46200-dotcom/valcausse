@@ -45,6 +45,11 @@ export async function getDashboardData() {
     const db = b.date_prevue || b.date_souhaitee || b.date_reelle || b.mois_prevu || ''
     return da < db ? -1 : da > db ? 1 : 0
   })
+  const cutoff7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const cmrEnRetard = cmrEnAttente.filter((l: any) => {
+    const dateRef = l.type === 'realisee' ? l.date_reelle : l.date_prevue
+    return dateRef && dateRef <= cutoff7
+  })
 
   const facturationSelect = `*,contrat_achat:contrats_achat(id,numero_contrat,famille,produit:produits(nom),transporteur:transporteurs(nom),fournisseur:fournisseurs(nom),contrats_vente(id,numero_contrat,destination_silo,agriculteur:agriculteurs(id,civilite,nom)))`
   const { data: livraisonsAFacturerRaw } = await supabase
@@ -84,6 +89,7 @@ export async function getDashboardData() {
     contrats: contrats ?? [],
     livraisonsPlanifiees,
     cmrEnAttente,
+    cmrEnRetard,
     livraisonsAFacturer,
     rfManquants: rfManquants ?? [],
     livraisonsAVerifierClient,

@@ -28,7 +28,7 @@ export default function RecherchePage() {
   const total = results
     ? (results.contrats?.length ?? 0) + (results.ventes?.length ?? 0) + (results.livraisons?.length ?? 0) +
       (results.fournisseurs?.length ?? 0) + (results.agriculteurs?.length ?? 0) + (results.transporteurs?.length ?? 0) +
-      (results.livraisonsParPoids?.length ?? 0)
+      (results.livraisonsParPoids?.length ?? 0) + (results.facturesFournisseur?.length ?? 0) + (results.facturesClient?.length ?? 0)
     : 0
 
   return (
@@ -198,6 +198,38 @@ export default function RecherchePage() {
                   <span className="font-medium">{t.nom}</span>
                 </ResultItem>
               ))}
+            </ResultGroup>
+          )}
+          {results.facturesFournisseur?.length > 0 && (
+            <ResultGroup title="Factures fournisseur" icon={<FileText size={16} />} count={results.facturesFournisseur.length}>
+              {results.facturesFournisseur.map((f: any) => (
+                <ResultItem key={f.id} href={`/contrats/${f.contrat_achat?.id}`}>
+                  <span className="font-mono font-semibold text-red-800">{f.numero_facture}</span>
+                  {f.numero_piece_logiciel && <span className="text-gray-500 text-xs ml-2">· Pièce : {f.numero_piece_logiciel}</span>}
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    {f.contrat_achat?.fournisseur?.nom} · {f.contrat_achat?.produit?.nom}
+                    {f.montant_ht != null && <span className="ml-2">HT : {f.montant_ht} €</span>}
+                    {f.date_facture && <span className="ml-2">· {formatDate(f.date_facture)}</span>}
+                  </div>
+                </ResultItem>
+              ))}
+            </ResultGroup>
+          )}
+          {results.facturesClient?.length > 0 && (
+            <ResultGroup title="Factures client" icon={<FileText size={16} />} count={results.facturesClient.length}>
+              {results.facturesClient.map((f: any) => {
+                const cv = f.contrat_vente
+                const ca = cv?.contrat_achat
+                return (
+                  <ResultItem key={f.id} href={ca?.id ? `/contrats/${ca.id}` : '#'}>
+                    <span className="font-mono font-semibold text-blue-800">{f.numero_facture_logiciel}</span>
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      {cv?.agriculteur?.nom} · {ca?.produit?.nom}
+                      {f.montant_ht != null && <span className="ml-2">HT : {f.montant_ht} €</span>}
+                    </div>
+                  </ResultItem>
+                )
+              })}
             </ResultGroup>
           )}
         </div>

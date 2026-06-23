@@ -102,6 +102,12 @@ export async function GET() {
     return da < db ? -1 : da > db ? 1 : 0
   })
 
+  const cutoff7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const cmrEnRetard = cmrEnAttente.filter((l: any) => {
+    const dateRef = l.type === 'realisee' ? l.date_reelle : l.date_prevue
+    return dateRef && dateRef <= cutoff7
+  })
+
   // Facturation en attente : réalisées sans facture transport ou fournisseur
   const facturationSelect = `
     *,
@@ -159,6 +165,7 @@ export async function GET() {
     contrats: contrats ?? [],
     livraisonsPlanifiees: livraisonsPlanifiees,
     cmrEnAttente: cmrEnAttente ?? [],
+    cmrEnRetard: cmrEnRetard ?? [],
     livraisonsAFacturer: livraisonsAFacturer ?? [],
     rfManquants: rfManquants ?? [],
     livraisonsAVerifierClient,

@@ -81,6 +81,8 @@ export default function FacturationPage() {
   const [filtTransporteur, setFiltTransporteur] = useState('')
   const [filtFournisseur, setFiltFournisseur] = useState('')
   const [filtPoids, setFiltPoids] = useState('')
+  const [filtDateDebut, setFiltDateDebut] = useState('')
+  const [filtDateFin, setFiltDateFin] = useState('')
 
   function getAgriFactu(l: any) {
     const ca = l.contrat_achat
@@ -110,17 +112,20 @@ export default function FacturationPage() {
         const poids = String(l.quantite_reelle ?? '')
         if (!poids.includes(filtPoids.replace(',', '.'))) return false
       }
+      if (filtDateDebut && (l.date_reelle ?? '') < filtDateDebut) return false
+      if (filtDateFin   && (l.date_reelle ?? '') > filtDateFin)   return false
       return true
     })
   }
 
-  function resetFiltres() { setFiltProduit(''); setFiltAgriculteur(''); setFiltTransporteur(''); setFiltFournisseur(''); setFiltPoids('') }
-  const hasFiltres = filtProduit || filtAgriculteur || filtTransporteur || filtFournisseur || filtPoids
+  function resetFiltres() { setFiltProduit(''); setFiltAgriculteur(''); setFiltTransporteur(''); setFiltFournisseur(''); setFiltPoids(''); setFiltDateDebut(''); setFiltDateFin('') }
+  const hasFiltres = filtProduit || filtAgriculteur || filtTransporteur || filtFournisseur || filtPoids || filtDateDebut || filtDateFin
 
-  const transportFiltres    = useMemo(() => applyFiltres(transportEnAttente),  [transportEnAttente,  filtProduit, filtAgriculteur, filtTransporteur, filtFournisseur, filtPoids])
-  const fournisseurFiltres  = useMemo(() => applyFiltres(fournisseurEnAttente), [fournisseurEnAttente, filtProduit, filtAgriculteur, filtTransporteur, filtFournisseur, filtPoids])
-  const verifClientFiltres  = useMemo(() => applyFiltres(aVerifierClient),      [aVerifierClient,     filtProduit, filtAgriculteur, filtTransporteur, filtFournisseur, filtPoids])
-  const saisirClientFiltres = useMemo(() => applyFiltres(aFacturerClient),      [aFacturerClient,     filtProduit, filtAgriculteur, filtTransporteur, filtFournisseur, filtPoids])
+  const deps = [filtProduit, filtAgriculteur, filtTransporteur, filtFournisseur, filtPoids, filtDateDebut, filtDateFin] as const
+  const transportFiltres    = useMemo(() => applyFiltres(transportEnAttente),  [transportEnAttente,  ...deps])
+  const fournisseurFiltres  = useMemo(() => applyFiltres(fournisseurEnAttente), [fournisseurEnAttente, ...deps])
+  const verifClientFiltres  = useMemo(() => applyFiltres(aVerifierClient),      [aVerifierClient,     ...deps])
+  const saisirClientFiltres = useMemo(() => applyFiltres(aFacturerClient),      [aFacturerClient,     ...deps])
 
   const [onglet, setOnglet] = useState<'transport' | 'fournisseur' | 'client'>('transport')
   const [sousOngletClient, setSousOngletClient] = useState<'verif' | 'saisir'>('verif')
@@ -174,6 +179,11 @@ export default function FacturationPage() {
 
       {/* Filtres communs à tous les onglets */}
       <div className="card flex gap-2 items-center flex-wrap py-3">
+        <span className="text-xs text-gray-400 font-medium">Période :</span>
+        <input type="date" value={filtDateDebut} onChange={e => setFiltDateDebut(e.target.value)} className="input text-xs py-1 w-36" title="Du" />
+        <span className="text-xs text-gray-400">→</span>
+        <input type="date" value={filtDateFin} onChange={e => setFiltDateFin(e.target.value)} className="input text-xs py-1 w-36" title="Au" />
+        <span className="text-gray-200 mx-1">|</span>
         <input type="text" value={filtPoids} onChange={e => setFiltPoids(e.target.value)}
           placeholder="Poids (t)..." className="input text-xs py-1 w-28" />
         <select value={filtProduit} onChange={e => setFiltProduit(e.target.value)} className="input text-xs py-1 w-36">
