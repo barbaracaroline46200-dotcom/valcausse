@@ -50,7 +50,9 @@ export default function ContratsPage() {
   const [filtFournisseur, setFiltFournisseur] = useState('')
   const [filtTransporteur, setFiltTransporteur] = useState('')
   const [filtAgriculteur, setFiltAgriculteur] = useState('')
+  const [filtCourtier, setFiltCourtier] = useState('')
   const [agriculteurs, setAgriculteurs] = useState<any[]>([])
+  const [courtiers, setCourtiers] = useState<any[]>([])
 
   useEffect(() => {
     Promise.all([
@@ -59,12 +61,14 @@ export default function ContratsPage() {
       fetch('/api/referentiels/fournisseurs').then(r => r.json()),
       fetch('/api/referentiels/transporteurs').then(r => r.json()),
       fetch('/api/referentiels/agriculteurs').then(r => r.json()),
-    ]).then(([c, p, f, t, a]) => {
+      fetch('/api/referentiels/courtiers').then(r => r.json()),
+    ]).then(([c, p, f, t, a, co]) => {
       setContrats(c)
       setProduits(p)
       setFournisseurs(f)
       setTransporteurs(t)
       setAgriculteurs(a)
+      setCourtiers(Array.isArray(co) ? co : [])
       setLoading(false)
     })
   }, [])
@@ -91,6 +95,7 @@ export default function ContratsPage() {
           const agriIds = (c.contrats_vente ?? []).map((cv: any) => cv.agriculteur_id)
           if (!agriIds.includes(filtAgriculteur)) return false
         }
+        if (filtCourtier && c.courtier_id !== filtCourtier) return false
         if (q) {
           const haystack = [
             c.numero_contrat,
@@ -125,7 +130,7 @@ export default function ContratsPage() {
         return { ...c, _prixVenteMoyen: prixVenteMoyen, _marge: marge }
       })
     return sort(base)
-  }, [contrats, filtFamille, filtStatut, filtProduit, filtFournisseur, filtTransporteur, filtAgriculteur, q, sortKey, sortDir])
+  }, [contrats, filtFamille, filtStatut, filtProduit, filtFournisseur, filtTransporteur, filtAgriculteur, filtCourtier, q, sortKey, sortDir])
 
   // Totaux sur les contrats filtrés
   const totaux = useMemo(() => {
@@ -149,10 +154,11 @@ export default function ContratsPage() {
     { key: 'fournisseur', label: 'Fournisseur', options: fournisseurs.map(f => ({ value: f.id, label: f.nom })), value: filtFournisseur, onChange: setFiltFournisseur },
     { key: 'transporteur', label: 'Transporteur', options: transporteurs.map(t => ({ value: t.id, label: t.nom })), value: filtTransporteur, onChange: setFiltTransporteur },
     { key: 'agriculteur', label: 'Agriculteur', options: agriculteurs.map(a => ({ value: a.id, label: a.nom })), value: filtAgriculteur, onChange: setFiltAgriculteur },
+    ...(courtiers.length > 0 ? [{ key: 'courtier', label: 'Courtier', options: courtiers.map(c => ({ value: c.id, label: c.nom })), value: filtCourtier, onChange: setFiltCourtier }] : []),
   ]
 
   function resetFilters() {
-    setFiltFamille(''); setFiltStatut(''); setFiltProduit(''); setFiltFournisseur(''); setFiltTransporteur(''); setFiltAgriculteur('')
+    setFiltFamille(''); setFiltStatut(''); setFiltProduit(''); setFiltFournisseur(''); setFiltTransporteur(''); setFiltAgriculteur(''); setFiltCourtier('')
   }
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-green-600" size={32} /></div>
