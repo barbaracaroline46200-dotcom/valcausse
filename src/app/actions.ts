@@ -21,7 +21,7 @@ export async function getDashboardData() {
 
   const { data: livraisonsPlanifieesRaw } = await supabase
     .from('livraisons')
-    .select(`*,contrat_achat:contrats_achat(numero_contrat,famille,produit:produits(nom),fournisseur:fournisseurs(nom),transporteur:transporteurs(id,nom),contrats_vente(id,agriculteur:agriculteurs(nom,ville_livraison)))`)
+    .select(`*,contrat_achat:contrats_achat(id,numero_contrat,famille,produit:produits(nom),fournisseur:fournisseurs(nom),transporteur:transporteurs(id,nom),contrats_vente(id,agriculteur:agriculteurs(nom,ville_livraison)))`)
     .eq('type', 'planifiee')
     .order('mois_prevu', { ascending: true })
 
