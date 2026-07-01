@@ -53,6 +53,7 @@ export default function ContratsPage() {
   const [filtCourtier, setFiltCourtier] = useState('')
   const [agriculteurs, setAgriculteurs] = useState<any[]>([])
   const [courtiers, setCourtiers] = useState<any[]>([])
+  const [aArchiver, setAArchiver] = useState<any[]>([])
 
   useEffect(() => {
     Promise.all([
@@ -62,19 +63,30 @@ export default function ContratsPage() {
       fetch('/api/referentiels/transporteurs').then(r => r.json()),
       fetch('/api/referentiels/agriculteurs').then(r => r.json()),
       fetch('/api/referentiels/courtiers').then(r => r.json()),
-    ]).then(([c, p, f, t, a, co]) => {
+      fetch('/api/contrats/a-archiver').then(r => r.json()),
+    ]).then(([c, p, f, t, a, co, aa]) => {
       setContrats(c)
       setProduits(p)
       setFournisseurs(f)
       setTransporteurs(t)
       setAgriculteurs(a)
       setCourtiers(Array.isArray(co) ? co : [])
+      setAArchiver(Array.isArray(aa) ? aa : [])
       setLoading(false)
     })
   }, [])
 
   function reload() {
     fetch('/api/contrats').then(r => r.json()).then(setContrats)
+  }
+
+  async function marquerClasse(id: string) {
+    await fetch(`/api/contrats/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ classeur_archive: true }),
+    })
+    setAArchiver(prev => prev.filter(c => c.id !== id))
   }
 
   const filtered = useMemo(() => {
@@ -182,6 +194,35 @@ export default function ContratsPage() {
           </button>
         )}
       </div>
+
+      {aArchiver.length > 0 && (
+        <div className="rounded-xl border-2 border-amber-400 bg-amber-50 p-4 space-y-2">
+          <div className="flex items-center gap-2 font-semibold text-amber-800 text-sm">
+            <span className="text-lg">📁</span>
+            {aArchiver.length === 1
+              ? '1 contrat terminé — pensez à le ranger dans votre classeur'
+              : `${aArchiver.length} contrats terminés — pensez à les ranger dans votre classeur`}
+          </div>
+          <div className="flex flex-col gap-1.5">
+            {aArchiver.map(c => (
+              <div key={c.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-amber-200">
+                <span className="text-sm font-medium text-gray-700">
+                  <span className="font-bold text-amber-900">{c.numero_contrat}</span>
+                  {c.produit?.nom && <span className="ml-2 text-gray-500">{c.produit.nom}</span>}
+                  {c.fournisseur?.nom && <span className="ml-2 text-gray-400">· {c.fournisseur.nom}</span>}
+                  <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">{c.statut === 'annule' ? 'Annulé' : 'Clos'}</span>
+                </span>
+                <button
+                  onClick={() => marquerClasse(c.id)}
+                  className="ml-4 text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center gap-1 shrink-0"
+                >
+                  ✓ Classé
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {q && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm" style={{ backgroundColor: '#fdf5f3', color: '#7B2820' }}>
