@@ -30,8 +30,11 @@ export default function RfPage() {
     </div>
   )
 
+  const negoce = rfManquants.filter((f: any) => f.contrat_achat?.famille === 'negoce')
+  const appro  = rfManquants.filter((f: any) => f.contrat_achat?.famille === 'appro')
+
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-8 pb-10">
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: '#dc2626' }}>
           <FileWarning size={22} />
@@ -42,13 +45,19 @@ export default function RfPage() {
             </span>
           )}
         </h1>
-        <p className="text-gray-500 text-sm mt-0.5">Factures fournisseur sans numéro RF — à recevoir de la comptable</p>
+        <p className="text-gray-500 text-sm mt-0.5">Factures fournisseur sans numéro RF — à compléter après retour de la comptable</p>
       </div>
 
-      <div className="card-section overflow-hidden">
-        {rfManquants.length === 0 ? (
-          <div className="px-5 py-12 text-center text-gray-500 text-sm">Aucun RF en attente 🎉</div>
-        ) : (
+      {rfManquants.length === 0 && (
+        <div className="card-section px-5 py-12 text-center text-gray-500 text-sm">Aucun RF en attente 🎉</div>
+      )}
+
+      {negoce.length > 0 && (
+        <div className="card-section overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50/60">
+            <span className="text-sm font-semibold text-gray-700">Négoce</span>
+            <span className="ml-2 text-xs text-gray-400">RF + date de paiement + mode de paiement</span>
+          </div>
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
@@ -58,7 +67,7 @@ export default function RfPage() {
               </tr>
             </thead>
             <tbody>
-              {rfManquants.map((f: any) => (
+              {negoce.map((f: any) => (
                 <tr key={f.id} className="table-row">
                   <td className="table-cell font-medium">{f.contrat_achat?.fournisseur?.nom ?? '—'}</td>
                   <td className="table-cell">{f.contrat_achat?.produit?.nom ?? '—'}</td>
@@ -69,49 +78,116 @@ export default function RfPage() {
                   <td className="table-cell">{formatDate(f.date_facture)}</td>
                   <td className="table-cell">{f.montant_ttc ? `${f.montant_ttc} €` : (f.montant_ht ? `${f.montant_ht} € (HT)` : '—')}</td>
                   <td className="table-cell">
-                    <SaisirRFInline factureId={f.id} onSaved={reload} />
+                    <SaisirRFInline factureId={f.id} famille="negoce" onSaved={reload} />
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
-      </div>
+        </div>
+      )}
+
+      {appro.length > 0 && (
+        <div className="card-section overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50/60">
+            <span className="text-sm font-semibold text-gray-700">Appro</span>
+            <span className="ml-2 text-xs text-gray-400">RF + FAF + date de paiement + mode de paiement</span>
+          </div>
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-100">
+                {['Fournisseur', 'Produit', 'Contrat', 'N° Facture', 'Date', 'Montant TTC', 'Saisir RF + FAF'].map(h => (
+                  <th key={h} className="table-header">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {appro.map((f: any) => (
+                <tr key={f.id} className="table-row">
+                  <td className="table-cell font-medium">{f.contrat_achat?.fournisseur?.nom ?? '—'}</td>
+                  <td className="table-cell">{f.contrat_achat?.produit?.nom ?? '—'}</td>
+                  <td className="table-cell">
+                    <a href={`/contrats/${f.contrat_achat?.id}`} className="text-green-700 hover:underline text-sm">{f.contrat_achat?.numero_contrat}</a>
+                  </td>
+                  <td className="table-cell">{f.numero_facture ?? '—'}</td>
+                  <td className="table-cell">{formatDate(f.date_facture)}</td>
+                  <td className="table-cell">{f.montant_ttc ? `${f.montant_ttc} €` : (f.montant_ht ? `${f.montant_ht} € (HT)` : '—')}</td>
+                  <td className="table-cell">
+                    <SaisirRFInline factureId={f.id} famille="appro" fafExistant={f.numero_piece_logiciel} onSaved={reload} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
 
-function SaisirRFInline({ factureId, onSaved }: { factureId: string; onSaved: () => void }) {
+function SaisirRFInline({ factureId, famille, fafExistant, onSaved }: {
+  factureId: string
+  famille: 'negoce' | 'appro'
+  fafExistant?: string | null
+  onSaved: () => void
+}) {
   const [rf, setRf] = useState('')
+  const [faf, setFaf] = useState(fafExistant ?? '')
   const [datePaiement, setDatePaiement] = useState('')
+  const [modePaiement, setModePaiement] = useState('')
   const [saving, setSaving] = useState(false)
 
   async function save() {
     if (!rf) return
     setSaving(true)
+    const body: any = {
+      numero_rf: rf,
+      date_paiement: datePaiement || null,
+      mode_paiement: modePaiement || null,
+    }
+    if (famille === 'appro' && faf) {
+      body.numero_piece_logiciel = faf
+    }
     await fetch(`/api/factures/fournisseur/${factureId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ numero_piece_logiciel: rf, date_paiement: datePaiement || null }),
+      body: JSON.stringify(body),
     })
     setSaving(false)
     onSaved()
   }
 
   return (
-    <div className="flex items-center gap-1">
-      <input type="text" value={rf} onChange={e => setRf(e.target.value)}
-        placeholder="N° RF"
-        className="text-xs border border-gray-200 rounded px-1.5 py-0.5 w-20 focus:outline-none focus:border-red-400"
-      />
-      <input type="date" value={datePaiement} onChange={e => setDatePaiement(e.target.value)}
-        title="Date de paiement"
-        className="text-xs border border-gray-200 rounded px-1.5 py-0.5 w-28 focus:outline-none focus:border-red-400"
-      />
-      <button onClick={save} disabled={!rf || saving}
-        className="text-xs px-2 py-0.5 rounded bg-red-600 text-white disabled:opacity-40 hover:bg-red-700">
-        {saving ? '...' : '✓'}
-      </button>
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-1">
+        <input type="text" value={rf} onChange={e => setRf(e.target.value)}
+          placeholder="N° RF"
+          className="text-xs border border-gray-200 rounded px-1.5 py-0.5 w-24 focus:outline-none focus:border-red-400"
+        />
+        {famille === 'appro' && (
+          <input type="text" value={faf} onChange={e => setFaf(e.target.value)}
+            placeholder="N° FAF"
+            className="text-xs border border-gray-200 rounded px-1.5 py-0.5 w-24 focus:outline-none focus:border-orange-400"
+          />
+        )}
+      </div>
+      <div className="flex items-center gap-1">
+        <input type="date" value={datePaiement} onChange={e => setDatePaiement(e.target.value)}
+          title="Date de paiement"
+          className="text-xs border border-gray-200 rounded px-1.5 py-0.5 w-28 focus:outline-none focus:border-red-400"
+        />
+        <select value={modePaiement} onChange={e => setModePaiement(e.target.value)}
+          className="text-xs border border-gray-200 rounded px-1.5 py-0.5 focus:outline-none focus:border-red-400">
+          <option value="">Mode…</option>
+          <option value="virement">Virement</option>
+          <option value="prelevement">Prélèvement</option>
+          <option value="lcr">LCR</option>
+        </select>
+        <button onClick={save} disabled={!rf || saving}
+          className="text-xs px-2 py-0.5 rounded bg-red-600 text-white disabled:opacity-40 hover:bg-red-700">
+          {saving ? '...' : '✓'}
+        </button>
+      </div>
     </div>
   )
 }

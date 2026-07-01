@@ -142,14 +142,14 @@ export async function GET() {
     (l: any) => l.verifie_client && !l.facture_client_saisie
   )
 
-  // RF à récupérer : factures fournisseur sans numéro RF (numero_piece_logiciel null)
+  // RF à récupérer : factures fournisseur sans numéro RF
   const { data: rfManquants } = await supabase
     .from('factures_fournisseur')
     .select(`
       *,
       contrat_achat:contrats_achat(id, numero_contrat, famille, produit:produits(nom), fournisseur:fournisseurs(nom))
     `)
-    .is('numero_piece_logiciel', null)
+    .is('numero_rf', null)
     .not('numero_facture', 'is', null)
     .order('date_facture', { ascending: false })
 
