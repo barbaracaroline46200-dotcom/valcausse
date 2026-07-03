@@ -581,9 +581,14 @@ export default function ContratDetailPage() {
                         </td>
                         <td className="table-cell">
                           {isAdmin && (
-                            <button onClick={() => setModifierLivRealisee(l)} className="btn-secondary text-xs py-1 px-2">
-                              <Pencil size={11} />
-                            </button>
+                            <div className="flex gap-1">
+                              <button onClick={() => setModifierLivRealisee(l)} className="btn-secondary text-xs py-1 px-2">
+                                <Pencil size={11} />
+                              </button>
+                              <button onClick={() => supprimerLivraison(l.id)} className="btn-danger text-xs py-1 px-2">
+                                <Trash2 size={11} />
+                              </button>
+                            </div>
                           )}
                         </td>
                       </tr>
