@@ -158,12 +158,30 @@ export default function ContratDetailPage() {
               <CheckCircle size={16} />
               {contrat.statut === 'en_cours' ? 'Clôturer' : 'Rouvrir'}
             </button>
+            <a href={`/api/pdf/recap-contrat?contrat_id=${id}`} target="_blank" rel="noopener noreferrer" className="btn-secondary">
+              <FileDown size={15} /> Récap PDF
+            </a>
             <button onClick={supprimerContrat} className="btn-danger">
               <Trash2 size={15} /> Supprimer
             </button>
           </div>
         )}
       </div>
+
+      {/* Contrat clôturé → proposer le récap à archiver */}
+      {isAdmin && contrat.statut === 'clos' && (
+        <div className="flex items-center justify-between gap-3 bg-green-50 border border-green-200 rounded-xl px-5 py-3">
+          <div className="flex items-center gap-3">
+            <CheckCircle size={20} className="text-green-600 flex-shrink-0" />
+            <span className="text-green-800 text-sm">
+              <span className="font-bold">Contrat clôturé.</span> Téléchargez le récapitulatif à imprimer et archiver.
+            </span>
+          </div>
+          <a href={`/api/pdf/recap-contrat?contrat_id=${id}`} target="_blank" rel="noopener noreferrer" className="btn-primary text-sm shrink-0">
+            <FileDown size={15} /> Télécharger le récap PDF
+          </a>
+        </div>
+      )}
 
       {/* Alerte dépassement vente */}
       {depassementVente && (
