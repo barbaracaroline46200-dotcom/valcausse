@@ -57,17 +57,40 @@ export default function SaisirFactureTransportGroupeModal({ selections, onClose,
           <span className="text-xs font-bold text-gray-700">{formatTonnes(totalTonnes)} · {totalMontant.toFixed(2)} €</span>
         </div>
         <table className="w-full text-sm">
+          <thead>
+            <tr className="text-xs text-gray-400">
+              <th className="px-4 py-1 text-left font-normal">Date</th>
+              <th className="px-4 py-1 text-left font-normal">Produit</th>
+              <th className="px-4 py-1 text-left font-normal">Agri</th>
+              <th className="px-4 py-1 text-right font-normal">Tonnes</th>
+              <th className="px-4 py-1 text-right font-normal">Prévu</th>
+              <th className="px-4 py-1 text-right font-normal">Réel</th>
+              <th className="px-4 py-1 text-right font-normal">Écart</th>
+            </tr>
+          </thead>
           <tbody>
             {selections.map(({ livraison: l, montant }) => {
               const ca = l.contrat_achat
               const agri = ca?.contrats_vente?.find((v: any) => v.id === l.contrat_vente_id)?.agriculteur
+              const prevu = ca?.prix_transport_prevu && l.quantite_reelle
+                ? ca.prix_transport_prevu * l.quantite_reelle
+                : null
+              const ecart = prevu != null ? parseFloat(montant) - prevu : null
               return (
                 <tr key={l.id} className="border-b border-gray-50 last:border-0">
                   <td className="px-4 py-1.5 text-gray-500">{formatDate(l.date_reelle)}</td>
                   <td className="px-4 py-1.5">{ca?.produit?.nom ?? '—'}</td>
                   <td className="px-4 py-1.5 text-gray-500">{agri?.nom ?? '—'}</td>
                   <td className="px-4 py-1.5 text-right">{formatTonnes(l.quantite_reelle)}</td>
+                  <td className="px-4 py-1.5 text-right text-gray-400">{prevu != null ? `${prevu.toFixed(2)} €` : '—'}</td>
                   <td className="px-4 py-1.5 font-semibold text-right text-amber-700">{parseFloat(montant).toFixed(2)} €</td>
+                  <td className="px-4 py-1.5 text-right">
+                    {ecart != null && (
+                      Math.abs(ecart) < 0.01
+                        ? <span className="text-xs text-green-600 font-medium">✓</span>
+                        : <span className={`text-xs font-medium ${ecart > 0 ? 'text-red-600' : 'text-amber-600'}`}>{ecart > 0 ? '+' : ''}{ecart.toFixed(2)} €</span>
+                    )}
+                  </td>
                 </tr>
               )
             })}

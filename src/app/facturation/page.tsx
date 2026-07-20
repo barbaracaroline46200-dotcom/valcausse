@@ -6,7 +6,7 @@ import SaisirFactureTransportGroupeModal from '@/components/livraisons/SaisirFac
 import SaisirFactureFournisseurGroupeModal from '@/components/livraisons/SaisirFactureFournisseurGroupeModal'
 import SaisirFactureClientModal from '@/components/livraisons/SaisirFactureClientModal'
 import { useAdmin } from '@/components/ui/AdminProvider'
-import { formatDate, formatTonnes } from '@/lib/annee-agricole'
+import { formatDate, formatTonnes, formatEuros } from '@/lib/annee-agricole'
 import AlerteNote from '@/components/ui/AlerteNote'
 
 export default function FacturationPage() {
@@ -323,6 +323,15 @@ export default function FacturationPage() {
                                 />
                                 <span className="text-xs text-gray-400">€</span>
                               </div>
+                              {prixPrevu && prix.trim() !== '' && !isNaN(parseFloat(prix)) && (() => {
+                                const ecart = parseFloat(prix) - parseFloat(prixPrevu)
+                                if (Math.abs(ecart) < 0.01) return <p className="text-xs mt-0.5 text-green-600 font-medium">✓ conforme</p>
+                                return (
+                                  <p className={`text-xs mt-0.5 font-medium ${ecart > 0 ? 'text-red-600' : 'text-amber-600'}`}>
+                                    {ecart > 0 ? '+' : ''}{formatEuros(ecart)} vs prévu
+                                  </p>
+                                )
+                              })()}
                             </td>
                             {isAdmin && (
                               <td className="table-cell text-center">
