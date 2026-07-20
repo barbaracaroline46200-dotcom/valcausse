@@ -11,9 +11,11 @@ interface Props {
   isAdmin?: boolean
   onConfirme: () => void  // appelé quand transporteur_contacte → reload dashboard
   onDelete?: () => void
+  selected?: boolean
+  onToggleSelect?: () => void
 }
 
-export default function LivraisonAOrganiser({ livraison: l, moisCourant, moisSuivant, isAdmin, onConfirme, onDelete }: Props) {
+export default function LivraisonAOrganiser({ livraison: l, moisCourant, moisSuivant, isAdmin, onConfirme, onDelete, selected, onToggleSelect }: Props) {
   // État local propre à cette livraison — initialisé depuis le serveur, géré localement
   const [agri, setAgri] = useState(!!l.agriculteur_contacte)
   const [pdf, setPdf] = useState(!!l.pdf_envoye)
@@ -87,10 +89,19 @@ export default function LivraisonAOrganiser({ livraison: l, moisCourant, moisSui
   }
 
   return (
-    <div className={`px-5 py-4 ${isRetard ? 'bg-red-50/40' : isProchain ? 'bg-blue-50/40' : ''}`}>
+    <div className={`px-5 py-4 ${selected ? 'bg-orange-50/60' : isRetard ? 'bg-red-50/40' : isProchain ? 'bg-blue-50/40' : ''}`}>
       {/* En-tête */}
       <div className="flex items-start justify-between gap-4 mb-3">
         <div className="flex items-center gap-3 flex-wrap">
+          {onToggleSelect && (
+            <input
+              type="checkbox"
+              checked={!!selected}
+              onChange={onToggleSelect}
+              className="w-4 h-4 cursor-pointer accent-orange-600 shrink-0"
+              title="Sélectionner pour un envoi groupé"
+            />
+          )}
           <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
             isRetard ? 'bg-red-100 text-red-700' : isProchain ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
           }`}>{isRetard ? '⚠️ ' : isProchain ? '→ ' : ''}{formatMois(l.mois_prevu)}</span>

@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { usePathname } from 'next/navigation'
-import { Truck, Loader2, ChevronDown, X } from 'lucide-react'
+import { Truck, Loader2, ChevronDown, X, FileText } from 'lucide-react'
 import LivraisonAOrganiser from '@/components/livraisons/LivraisonAOrganiser'
 import { useAdmin } from '@/components/ui/AdminProvider'
 
@@ -99,6 +99,7 @@ export default function LivraisonsPage() {
   const [filtProduits, setFiltProduits] = useState<string[]>([])
   const [filtAgriculteurs, setFiltAgriculteurs] = useState<string[]>([])
   const [filtTransporteurs, setFiltTransporteurs] = useState<string[]>([])
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   const reload = useCallback(async () => {
     const res = await fetch('/api/dashboard')
@@ -114,6 +115,23 @@ export default function LivraisonsPage() {
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [])
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
+
+  async function envoyerPdfGroupe() {
+    window.open(`/api/pdf/transporteur/groupe?livraison_ids=${selectedIds.join(',')}`, '_blank')
+    await Promise.all(selectedIds.map(id =>
+      fetch(`/api/livraisons/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdf_envoye: true }),
+      })
+    ))
+    setSelectedIds([])
+    reload()
+  }
 
   async function deleteLivraison(id: string) {
     if (!window.confirm('Supprimer cette livraison ? Action irréversible.')) return
@@ -144,6 +162,9 @@ export default function LivraisonsPage() {
     if (filtTransporteurs.length > 0 && !filtTransporteurs.includes(l.contrat_achat?.transporteur?.nom)) return false
     return true
   }), [planifiees, filtFournisseurs, filtProduits, filtAgriculteurs, filtTransporteurs])
+
+  const selectionnees = useMemo(() => planifiees.filter((l: any) => selectedIds.includes(l.id)), [planifiees, selectedIds])
+  const totalSelection = selectionnees.reduce((sum: number, l: any) => sum + (Number(l.quantite_prevue) || 0), 0)
 
   const hasFiltres = filtFournisseurs.length > 0 || filtProduits.length > 0 || filtAgriculteurs.length > 0 || filtTransporteurs.length > 0
   const nbActifs = filtFournisseurs.length + filtProduits.length + filtAgriculteurs.length + filtTransporteurs.length
@@ -188,6 +209,29 @@ export default function LivraisonsPage() {
         )}
       </div>
 
+      {selectedIds.length > 0 && (
+        <div className="sticky top-2 z-40 flex items-center justify-between gap-3 px-4 py-3 rounded-xl shadow-lg flex-wrap" style={{ backgroundColor: '#7B2820' }}>
+          <span className="text-white text-sm font-medium">
+            {selectedIds.length} livraison{selectedIds.length > 1 ? 's' : ''} sélectionnée{selectedIds.length > 1 ? 's' : ''} — soit {totalSelection.toLocaleString('fr-FR')} tonnes
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedIds([])}
+              className="text-xs text-white/70 hover:text-white px-2"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={envoyerPdfGroupe}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white"
+              style={{ color: '#7B2820' }}
+            >
+              <FileText size={15} /> Télécharger le PDF groupé
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="card-section overflow-hidden">
         {planifiees.length === 0 ? (
           <div className="px-5 py-12 text-center text-gray-500 text-sm">Aucune livraison en attente 🎉</div>
@@ -211,6 +255,8 @@ export default function LivraisonsPage() {
                     isAdmin={isAdmin}
                     onConfirme={reload}
                     onDelete={() => deleteLivraison(l.id)}
+                    selected={selectedIds.includes(l.id)}
+                    onToggleSelect={() => toggleSelect(l.id)}
                   />
                 ))}
               </div>
