@@ -3,7 +3,7 @@
 import { getDashboardData } from './actions'
 import { useEffect, useState, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
-import { Phone, AlertTriangle, TrendingUp, Loader2, Plus, Trash2, CheckSquare, Square, CalendarDays, CheckCircle2, Circle, ClipboardList, CheckCircle, Wheat, Sprout, PackageOpen, PackageCheck } from 'lucide-react'
+import { Phone, AlertTriangle, TrendingUp, Loader2, Plus, Trash2, CheckSquare, Square, CalendarDays, CheckCircle2, Circle, ClipboardList, CheckCircle, Wheat, Sprout, PackageOpen, PackageCheck, ChevronDown } from 'lucide-react'
 import { formatDate, formatTonnes, getAnneeAgricoleLabel, getAnneeAgricole } from '@/lib/annee-agricole'
 import { quantiteLivree, reliquat } from '@/lib/utils'
 import CalendrierLivraisons from '@/components/ui/CalendrierLivraisons'
@@ -536,6 +536,7 @@ export default function DashboardPage() {
           count={cmrEnRetard.length}
           color="red"
           subtitle="Ces livraisons réalisées n'ont toujours pas de lettre de voiture saisie"
+          collapsible
         >
           <table className="w-full">
             <thead><tr className="border-b border-gray-100">
@@ -634,26 +635,32 @@ const SECTION_COLORS = {
   brun:   { bg: '#7B2820', light: '#fdf5f3', border: '#e4b5ad' },
 }
 
-function Section({ icon, title, count, color, subtitle, children }: {
+function Section({ icon, title, count, color, subtitle, children, collapsible, defaultCollapsed }: {
   icon: React.ReactNode
   title: string
   count: number | null
   color: 'orange' | 'red' | 'blue' | 'brun'
   subtitle?: string
   children: React.ReactNode
+  collapsible?: boolean
+  defaultCollapsed?: boolean
 }) {
   const c = SECTION_COLORS[color]
+  const [collapsed, setCollapsed] = useState(!!defaultCollapsed)
   return (
     <div className="card-section overflow-hidden">
-      <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3"
-           style={{ backgroundColor: c.light, borderBottomColor: c.border }}>
+      <div
+        className="px-5 py-4 border-b border-gray-100 flex items-center gap-3"
+        style={{ backgroundColor: c.light, borderBottomColor: c.border, cursor: collapsible ? 'pointer' : undefined }}
+        onClick={collapsible ? () => setCollapsed(v => !v) : undefined}
+      >
         <div
           className="w-9 h-9 rounded-lg flex items-center justify-center text-white flex-shrink-0"
           style={{ backgroundColor: c.bg }}
         >
           {icon}
         </div>
-        <div>
+        <div className="flex-1">
           <div className="flex items-center gap-2">
             <h2 className="font-bold" style={{ color: '#3a1e1a' }}>{title}</h2>
             {count !== null && count > 0 && (
@@ -667,8 +674,15 @@ function Section({ icon, title, count, color, subtitle, children }: {
           </div>
           {subtitle && <p className="text-xs mt-0.5" style={{ color: '#7B2820', opacity: 0.7 }}>{subtitle}</p>}
         </div>
+        {collapsible && (
+          <ChevronDown
+            size={18}
+            className="flex-shrink-0 transition-transform"
+            style={{ color: '#7B2820', transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}
+          />
+        )}
       </div>
-      <div className="overflow-x-auto">{children}</div>
+      {!collapsed && <div className="overflow-x-auto">{children}</div>}
     </div>
   )
 }
