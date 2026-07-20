@@ -38,6 +38,55 @@ async function recalculerStatutContrat(supabase: any, contratAchatId: string) {
   }
 }
 
+// Quand une facture transport est saisie sur une livraison, met à jour (ou crée) automatiquement
+// le tarif correspondant (transporteur + trajet) dans la grille "Tarifs transport" avec le prix réel constaté.
+async function autoMajTarifTransport(supabase: any, livraison: any) {
+  const montant = Number(livraison.montant_transport_reel)
+  const quantite = Number(livraison.quantite_reelle)
+  if (!livraison.transport_facture || !montant || !quantite || quantite <= 0) return
+
+  let transporteurId = livraison.transporteur_id
+  let lieuChargement = livraison.ville_chargement?.trim()
+  const lieuDestination = livraison.ville_destination?.trim()
+
+  if ((!transporteurId || !lieuChargement) && livraison.contrat_achat_id) {
+    const { data: ca } = await supabase
+      .from('contrats_achat')
+      .select('transporteur_id,ville_chargement')
+      .eq('id', livraison.contrat_achat_id)
+      .single()
+    transporteurId = transporteurId ?? ca?.transporteur_id
+    lieuChargement = lieuChargement ?? ca?.ville_chargement?.trim()
+  }
+  if (!transporteurId || !lieuChargement || !lieuDestination) return
+
+  const prixParTonne = Math.round((montant / quantite) * 100) / 100
+  const dateRef = livraison.date_facture_transport
+    ? new Date(livraison.date_facture_transport).toLocaleDateString('fr-FR')
+    : new Date().toLocaleDateString('fr-FR')
+  const notes = `Auto — dernière facture le ${dateRef}`
+
+  const { data: existant } = await supabase
+    .from('tarifs_transport')
+    .select('id')
+    .eq('transporteur_id', transporteurId)
+    .ilike('lieu_chargement', lieuChargement)
+    .ilike('lieu_destination', lieuDestination)
+    .maybeSingle()
+
+  if (existant) {
+    await supabase.from('tarifs_transport').update({ prix_par_tonne: prixParTonne, notes }).eq('id', existant.id)
+  } else {
+    await supabase.from('tarifs_transport').insert({
+      transporteur_id: transporteurId,
+      lieu_chargement: lieuChargement,
+      lieu_destination: lieuDestination,
+      prix_par_tonne: prixParTonne,
+      notes,
+    })
+  }
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const body = await req.json()
   const supabase = getServiceClient()
@@ -51,6 +100,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   if (data.contrat_achat_id) {
     await recalculerStatutContrat(supabase, data.contrat_achat_id)
+  }
+  if ('montant_transport_reel' in body || 'transport_facture' in body) {
+    await autoMajTarifTransport(supabase, data)
   }
 
   return NextResponse.json(data)
