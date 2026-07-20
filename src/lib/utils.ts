@@ -18,9 +18,10 @@ export function quantiteLivree(livraisons: Array<{ quantite_reelle?: number | nu
     .reduce((sum, l) => sum + (l.quantite_reelle ?? 0), 0)
 }
 
-export function ecartTransport(montantReel?: number | null, quantiteReelle?: number | null, prixPrev?: number | null): number | null {
-  if (montantReel == null || quantiteReelle == null || prixPrev == null) return null
-  return montantReel - quantiteReelle * prixPrev
+// montantReel et prixPrev sont tous les deux des prix par tonne (pas des montants totaux)
+export function ecartTransport(montantReel?: number | null, prixPrev?: number | null): number | null {
+  if (montantReel == null || prixPrev == null) return null
+  return montantReel - prixPrev
 }
 
 export function joursDepuis(dateStr: string): number {

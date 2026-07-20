@@ -80,13 +80,13 @@ export default function ModifierLivraisonRealiseeModal({ livraison, contrat, onC
     setSaving(false)
   }
 
-  const prevu = livraison.quantite_reelle != null ? livraison.quantite_reelle * contrat.prix_transport_prevu : null
+  const prevu = contrat.prix_transport_prevu ?? null
 
   return (
     <Modal title="Modifier la livraison réalisée" onClose={onClose} size="md">
       {prevu != null && (
         <div className="bg-orange-50 border border-orange-100 rounded-lg px-4 py-2 text-sm text-orange-700 mb-4">
-          Transport prévu : <strong>{prevu.toFixed(2)} €</strong>
+          Transport prévu : <strong>{prevu.toFixed(2)} €/t</strong>
         </div>
       )}
       <form onSubmit={submit} className="space-y-4">

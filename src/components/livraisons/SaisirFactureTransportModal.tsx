@@ -45,9 +45,12 @@ export default function SaisirFactureTransportModal({ livraison, onClose, onSave
     setSaving(false)
   }
 
-  const transporteurPrevu = ca?.prix_transport_prevu && livraison.quantite_reelle
-    ? (ca.prix_transport_prevu * livraison.quantite_reelle).toFixed(2)
-    : null
+  const montantPrevu = ca?.prix_transport_prevu ?? null
+  const transporteurPrevu = montantPrevu != null ? montantPrevu.toFixed(2) : null
+
+  const montantSaisi = form.montant_transport_reel ? parseFloat(form.montant_transport_reel) : null
+  const ecart = montantPrevu != null && montantSaisi != null ? montantSaisi - montantPrevu : null
+  const ecartPct = ecart != null && montantPrevu ? (ecart / montantPrevu) * 100 : null
 
   return (
     <Modal title="Saisir la facture transport" onClose={onClose} size="sm">
@@ -56,9 +59,6 @@ export default function SaisirFactureTransportModal({ livraison, onClose, onSave
         <div className="text-xs mt-0.5 text-blue-600">
           Transporteur : <strong>{ca?.transporteur?.nom ?? '—'}</strong> · {formatTonnes(livraison.quantite_reelle)} · {formatDate(livraison.date_reelle)}
         </div>
-        {transporteurPrevu && (
-          <div className="text-xs mt-0.5 text-blue-500">Montant prévu : {transporteurPrevu} €</div>
-        )}
       </div>
       <form onSubmit={submit} className="space-y-4">
         <div>
@@ -70,8 +70,23 @@ export default function SaisirFactureTransportModal({ livraison, onClose, onSave
           <input className="input" value={form.numero_facture_transport} onChange={f('numero_facture_transport')} placeholder="Ex: FAT-2026-0042" required />
         </div>
         <div>
-          <label className="label">Prix réel transport (€)</label>
+          <div className="flex items-center justify-between">
+            <label className="label mb-0">Prix réel transport (€)</label>
+            {transporteurPrevu && (
+              <span className="text-xs text-gray-500">
+                Prévu : <strong className="text-gray-700">{transporteurPrevu} €</strong>
+              </span>
+            )}
+          </div>
           <input type="number" step="0.01" className="input" value={form.montant_transport_reel} onChange={f('montant_transport_reel')} placeholder={transporteurPrevu ?? 'Montant...'} />
+          {ecart != null && Math.abs(ecart) >= 0.01 && (
+            <p className={`text-xs mt-1 font-medium ${Math.abs(ecartPct ?? 0) > 5 ? 'text-red-600' : 'text-amber-600'}`}>
+              {ecart > 0 ? '+' : ''}{ecart.toFixed(2)} € par rapport au prévu ({ecart > 0 ? '+' : ''}{ecartPct?.toFixed(1)} %)
+            </p>
+          )}
+          {ecart != null && Math.abs(ecart) < 0.01 && (
+            <p className="text-xs mt-1 font-medium text-green-600">✓ Conforme au montant prévu</p>
+          )}
         </div>
         {error && <p className="text-red-600 text-sm">{error}</p>}
         <div className="flex justify-end gap-3">

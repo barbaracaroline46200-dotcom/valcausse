@@ -263,9 +263,7 @@ export default function FacturationPage() {
                       {livsT.map((l: any) => {
                         const ca = l.contrat_achat
                         const agri = getAgriFactu(l)
-                        const prixPrevu = ca?.prix_transport_prevu && l.quantite_reelle
-                          ? (ca.prix_transport_prevu * l.quantite_reelle).toFixed(2)
-                          : null
+                        const prixPrevu = ca?.prix_transport_prevu ? ca.prix_transport_prevu.toFixed(2) : null
                         const prix = prixTransport[l.id] ?? ''
                         const checked = selectionTransport.has(l.id)
                         const peutCocher = prix.trim() !== '' && !isNaN(parseFloat(prix))

@@ -14,7 +14,7 @@ function anneeAgricole(date: string | null): string {
 function computeContrat(c: any) {
   const livRealisees = (c.livraisons ?? []).filter((l: any) => l.type === 'realisee')
   const tonnesRealisees = livRealisees.reduce((s: number, l: any) => s + (l.quantite_reelle ?? 0), 0)
-  const coutTransport = livRealisees.reduce((s: number, l: any) => s + (l.montant_transport_reel ?? 0), 0)
+  const coutTransport = livRealisees.reduce((s: number, l: any) => s + (l.montant_transport_reel ?? 0) * (l.quantite_reelle ?? 0), 0)
   const coutFournisseur = (c.factures_fournisseur ?? []).reduce((s: number, f: any) => s + (f.montant_ht ?? 0), 0)
   const caClient = (c.contrats_vente ?? []).flatMap((cv: any) => cv.factures_client ?? []).reduce((s: number, f: any) => s + (f.montant_ht ?? 0), 0)
   const marge = caClient - coutFournisseur - coutTransport
@@ -123,7 +123,7 @@ export default function StatsPage() {
         const entry = map.get(nomT) ?? { nom: nomT, livraisons: 0, tonnes: 0, transport: 0, avecCmr: 0, sansCmr: 0 }
         entry.livraisons++
         entry.tonnes += l.quantite_reelle ?? 0
-        entry.transport += l.montant_transport_reel ?? 0
+        entry.transport += (l.montant_transport_reel ?? 0) * (l.quantite_reelle ?? 0)
         if (l.numero_lettre_voiture) entry.avecCmr++; else entry.sansCmr++
         map.set(nomT, entry)
       })
@@ -140,7 +140,7 @@ export default function StatsPage() {
         const entry = map.get(mois) ?? { ca: 0, fournisseur: 0, transport: 0, tonnes: 0 }
         const qte = l.quantite_reelle ?? 0
         // Transport direct
-        entry.transport += l.montant_transport_reel ?? 0
+        entry.transport += (l.montant_transport_reel ?? 0) * qte
         entry.tonnes += qte
         // Prorata fournisseur et CA (par tonne livrée / totale)
         if (c.tonnesRealisees > 0) {

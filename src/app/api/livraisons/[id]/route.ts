@@ -41,9 +41,9 @@ async function recalculerStatutContrat(supabase: any, contratAchatId: string) {
 // Quand une facture transport est saisie sur une livraison, met à jour (ou crée) automatiquement
 // le tarif correspondant (transporteur + trajet) dans la grille "Tarifs transport" avec le prix réel constaté.
 async function autoMajTarifTransport(supabase: any, livraison: any) {
-  const montant = Number(livraison.montant_transport_reel)
-  const quantite = Number(livraison.quantite_reelle)
-  if (!livraison.transport_facture || !montant || !quantite || quantite <= 0) return
+  // montant_transport_reel est déjà un prix par tonne (pas un montant total à diviser)
+  const prixParTonne = Number(livraison.montant_transport_reel)
+  if (!livraison.transport_facture || !prixParTonne) return
 
   let transporteurId = livraison.transporteur_id
   let lieuChargement = livraison.ville_chargement?.trim()
@@ -69,7 +69,6 @@ async function autoMajTarifTransport(supabase: any, livraison: any) {
   }
   if (!transporteurId || !lieuChargement || !lieuDestination) return
 
-  const prixParTonne = Math.round((montant / quantite) * 100) / 100
   const dateRef = livraison.date_facture_transport
     ? new Date(livraison.date_facture_transport).toLocaleDateString('fr-FR')
     : new Date().toLocaleDateString('fr-FR')

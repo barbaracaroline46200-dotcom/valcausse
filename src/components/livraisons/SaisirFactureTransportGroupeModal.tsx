@@ -17,7 +17,8 @@ interface Props {
 export default function SaisirFactureTransportGroupeModal({ selections, onClose, onSaved }: Props) {
   const transporteurNom = selections[0]?.livraison?.contrat_achat?.transporteur?.nom ?? '—'
   const totalTonnes = selections.reduce((s, { livraison: l }) => s + (l.quantite_reelle ?? 0), 0)
-  const totalMontant = selections.reduce((s, { montant }) => s + (parseFloat(montant) || 0), 0)
+  // montant = prix par tonne saisi pour cette livraison → coût réel = prix × tonnage
+  const totalMontant = selections.reduce((s, { livraison: l, montant }) => s + (parseFloat(montant) || 0) * (l.quantite_reelle ?? 0), 0)
 
   const [dateFacture, setDateFacture] = useState('')
   const [numeroFacture, setNumeroFacture] = useState('')
@@ -54,7 +55,7 @@ export default function SaisirFactureTransportGroupeModal({ selections, onClose,
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
             {selections.length} transport{selections.length > 1 ? 's' : ''} · {transporteurNom}
           </span>
-          <span className="text-xs font-bold text-gray-700">{formatTonnes(totalTonnes)} · {totalMontant.toFixed(2)} €</span>
+          <span className="text-xs font-bold text-gray-700">{formatTonnes(totalTonnes)} · coût total {totalMontant.toFixed(2)} €</span>
         </div>
         <table className="w-full text-sm">
           <thead>
@@ -63,18 +64,16 @@ export default function SaisirFactureTransportGroupeModal({ selections, onClose,
               <th className="px-4 py-1 text-left font-normal">Produit</th>
               <th className="px-4 py-1 text-left font-normal">Agri</th>
               <th className="px-4 py-1 text-right font-normal">Tonnes</th>
-              <th className="px-4 py-1 text-right font-normal">Prévu</th>
-              <th className="px-4 py-1 text-right font-normal">Réel</th>
-              <th className="px-4 py-1 text-right font-normal">Écart</th>
+              <th className="px-4 py-1 text-right font-normal">Prévu €/t</th>
+              <th className="px-4 py-1 text-right font-normal">Réel €/t</th>
+              <th className="px-4 py-1 text-right font-normal">Écart €/t</th>
             </tr>
           </thead>
           <tbody>
             {selections.map(({ livraison: l, montant }) => {
               const ca = l.contrat_achat
               const agri = ca?.contrats_vente?.find((v: any) => v.id === l.contrat_vente_id)?.agriculteur
-              const prevu = ca?.prix_transport_prevu && l.quantite_reelle
-                ? ca.prix_transport_prevu * l.quantite_reelle
-                : null
+              const prevu = ca?.prix_transport_prevu ?? null
               const ecart = prevu != null ? parseFloat(montant) - prevu : null
               return (
                 <tr key={l.id} className="border-b border-gray-50 last:border-0">

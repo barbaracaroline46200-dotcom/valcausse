@@ -543,8 +543,8 @@ export default function ContratDetailPage() {
                 </thead>
                 <tbody>
                   {livraisonsRealisees.map((l: any) => {
-                    const ecart = ecartTransport(l.montant_transport_reel, l.quantite_reelle, contrat.prix_transport_prevu)
-                    const prevu = l.quantite_reelle != null ? l.quantite_reelle * contrat.prix_transport_prevu : null
+                    const ecart = ecartTransport(l.montant_transport_reel, contrat.prix_transport_prevu)
+                    const prevu = contrat.prix_transport_prevu ?? null
                     return (
                       <tr key={l.id} className="table-row bg-green-50/40 hover:bg-green-50/80">
                         <td className="table-cell font-medium">{formatDate(l.date_reelle)}{l.note_alerte && <span className="ml-1"><AlerteNote note={l.note_alerte} size={13} /></span>}</td>
@@ -574,12 +574,12 @@ export default function ContratDetailPage() {
                             ? `${l.piece_client_prefixe} ${l.piece_client_numero}`
                             : '—'}
                         </td>
-                        <td className="table-cell text-xs text-gray-500">{formatEuros(prevu)}</td>
-                        <td className="table-cell text-xs">{formatEuros(l.montant_transport_reel)}</td>
+                        <td className="table-cell text-xs text-gray-500">{prevu != null ? formatEurosParTonne(prevu) : '—'}</td>
+                        <td className="table-cell text-xs">{l.montant_transport_reel != null ? formatEurosParTonne(l.montant_transport_reel) : '—'}</td>
                         <td className="table-cell">
                           {ecart != null && (
                             <span className={`text-xs font-bold ${ecart <= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                              {ecart >= 0 ? '+' : ''}{formatEuros(ecart)}
+                              {ecart >= 0 ? '+' : ''}{formatEurosParTonne(ecart)}
                             </span>
                           )}
                         </td>
@@ -626,7 +626,7 @@ export default function ContratDetailPage() {
       {/* Bilan financier */}
       {(() => {
         const coutFournisseur = (contrat.factures_fournisseur ?? []).reduce((s: number, f: any) => s + (f.montant_ht ?? 0), 0)
-        const coutTransport = (contrat.livraisons ?? []).filter((l: any) => l.type === 'realisee').reduce((s: number, l: any) => s + (l.montant_transport_reel ?? 0), 0)
+        const coutTransport = (contrat.livraisons ?? []).filter((l: any) => l.type === 'realisee').reduce((s: number, l: any) => s + (l.montant_transport_reel ?? 0) * (l.quantite_reelle ?? 0), 0)
         const caClient = (contrat.contrats_vente ?? []).flatMap((cv: any) => cv.factures_client ?? []).reduce((s: number, f: any) => s + (f.montant_ht ?? 0), 0)
         const marge = caClient - coutFournisseur - coutTransport
         const margePct = caClient > 0 ? (marge / caClient) * 100 : null

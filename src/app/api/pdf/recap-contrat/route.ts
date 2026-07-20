@@ -63,7 +63,8 @@ export async function GET(req: NextRequest) {
     const nom = l.transporteur?.nom ?? contrat.transporteur?.nom ?? '—'
     const entry = parTransporteur.get(nom) || { tonnes: 0, montant: 0, nbFactures: 0, nbLivraisons: 0 }
     entry.tonnes += Number(l.quantite_reelle) || 0
-    entry.montant += Number(l.montant_transport_reel) || 0
+    // montant_transport_reel est un prix par tonne : multiplier par le tonnage pour obtenir le coût réel
+    entry.montant += (Number(l.montant_transport_reel) || 0) * (Number(l.quantite_reelle) || 0)
     entry.nbLivraisons += 1
     if (l.transport_facture) entry.nbFactures += 1
     parTransporteur.set(nom, entry)
