@@ -47,7 +47,7 @@ async function autoMajTarifTransport(supabase: any, livraison: any) {
 
   let transporteurId = livraison.transporteur_id
   let lieuChargement = livraison.ville_chargement?.trim()
-  const lieuDestination = livraison.ville_destination?.trim()
+  let lieuDestination = livraison.ville_destination?.trim()
 
   if ((!transporteurId || !lieuChargement) && livraison.contrat_achat_id) {
     const { data: ca } = await supabase
@@ -57,6 +57,15 @@ async function autoMajTarifTransport(supabase: any, livraison: any) {
       .single()
     transporteurId = transporteurId ?? ca?.transporteur_id
     lieuChargement = lieuChargement ?? ca?.ville_chargement?.trim()
+  }
+  // Pas de ville de destination saisie → repli sur le nom du silo ou la ville de l'agriculteur du contrat de vente lié
+  if (!lieuDestination && livraison.contrat_vente_id) {
+    const { data: cv } = await supabase
+      .from('contrats_vente')
+      .select('silo_nom,agriculteur:agriculteurs(ville_livraison)')
+      .eq('id', livraison.contrat_vente_id)
+      .single()
+    lieuDestination = cv?.silo_nom?.trim() || (cv?.agriculteur as any)?.ville_livraison?.trim()
   }
   if (!transporteurId || !lieuChargement || !lieuDestination) return
 
