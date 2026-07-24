@@ -321,7 +321,11 @@ export default function ContratsPage() {
                         : <span className="text-xs text-green-600 font-medium">✓ Complet</span>
                       }
                     </td>
-                    <td className="table-cell">{formatEurosParTonne(c.prix_achat)}</td>
+                    <td className="table-cell">
+                      {c.prix_achat != null
+                        ? formatEurosParTonne(c.prix_achat)
+                        : <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700 whitespace-nowrap">⚠ À définir</span>}
+                    </td>
                     <td className="table-cell">
                       {c._marge != null ? (
                         <span className={`font-bold text-sm ${c._marge > 0 ? 'text-green-700' : c._marge < 0 ? 'text-red-600' : 'text-gray-400'}`}>

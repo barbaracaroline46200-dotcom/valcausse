@@ -528,6 +528,47 @@ export default function DashboardPage() {
         </Section>
       )}
 
+      {/* Contrats sans prix d'achat défini */}
+      {(data?.contratsSansPrix ?? []).length > 0 && (
+        <Section
+          icon={<AlertTriangle size={20} />}
+          title="Prix d'achat à définir"
+          count={data.contratsSansPrix.length}
+          color="red"
+          subtitle="Ces contrats en cours n'ont pas encore de prix — à fixer avant leur date de début"
+        >
+          <table className="w-full">
+            <thead><tr className="border-b border-gray-100">
+              {['Contrat', 'Produit', 'Fournisseur', 'Quantité', 'Date début'].map(h => (
+                <th key={h} className="table-header">{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {data.contratsSansPrix.map((c: any) => {
+                const debut = c.date_debut ? new Date(c.date_debut) : null
+                const demarre = debut ? debut <= new Date() : false
+                const proche = debut && !demarre ? debut <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : false
+                return (
+                  <tr key={c.id} className="table-row">
+                    <td className="table-cell"><a href={`/contrats/${c.id}`} className="font-medium text-green-700 hover:underline">{c.numero_contrat}</a></td>
+                    <td className="table-cell">{c.produit?.nom ?? '—'}</td>
+                    <td className="table-cell text-sm">{c.fournisseur?.nom ?? '—'}</td>
+                    <td className="table-cell">{formatTonnes(c.quantite_totale)}</td>
+                    <td className="table-cell">
+                      {debut ? (
+                        <span className={`font-semibold ${demarre ? 'text-red-600' : proche ? 'text-orange-600' : 'text-gray-600'}`}>
+                          {formatDate(c.date_debut)}{demarre ? ' ⚠️ Déjà commencé' : proche ? ' ⚠️' : ''}
+                        </span>
+                      ) : <span className="text-gray-300">Pas de date</span>}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </Section>
+      )}
+
       {/* CMR en retard > 7 jours */}
       {cmrEnRetard.length > 0 && (
         <Section

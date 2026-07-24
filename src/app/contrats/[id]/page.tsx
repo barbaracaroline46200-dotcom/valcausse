@@ -183,6 +183,19 @@ export default function ContratDetailPage() {
         </div>
       )}
 
+      {/* Alerte prix d'achat non défini */}
+      {!contrat.prix_achat && (
+        <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-5 py-3">
+          <AlertTriangle size={20} className="text-red-600 flex-shrink-0" />
+          <div>
+            <span className="font-bold text-red-700">Prix d'achat non défini.</span>
+            <span className="text-red-600 ml-1">
+              Pensez à le renseigner{contrat.date_debut ? ` avant le début du contrat (${formatDate(contrat.date_debut)})` : ''}{isAdmin ? ' via "Modifier".' : '.'}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Alerte dépassement vente */}
       {depassementVente && (
         <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-5 py-3">

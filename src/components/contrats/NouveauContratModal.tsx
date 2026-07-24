@@ -140,7 +140,7 @@ export default function NouveauContratModal({ onClose, onSaved }: Props) {
             </select>
           </div>
           <div>
-            <label className="label">Prix achat (€/t) *</label>
+            <label className="label">Prix achat (€/t)</label>
             <input type="number" step="0.01" className="input" value={form.prix_achat} onChange={f('prix_achat')} placeholder="— À définir —" />
           </div>
           <div>

@@ -85,6 +85,15 @@ export async function getDashboardData() {
 
   const { data: transporteurs } = await supabase.from('transporteurs').select('*').order('nom')
 
+  // Contrats sans prix d'achat défini — à fixer avant leur date de début
+  const { data: contratsPrixRaw } = await supabase
+    .from('contrats_achat')
+    .select('id,numero_contrat,famille,date_debut,quantite_totale,prix_achat,produit:produits(nom),fournisseur:fournisseurs(nom)')
+    .eq('statut', 'en_cours')
+  const contratsSansPrix = (contratsPrixRaw ?? [])
+    .filter((c: any) => c.prix_achat == null)
+    .sort((a: any, b: any) => (a.date_debut ?? '9999-99-99').localeCompare(b.date_debut ?? '9999-99-99'))
+
   return {
     contrats: contrats ?? [],
     livraisonsPlanifiees,
@@ -95,6 +104,7 @@ export async function getDashboardData() {
     livraisonsAVerifierClient,
     livraisonsAFacturerClient,
     contratsAlerte: contratsAlerte ?? [],
+    contratsSansPrix,
     annee: { debut, fin },
     moisCourant,
     moisSuivant,

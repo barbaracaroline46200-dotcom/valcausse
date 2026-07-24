@@ -15,7 +15,7 @@ const BRUN_LIGHT = '#fdf5f3'
 export default function Sidebar() {
   const pathname = usePathname()
   const { isAdmin, role, logout } = useAdmin()
-  const [counts, setCounts] = useState({ livraisons: 0, cmr: 0, facturation: 0, rf: 0 })
+  const [counts, setCounts] = useState({ livraisons: 0, cmr: 0, facturation: 0, rf: 0, prixADefinir: 0 })
 
   useEffect(() => {
     async function fetchCounts() {
@@ -27,6 +27,7 @@ export default function Sidebar() {
           cmr: (d.cmrEnAttente ?? []).length,
           facturation: (d.livraisonsAFacturer ?? []).length + (d.livraisonsAVerifierClient ?? []).length + (d.livraisonsAFacturerClient ?? []).length,
           rf: (d.rfManquants ?? []).length,
+          prixADefinir: (d.contratsSansPrix ?? []).length,
         })
       } catch {}
     }
@@ -68,7 +69,7 @@ export default function Sidebar() {
 
         {/* CONTRATS */}
         <SectionLabel label="Contrats" />
-        <NavItem href="/contrats"      label="Contrats achat"    icon={<FileText size={18} />}        active={active('/contrats')} />
+        <NavItem href="/contrats"      label="Contrats achat"    icon={<FileText size={18} />}        active={active('/contrats')} badge={counts.prixADefinir > 0 ? counts.prixADefinir : undefined} badgeColor="#dc2626" />
         <NavItem href="/ventes"        label="Contrats vente"    icon={<ShoppingCart size={18} />}    active={active('/ventes')} />
         <NavItem href="/archives"      label="Archives"          icon={<Archive size={18} />}         active={active('/archives')} />
 

@@ -161,6 +161,16 @@ export async function GET() {
     .eq('statut', 'en_cours')
     .lte('date_fin', dans30j)
 
+  // Contrats sans prix d'achat défini — à fixer avant leur date de début
+  // (filtre is.null peu fiable sur Vercel, on filtre en JS comme ailleurs dans ce fichier)
+  const { data: contratsPrixRaw } = await supabase
+    .from('contrats_achat')
+    .select('id,numero_contrat,famille,date_debut,quantite_totale,prix_achat,produit:produits(nom),fournisseur:fournisseurs(nom)')
+    .eq('statut', 'en_cours')
+  const contratsSansPrix = (contratsPrixRaw ?? [])
+    .filter((c: any) => c.prix_achat == null)
+    .sort((a: any, b: any) => (a.date_debut ?? '9999-99-99').localeCompare(b.date_debut ?? '9999-99-99'))
+
   return NextResponse.json({
     contrats: contrats ?? [],
     livraisonsPlanifiees: livraisonsPlanifiees,
@@ -171,6 +181,7 @@ export async function GET() {
     livraisonsAVerifierClient,
     livraisonsAFacturerClient,
     contratsAlerte: contratsAlerte ?? [],
+    contratsSansPrix,
     annee: { debut, fin },
     moisCourant,
     moisSuivant,
