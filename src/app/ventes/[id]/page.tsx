@@ -1,13 +1,17 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { Loader2, Pencil, ArrowLeft, Link2, CheckCircle, RotateCcw } from 'lucide-react'
+import { Loader2, Pencil, ArrowLeft, Link2, CheckCircle, RotateCcw, Plus, Trash2 } from 'lucide-react'
 import { formatTonnes, formatEurosParTonne, formatDate } from '@/lib/annee-agricole'
 import { BadgeStatut, BadgeAnnee } from '@/components/ui/Badge'
 import { useAdmin } from '@/components/ui/AdminProvider'
+import { contratSyntheticFromVente } from '@/lib/utils'
 import Link from 'next/link'
 import Modal from '@/components/ui/Modal'
 import CalendrierContrat from '@/components/ui/CalendrierContrat'
+import AjouterLivraisonSiloModal from '@/components/livraisons/AjouterLivraisonSiloModal'
+import RealiserLivraisonModal from '@/components/livraisons/RealiserLivraisonModal'
+import ModifierLivraisonModal from '@/components/livraisons/ModifierLivraisonModal'
 
 export default function VenteDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -16,9 +20,18 @@ export default function VenteDetailPage() {
   const [loading, setLoading] = useState(true)
   const [showEdit, setShowEdit] = useState(false)
   const [showRelierContrat, setShowRelierContrat] = useState(false)
+  const [showAjoutLiv, setShowAjoutLiv] = useState(false)
+  const [realiserLiv, setRealiserLiv] = useState<any>(null)
+  const [modifierLiv, setModifierLiv] = useState<any>(null)
 
   function reload() {
     fetch(`/api/ventes/${id}`).then(r => r.json()).then(v => { setVente(v); setLoading(false) })
+  }
+
+  async function supprimerLivraison(livId: string) {
+    if (!confirm('Supprimer cette livraison ?')) return
+    await fetch(`/api/livraisons/${livId}`, { method: 'DELETE' })
+    reload()
   }
 
   useEffect(() => { reload() }, [id])
@@ -148,18 +161,30 @@ export default function VenteDetailPage() {
       <div className="card">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-sm" style={{ color: '#7B2820' }}>Livraisons</h2>
-          <div className="text-sm text-gray-500">
-            <span className="font-semibold text-green-700">{formatTonnes(qteLivree)}</span> livrées
-            {reliquat > 0 && <span className="ml-2 text-orange-600 font-semibold">· {formatTonnes(reliquat)} restantes</span>}
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-gray-500">
+              <span className="font-semibold text-green-700">{formatTonnes(qteLivree)}</span> livrées
+              {reliquat > 0 && <span className="ml-2 text-orange-600 font-semibold">· {formatTonnes(reliquat)} restantes</span>}
+            </div>
+            {isAdmin && !vente.contrat_achat_id && (
+              <button onClick={() => setShowAjoutLiv(true)} className="btn-primary text-xs">
+                <Plus size={14} /> Ajouter livraison
+              </button>
+            )}
           </div>
         </div>
+        {!vente.contrat_achat_id && (
+          <p className="text-xs text-gray-400 mb-3">
+            Vente directe départ silo — les livraisons se gèrent ici (pas de contrat d'achat lié).
+          </p>
+        )}
         {livraisons.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-4">Aucune livraison</p>
         ) : (
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
-                {['Statut', 'Mois prévu', 'Date / Semaine', 'Enlèvement', 'Destination', 'Tonnes', 'CMR'].map(h => (
+                {['Statut', 'Mois prévu', 'Date / Semaine', 'Enlèvement', 'Destination', 'Transporteur', 'Tonnes', 'CMR', ...(vente.contrat_achat_id ? [] : ['Actions'])].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
@@ -178,6 +203,7 @@ export default function VenteDetailPage() {
                   </td>
                   <td className="table-cell text-sm">{l.ville_chargement ?? '—'}</td>
                   <td className="table-cell text-sm">{l.ville_destination ?? '—'}</td>
+                  <td className="table-cell text-sm">{l.transporteur?.nom ?? '—'}</td>
                   <td className="table-cell font-semibold">{formatTonnes(l.type === 'realisee' ? l.quantite_reelle : l.quantite_prevue)}</td>
                   <td className="table-cell">
                     {l.type === 'realisee'
@@ -186,6 +212,27 @@ export default function VenteDetailPage() {
                         : <span className="badge-alerte text-xs">Manquant</span>
                       : <span className="text-gray-400 text-xs">—</span>}
                   </td>
+                  {!vente.contrat_achat_id && (
+                    <td className="table-cell">
+                      {isAdmin && (
+                        <div className="flex gap-1 flex-wrap">
+                          {l.type === 'planifiee' && (
+                            <>
+                              <button onClick={() => setRealiserLiv(l)} className="btn-primary text-xs py-1 px-2">
+                                Réaliser
+                              </button>
+                              <button onClick={() => setModifierLiv(l)} className="btn-secondary text-xs py-1 px-2">
+                                <Pencil size={12} />
+                              </button>
+                            </>
+                          )}
+                          <button onClick={() => supprimerLivraison(l.id)} className="btn-danger text-xs py-1 px-2">
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -199,6 +246,25 @@ export default function VenteDetailPage() {
       )}
       {showRelierContrat && (
         <RelierContratModal vente={vente} onClose={() => setShowRelierContrat(false)} onSaved={() => { setShowRelierContrat(false); reload() }} />
+      )}
+      {showAjoutLiv && (
+        <AjouterLivraisonSiloModal vente={vente} onClose={() => setShowAjoutLiv(false)} onSaved={() => { setShowAjoutLiv(false); reload() }} />
+      )}
+      {realiserLiv && (
+        <RealiserLivraisonModal
+          livraison={realiserLiv}
+          contrat={contratSyntheticFromVente(vente)}
+          onClose={() => setRealiserLiv(null)}
+          onSaved={() => { setRealiserLiv(null); reload() }}
+        />
+      )}
+      {modifierLiv && (
+        <ModifierLivraisonModal
+          livraison={modifierLiv}
+          contrat={contratSyntheticFromVente(vente)}
+          onClose={() => setModifierLiv(null)}
+          onSaved={() => { setModifierLiv(null); reload() }}
+        />
       )}
     </div>
   )

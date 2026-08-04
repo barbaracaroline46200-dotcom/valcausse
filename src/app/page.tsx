@@ -588,13 +588,20 @@ export default function DashboardPage() {
             <tbody>
               {cmrEnRetard.map((l: any) => {
                 const ca = l.contrat_achat
+                const cv = l.contrat_vente
                 const dateRef = l.type === 'realisee' ? l.date_reelle : l.date_prevue
                 const jours = dateRef ? Math.floor((Date.now() - new Date(dateRef).getTime()) / 86400000) : '?'
                 return (
                   <tr key={l.id} className="table-row">
-                    <td className="table-cell"><a href={`/contrats/${ca?.id}`} className="text-green-700 hover:underline font-medium">{ca?.numero_contrat ?? '—'}</a></td>
-                    <td className="table-cell text-sm">{ca?.fournisseur?.nom ?? '—'}</td>
-                    <td className="table-cell">{ca?.produit?.nom ?? '—'}</td>
+                    <td className="table-cell">
+                      {ca
+                        ? <a href={`/contrats/${ca.id}`} className="text-green-700 hover:underline font-medium">{ca.numero_contrat ?? '—'}</a>
+                        : cv
+                          ? <a href={`/ventes/${cv.id}`} className="text-green-700 hover:underline font-medium">{cv.numero_contrat ?? '—'}</a>
+                          : '—'}
+                    </td>
+                    <td className="table-cell text-sm">{ca?.fournisseur?.nom ?? (cv ? 'Vente directe (silo)' : '—')}</td>
+                    <td className="table-cell">{ca?.produit?.nom ?? cv?.produit?.nom ?? '—'}</td>
                     <td className="table-cell">{l.transporteur?.nom ?? ca?.transporteur?.nom ?? '—'}</td>
                     <td className="table-cell text-sm">{dateRef ? new Date(dateRef).toLocaleDateString('fr-FR') : '—'}</td>
                     <td className="table-cell"><span className="badge-alerte font-bold text-red-700">{jours}j</span></td>

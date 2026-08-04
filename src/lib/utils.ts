@@ -40,3 +40,20 @@ export function nomEntite(a: { nom?: string | null; civilite?: string | null } |
 
 /** Alias pour rétrocompatibilité */
 export const nomAgri = nomEntite
+
+/** Construit un pseudo-contrat d'achat à partir d'un contrat de vente départ silo
+ *  (sans contrat d'achat lié), pour réutiliser les modales de livraison existantes
+ *  qui attendent une prop `contrat`. */
+export function contratSyntheticFromVente(cv: any) {
+  return {
+    id: null,
+    famille: cv?.produit?.famille ?? 'negoce',
+    numero_contrat: cv?.numero_contrat,
+    fournisseur: undefined,
+    produit: cv?.produit,
+    ville_chargement: undefined,
+    transporteur: undefined,
+    prix_transport_prevu: undefined,
+    contrats_vente: cv ? [cv] : [],
+  }
+}

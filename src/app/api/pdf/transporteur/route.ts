@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
     .select(`
       *,
       transporteur:transporteurs(nom),
+      contrat_vente:contrats_vente(numero_contrat,produit:produits(nom),agriculteur:agriculteurs(*)),
       contrat_achat:contrats_achat(
         *,
         produit:produits(nom),
@@ -31,7 +32,8 @@ export async function GET(req: NextRequest) {
   const ca = liv.contrat_achat as any
   const contratVenteId = (liv as any).contrat_vente_id
   const contrats_vente: any[] = ca?.contrats_vente ?? []
-  const cv = contrats_vente.find((v: any) => v.id === contratVenteId)
+  // Vente départ silo : pas de contrat d'achat, repli sur le contrat de vente lié directement
+  const cv = contrats_vente.find((v: any) => v.id === contratVenteId) ?? (liv as any).contrat_vente
   const agriculteur = cv?.agriculteur
 
   const pdfDoc = await PDFDocument.create()
@@ -69,7 +71,7 @@ export async function GET(req: NextRequest) {
     y -= 20
   }
 
-  row('Produit', ca?.produit?.nom ?? '—', true)
+  row('Produit', ca?.produit?.nom ?? cv?.produit?.nom ?? '—', true)
   row('Quantité prévue', `${liv.quantite_prevue ?? '—'} tonnes`, true)
   y -= 5
 
@@ -87,17 +89,24 @@ export async function GET(req: NextRequest) {
   page.drawLine({ start: { x: 50, y }, end: { x: width - 50, y }, thickness: 0.5, color: rgb(0.9, 0.9, 0.9) })
   y -= 15
 
-  // Fournisseur
-  page.drawText('FOURNISSEUR', { x: 50, y, font: fontBold, size: 10, color: brun })
-  y -= 18
-  row('Nom', ca?.fournisseur?.nom ?? '—')
-  row('Référence contrat', ca?.reference_fournisseur ?? '—')
-  row('N° contrat interne', ca?.numero_contrat ?? '—')
-  if (ca?.courtier) {
-    row('Courtier', `${ca.courtier.nom}${ca.courtier.numero_courtier ? ` (n° ${ca.courtier.numero_courtier})` : ''}`)
-  }
-  if (ca?.famille === 'appro' && liv.numero_mise_a_disposition) {
-    row('N° mise à disposition', liv.numero_mise_a_disposition)
+  // Fournisseur (ou origine, pour une vente directe départ silo sans contrat d'achat)
+  if (ca) {
+    page.drawText('FOURNISSEUR', { x: 50, y, font: fontBold, size: 10, color: brun })
+    y -= 18
+    row('Nom', ca?.fournisseur?.nom ?? '—')
+    row('Référence contrat', ca?.reference_fournisseur ?? '—')
+    row('N° contrat interne', ca?.numero_contrat ?? '—')
+    if (ca?.courtier) {
+      row('Courtier', `${ca.courtier.nom}${ca.courtier.numero_courtier ? ` (n° ${ca.courtier.numero_courtier})` : ''}`)
+    }
+    if (ca?.famille === 'appro' && liv.numero_mise_a_disposition) {
+      row('N° mise à disposition', liv.numero_mise_a_disposition)
+    }
+  } else {
+    page.drawText('ORIGINE', { x: 50, y, font: fontBold, size: 10, color: brun })
+    y -= 18
+    row('Origine', 'Vente directe depuis silo')
+    row('N° contrat de vente', cv?.numero_contrat ?? '—')
   }
   y -= 5
 

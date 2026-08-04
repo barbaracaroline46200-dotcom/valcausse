@@ -32,6 +32,7 @@ export async function GET() {
     .select(`
       *,
       transporteur:transporteurs(id,nom,telephone),
+      contrat_vente:contrats_vente(id,numero_contrat,produit:produits(nom,famille),agriculteur:agriculteurs(civilite,nom,ville_livraison,telephone)),
       contrat_achat:contrats_achat(
         id,numero_contrat,famille,gere_par_silo,
         produit:produits(nom),
@@ -60,6 +61,7 @@ export async function GET() {
   const cmrSelect = `
     *,
     transporteur:transporteurs(id,nom,email,telephone),
+    contrat_vente:contrats_vente(id, numero_contrat, quantite, destination_silo, silo_nom, produit:produits(nom,famille), agriculteur:agriculteurs(id,civilite,nom,ville_livraison)),
     contrat_achat:contrats_achat(
       id, numero_contrat, famille, prix_transport_prevu,
       produit:produits(nom),
@@ -114,6 +116,7 @@ export async function GET() {
   const facturationSelect = `
     *,
     transporteur:transporteurs(id,nom),
+    contrat_vente:contrats_vente(id, numero_contrat, destination_silo, prix_vente, produit:produits(nom), agriculteur:agriculteurs(id,civilite,nom)),
     contrat_achat:contrats_achat(
       id, numero_contrat, famille, prix_achat,
       produit:produits(nom),
@@ -130,12 +133,13 @@ export async function GET() {
     (l: any) => l.type === 'realisee' && !l.solde_ouverture
   )
   const livraisonsAFacturer = livraisonsRealisees.filter(
-    (l: any) => !l.transport_facture || !l.facture_fournisseur_id
+    // Pas de contrat d'achat (vente départ silo) → pas de fournisseur à facturer
+    (l: any) => !l.transport_facture || (l.contrat_achat_id && !l.facture_fournisseur_id)
   )
 
   // Facturation client : livraisons réalisées non-silo, par étape de workflow
   const livraisonsClientBase = livraisonsRealisees.filter((l: any) => {
-    const cv = l.contrat_achat?.contrats_vente?.find((v: any) => v.id === l.contrat_vente_id)
+    const cv = l.contrat_achat?.contrats_vente?.find((v: any) => v.id === l.contrat_vente_id) ?? l.contrat_vente
     return cv && !cv.destination_silo
   })
   const livraisonsAVerifierClient = livraisonsClientBase.filter(

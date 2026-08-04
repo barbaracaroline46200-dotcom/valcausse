@@ -88,6 +88,12 @@ export default function FacturationPage() {
     const ca = l.contrat_achat
     return ca?.contrats_vente?.find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur
       ?? ca?.contrats_vente?.[0]?.agriculteur
+      ?? l.contrat_vente?.agriculteur // vente départ silo, pas de contrat d'achat
+  }
+
+  // Contrat de vente concerné par une livraison (avec repli départ silo)
+  function getVenteFactu(l: any) {
+    return l.contrat_achat?.contrats_vente?.find((v: any) => v.id === l.contrat_vente_id) ?? l.contrat_vente
   }
 
   // Le transporteur réel d'une livraison peut avoir été réaffecté (livraisons.transporteur_id),
@@ -97,7 +103,8 @@ export default function FacturationPage() {
   }
 
   const transportEnAttente = useMemo(() => aFacturer.filter((l: any) => !l.transport_facture), [aFacturer])
-  const fournisseurEnAttente = useMemo(() => aFacturer.filter((l: any) => !l.facture_fournisseur_id), [aFacturer])
+  // Pas de contrat d'achat (vente départ silo) → pas de fournisseur à facturer
+  const fournisseurEnAttente = useMemo(() => aFacturer.filter((l: any) => l.contrat_achat_id && !l.facture_fournisseur_id), [aFacturer])
 
   const total = transportEnAttente.length + fournisseurEnAttente.length + aVerifierClient.length + aFacturerClient.length
 
@@ -300,12 +307,16 @@ export default function FacturationPage() {
                               </button>
                             </td>
                             <td className="table-cell text-sm">{formatDate(l.date_reelle)}</td>
-                            <td className="table-cell font-medium">{ca?.produit?.nom ?? '—'}</td>
+                            <td className="table-cell font-medium">{ca?.produit?.nom ?? l.contrat_vente?.produit?.nom ?? '—'}</td>
                             {!filtTransporteurActif && (
                               <td className="table-cell text-sm text-gray-500">{getTransporteurFactu(l) ?? '—'}</td>
                             )}
                             <td className="table-cell">
-                              <a href={`/contrats/${ca?.id}`} className="text-green-700 hover:underline text-sm" onClick={e => e.stopPropagation()}>{ca?.numero_contrat}</a>
+                              {ca
+                                ? <a href={`/contrats/${ca.id}`} className="text-green-700 hover:underline text-sm" onClick={e => e.stopPropagation()}>{ca.numero_contrat}</a>
+                                : l.contrat_vente
+                                  ? <a href={`/ventes/${l.contrat_vente.id}`} className="text-green-700 hover:underline text-sm" onClick={e => e.stopPropagation()}>{l.contrat_vente.numero_contrat || 'Départ silo'}</a>
+                                  : <span className="text-gray-400 text-sm">—</span>}
                               {l.note_alerte && <span className="ml-1"><AlerteNote note={l.note_alerte} size={13} /></span>}
                               {ca?.note_alerte && <span className="ml-1"><AlerteNote note={`Contrat : ${ca.note_alerte}`} size={13} /></span>}
                             </td>
@@ -521,12 +532,12 @@ export default function FacturationPage() {
                   <tbody>
                     {verifClientFiltres.map((l: any) => {
                       const ca = l.contrat_achat
-                      const cv = ca?.contrats_vente?.find((v: any) => v.id === l.contrat_vente_id)
+                      const cv = getVenteFactu(l)
                       const agri = cv?.agriculteur
                       return (
                         <tr key={l.id} className="table-row">
                           <td className="table-cell text-sm">{formatDate(l.date_reelle)}</td>
-                          <td className="table-cell font-medium">{ca?.produit?.nom ?? '—'}</td>
+                          <td className="table-cell font-medium">{ca?.produit?.nom ?? cv?.produit?.nom ?? '—'}</td>
                           <td className="table-cell">
                             {cv
                               ? <a href={`/ventes/${cv.id}`} className="text-green-700 hover:underline text-sm">{cv.numero_contrat || 'Sans n°'}</a>
@@ -591,7 +602,7 @@ export default function FacturationPage() {
                   <tbody>
                     {saisirClientFiltres.map((l: any) => {
                       const ca = l.contrat_achat
-                      const cv = ca?.contrats_vente?.find((v: any) => v.id === l.contrat_vente_id)
+                      const cv = getVenteFactu(l)
                       const agri = cv?.agriculteur
                       const checked = selectionSaisie.has(l.id)
                       return (
@@ -606,7 +617,7 @@ export default function FacturationPage() {
                               : <Square size={16} className="text-gray-300 mx-auto" />}
                           </td>
                           <td className="table-cell text-sm">{formatDate(l.date_reelle)}</td>
-                          <td className="table-cell font-medium">{ca?.produit?.nom ?? '—'}</td>
+                          <td className="table-cell font-medium">{ca?.produit?.nom ?? cv?.produit?.nom ?? '—'}</td>
                           <td className="table-cell">
                             {cv
                               ? <a href={`/ventes/${cv.id}`} className="text-green-700 hover:underline text-sm" onClick={e => e.stopPropagation()}>{cv.numero_contrat || 'Sans n°'}</a>

@@ -19,7 +19,11 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       livraisons(
         id, type, mois_prevu, date_prevue, date_reelle, semaine_prevue,
         quantite_prevue, quantite_reelle, ville_chargement, ville_destination,
-        numero_lettre_voiture, transporteur_contacte
+        numero_lettre_voiture, transporteur_contacte, contrat_vente_id,
+        destination_silo, transporteur_id, transporteur:transporteurs(nom,telephone),
+        piece_fournisseur_prefixe, piece_fournisseur_numero,
+        piece_client_prefixe, piece_client_numero,
+        montant_transport_reel, transport_facture, numero_mise_a_disposition, note_alerte
       ),
       factures_client(id, numero_facture_logiciel, montant_ht, montant_ttc, mode_paiement, date_paiement)
     `)

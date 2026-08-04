@@ -80,7 +80,9 @@ export default function RealiserLivraisonModal({ livraison, contrat, onClose, on
     setSaving(false)
   }
 
-  const prevu = livraison.quantite_prevue ? livraison.quantite_prevue * contrat.prix_transport_prevu : null
+  const prevu = livraison.quantite_prevue && contrat.prix_transport_prevu != null
+    ? livraison.quantite_prevue * contrat.prix_transport_prevu
+    : null
   const ventesLiees = contrat.contrats_vente ?? []
 
   const siloActif = form.destination_silo

@@ -5,7 +5,7 @@ import { FileWarning, Loader2, Trash2 } from 'lucide-react'
 import RealiserLivraisonModal from '@/components/livraisons/RealiserLivraisonModal'
 import { useAdmin } from '@/components/ui/AdminProvider'
 import { formatDate } from '@/lib/annee-agricole'
-import { joursDepuis } from '@/lib/utils'
+import { joursDepuis, contratSyntheticFromVente } from '@/lib/utils'
 
 export default function CmrPage() {
   const { isAdmin } = useAdmin()
@@ -45,11 +45,13 @@ export default function CmrPage() {
   function getAgri(l: any) {
     return l.contrat_achat?.contrats_vente?.find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur
       ?? l.contrat_achat?.contrats_vente?.[0]?.agriculteur
+      ?? l.contrat_vente?.agriculteur // vente départ silo, pas de contrat d'achat
   }
 
   function getCv(l: any) {
     return l.contrat_achat?.contrats_vente?.find((cv: any) => cv.id === l.contrat_vente_id)
       ?? l.contrat_achat?.contrats_vente?.[0]
+      ?? l.contrat_vente
   }
 
   function categorise(l: any): 'normal' | 'negoce_silo' | 'appro_gare' {
@@ -66,13 +68,13 @@ export default function CmrPage() {
 
   const transporteurs = useMemo(() => [...new Set(listeActive.map((l: any) => l.transporteur?.nom ?? l.contrat_achat?.transporteur?.nom).filter(Boolean))].sort(), [listeActive])
   const fournisseurs  = useMemo(() => [...new Set(listeActive.map((l: any) => l.contrat_achat?.fournisseur?.nom).filter(Boolean))].sort(), [listeActive])
-  const produits      = useMemo(() => [...new Set(listeActive.map((l: any) => l.contrat_achat?.produit?.nom).filter(Boolean))].sort(), [listeActive])
+  const produits      = useMemo(() => [...new Set(listeActive.map((l: any) => l.contrat_achat?.produit?.nom ?? l.contrat_vente?.produit?.nom).filter(Boolean))].sort(), [listeActive])
   const agriculteurs  = useMemo(() => [...new Set(listeActive.map((l: any) => getAgri(l)?.nom).filter(Boolean))].sort(), [listeActive])
 
   const cmrFiltres = useMemo(() => listeActive.filter((l: any) => {
     if (filtTransporteur && (l.transporteur?.nom ?? l.contrat_achat?.transporteur?.nom) !== filtTransporteur) return false
     if (filtFournisseur  && l.contrat_achat?.fournisseur?.nom  !== filtFournisseur)  return false
-    if (filtProduit      && l.contrat_achat?.produit?.nom      !== filtProduit)      return false
+    if (filtProduit      && (l.contrat_achat?.produit?.nom ?? l.contrat_vente?.produit?.nom) !== filtProduit) return false
     if (filtAgriculteur  && (getAgri(l)?.nom ?? '—')           !== filtAgriculteur)  return false
     return true
   }), [listeActive, filtTransporteur, filtFournisseur, filtProduit, filtAgriculteur])
@@ -190,12 +192,18 @@ export default function CmrPage() {
                     onClick={() => setCmrModal(l)}
                     title="Cliquer pour saisir le CMR">
                     <td className="table-cell">
-                      <a href={`/contrats/${l.contrat_achat?.id}`} className="text-green-700 hover:underline text-sm font-medium" onClick={e => e.stopPropagation()}>
-                        {l.contrat_achat?.numero_contrat ?? '—'}
-                      </a>
+                      {l.contrat_achat
+                        ? <a href={`/contrats/${l.contrat_achat.id}`} className="text-green-700 hover:underline text-sm font-medium" onClick={e => e.stopPropagation()}>
+                            {l.contrat_achat.numero_contrat ?? '—'}
+                          </a>
+                        : l.contrat_vente
+                          ? <a href={`/ventes/${l.contrat_vente.id}`} className="text-green-700 hover:underline text-sm font-medium" onClick={e => e.stopPropagation()}>
+                              {l.contrat_vente.numero_contrat ?? '—'}
+                            </a>
+                          : '—'}
                     </td>
-                    <td className="table-cell text-sm">{l.contrat_achat?.fournisseur?.nom ?? '—'}</td>
-                    <td className="table-cell font-medium">{l.contrat_achat?.produit?.nom ?? '—'}</td>
+                    <td className="table-cell text-sm">{l.contrat_achat?.fournisseur?.nom ?? (l.contrat_vente ? 'Vente directe (silo)' : '—')}</td>
+                    <td className="table-cell font-medium">{l.contrat_achat?.produit?.nom ?? l.contrat_vente?.produit?.nom ?? '—'}</td>
                     <td className="table-cell text-sm">{[agri?.civilite, agri?.nom].filter(Boolean).join(' ') || '—'}</td>
                     <td className="table-cell">{l.transporteur?.nom ?? l.contrat_achat?.transporteur?.nom ?? '—'}</td>
                     <td className="table-cell">
@@ -235,7 +243,7 @@ export default function CmrPage() {
       {cmrModal && (
         <RealiserLivraisonModal
           livraison={cmrModal}
-          contrat={cmrModal.contrat_achat}
+          contrat={cmrModal.contrat_achat ?? contratSyntheticFromVente(cmrModal.contrat_vente)}
           onClose={() => setCmrModal(null)}
           onSaved={() => { setCmrModal(null); reload() }}
         />

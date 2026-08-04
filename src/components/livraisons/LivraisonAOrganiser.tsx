@@ -27,8 +27,15 @@ export default function LivraisonAOrganiser({ livraison: l, moisCourant, moisSui
   const [saving, setSaving] = useState(false)
 
   const ca = l.contrat_achat
-  const agriDest = (ca?.contrats_vente ?? []).find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur
+  // Vente départ silo : pas de contrat d'achat, les infos viennent directement du contrat de vente lié
+  const cv = l.contrat_vente
+  const agriDest = (ca?.contrats_vente ?? []).find((v: any) => v.id === l.contrat_vente_id)?.agriculteur
     ?? ca?.contrats_vente?.[0]?.agriculteur
+    ?? cv?.agriculteur
+  const produitNom = ca?.produit?.nom ?? cv?.produit?.nom
+  const origineLabel = ca?.fournisseur?.nom ?? (cv ? 'Vente directe (départ silo)' : undefined)
+  const lienContrat = ca ? `/contrats/${ca.id}` : cv ? `/ventes/${cv.id}` : '#'
+  const numeroContratAffiche = ca?.numero_contrat ?? cv?.numero_contrat
   // Le transporteur de la livraison peut avoir été réaffecté, différent du transporteur par défaut du contrat
   const transporteurEffectif = l.transporteur ?? ca?.transporteur
   const moisLiv = l.mois_prevu?.slice(0, 7) ?? ''
@@ -107,8 +114,8 @@ export default function LivraisonAOrganiser({ livraison: l, moisCourant, moisSui
           <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
             isRetard ? 'bg-red-100 text-red-700' : isProchain ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
           }`}>{isRetard ? '⚠️ ' : isProchain ? '→ ' : ''}{formatMois(l.mois_prevu)}</span>
-          <span className="font-semibold text-gray-800">{ca?.produit?.nom}</span>
-          <span className="text-gray-500 text-sm">{ca?.fournisseur?.nom}</span>
+          <span className="font-semibold text-gray-800">{produitNom}</span>
+          <span className="text-gray-500 text-sm">{origineLabel}</span>
           <span className="text-gray-400">·</span>
           <span className="text-sm font-medium" style={{ color: '#7B2820' }}>{formatTonnes(l.quantite_prevue)}</span>
           <span className="text-gray-400">·</span>
@@ -122,7 +129,7 @@ export default function LivraisonAOrganiser({ livraison: l, moisCourant, moisSui
               <AlertTriangle size={11} /> N° MAD manquant
             </span>
           )}
-          <a href={`/contrats/${ca?.id}`} className="text-xs text-green-700 hover:underline">{ca?.numero_contrat}</a>
+          <a href={lienContrat} className="text-xs text-green-700 hover:underline">{numeroContratAffiche}</a>
           {l.note_alerte && <AlerteNote note={l.note_alerte} size={14} />}
           {ca?.note_alerte && <AlerteNote note={`Contrat : ${ca.note_alerte}`} size={14} />}
           {isAdmin && onDelete && (

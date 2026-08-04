@@ -38,6 +38,28 @@ async function recalculerStatutContrat(supabase: any, contratAchatId: string) {
   }
 }
 
+// Même logique que ci-dessus, mais pour un contrat de vente départ silo
+// (pas de contrat d'achat lié, donc pas passé par recalculerStatutContrat)
+async function recalculerStatutContratVente(supabase: any, contratVenteId: string) {
+  const { data: cv } = await supabase
+    .from('contrats_vente')
+    .select('id,statut,quantite,livraisons(id,type,quantite_reelle)')
+    .eq('id', contratVenteId)
+    .single()
+  if (!cv) return
+
+  const livree = (cv.livraisons ?? [])
+    .filter((l: any) => l.type === 'realisee' && l.quantite_reelle != null)
+    .reduce((s: number, l: any) => s + l.quantite_reelle, 0)
+  const reliquat = Math.max(0, (cv.quantite ?? 0) - livree)
+
+  if (reliquat < 10 && cv.statut !== 'clos') {
+    await supabase.from('contrats_vente').update({ statut: 'clos' }).eq('id', cv.id)
+  } else if (reliquat >= 10 && cv.statut === 'clos') {
+    await supabase.from('contrats_vente').update({ statut: 'en_cours' }).eq('id', cv.id)
+  }
+}
+
 // Quand une facture transport est saisie sur une livraison, met à jour (ou crée) automatiquement
 // le tarif correspondant (transporteur + trajet) dans la grille "Tarifs transport" avec le prix réel constaté.
 async function autoMajTarifTransport(supabase: any, livraison: any) {
@@ -108,6 +130,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   if (data.contrat_achat_id) {
     await recalculerStatutContrat(supabase, data.contrat_achat_id)
+  } else if (data.contrat_vente_id) {
+    await recalculerStatutContratVente(supabase, data.contrat_vente_id)
   }
   if ('montant_transport_reel' in body || 'transport_facture' in body) {
     await autoMajTarifTransport(supabase, data)
@@ -118,13 +142,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const supabase = getServiceClient()
-  // Récupérer le contrat_achat_id avant suppression
-  const { data: liv } = await supabase.from('livraisons').select('contrat_achat_id').eq('id', params.id).single()
+  // Récupérer le contrat_achat_id / contrat_vente_id avant suppression
+  const { data: liv } = await supabase.from('livraisons').select('contrat_achat_id,contrat_vente_id').eq('id', params.id).single()
   const { error } = await supabase.from('livraisons').delete().eq('id', params.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   // Recalculer après suppression
   if (liv?.contrat_achat_id) {
     await recalculerStatutContrat(supabase, liv.contrat_achat_id)
+  } else if (liv?.contrat_vente_id) {
+    await recalculerStatutContratVente(supabase, liv.contrat_vente_id)
   }
   return NextResponse.json({ ok: true })
 }

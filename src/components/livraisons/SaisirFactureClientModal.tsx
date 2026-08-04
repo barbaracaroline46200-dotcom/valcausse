@@ -8,6 +8,7 @@ interface Livraison {
   date_reelle?: string
   quantite_reelle?: number
   contrat_achat?: any
+  contrat_vente?: any
   contrat_vente_id?: string
 }
 
@@ -28,9 +29,9 @@ export default function SaisirFactureClientModal({ livraisons, onClose, onSaved 
   // Toutes les livraisons sont forcément du même contrat_vente
   const cv = livraisons[0]?.contrat_achat?.contrats_vente?.find(
     (v: any) => v.id === livraisons[0]?.contrat_vente_id
-  )
+  ) ?? livraisons[0]?.contrat_vente // vente départ silo, pas de contrat d'achat
   const agri = cv?.agriculteur
-  const produit = livraisons[0]?.contrat_achat?.produit?.nom ?? '—'
+  const produit = livraisons[0]?.contrat_achat?.produit?.nom ?? cv?.produit?.nom ?? '—'
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
