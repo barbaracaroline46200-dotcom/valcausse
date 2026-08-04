@@ -111,10 +111,11 @@ export async function GET() {
   // Facturation en attente : réalisées sans facture transport ou fournisseur
   const facturationSelect = `
     *,
+    transporteur:transporteurs(id,nom),
     contrat_achat:contrats_achat(
       id, numero_contrat, famille, prix_achat,
       produit:produits(nom),
-      transporteur:transporteurs(nom),
+      transporteur:transporteurs(id,nom),
       fournisseur:fournisseurs(nom),
       contrats_vente(id, numero_contrat, destination_silo, prix_vente, agriculteur:agriculteurs(id,civilite,nom))
     )

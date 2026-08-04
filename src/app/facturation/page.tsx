@@ -90,6 +90,12 @@ export default function FacturationPage() {
       ?? ca?.contrats_vente?.[0]?.agriculteur
   }
 
+  // Le transporteur réel d'une livraison peut avoir été réaffecté (livraisons.transporteur_id),
+  // différent du transporteur par défaut du contrat d'achat.
+  function getTransporteurFactu(l: any): string | undefined {
+    return l.transporteur?.nom ?? l.contrat_achat?.transporteur?.nom
+  }
+
   const transportEnAttente = useMemo(() => aFacturer.filter((l: any) => !l.transport_facture), [aFacturer])
   const fournisseurEnAttente = useMemo(() => aFacturer.filter((l: any) => !l.facture_fournisseur_id), [aFacturer])
 
@@ -99,14 +105,14 @@ export default function FacturationPage() {
   const toutesLivraisons = useMemo(() => [...aFacturer, ...aVerifierClient, ...aFacturerClient], [aFacturer, aVerifierClient, aFacturerClient])
   const optProduits      = useMemo(() => [...new Set(toutesLivraisons.map((l: any) => l.contrat_achat?.produit?.nom).filter(Boolean))].sort(), [toutesLivraisons])
   const optAgriculteurs  = useMemo(() => [...new Set(toutesLivraisons.map((l: any) => getAgriFactu(l)?.nom).filter(Boolean))].sort(), [toutesLivraisons])
-  const optTransporteurs = useMemo(() => [...new Set(toutesLivraisons.map((l: any) => l.contrat_achat?.transporteur?.nom).filter(Boolean))].sort(), [toutesLivraisons])
+  const optTransporteurs = useMemo(() => [...new Set(toutesLivraisons.map((l: any) => getTransporteurFactu(l)).filter(Boolean))].sort(), [toutesLivraisons])
   const optFournisseurs  = useMemo(() => [...new Set(toutesLivraisons.map((l: any) => l.contrat_achat?.fournisseur?.nom).filter(Boolean))].sort(), [toutesLivraisons])
 
   function applyFiltres(list: any[]) {
     return list.filter((l: any) => {
       if (filtProduit      && l.contrat_achat?.produit?.nom !== filtProduit) return false
       if (filtAgriculteur  && (getAgriFactu(l)?.nom ?? '—') !== filtAgriculteur) return false
-      if (filtTransporteur && (l.contrat_achat?.transporteur?.nom ?? '—') !== filtTransporteur) return false
+      if (filtTransporteur && (getTransporteurFactu(l) ?? '—') !== filtTransporteur) return false
       if (filtFournisseur  && (l.contrat_achat?.fournisseur?.nom ?? '—') !== filtFournisseur) return false
       if (filtPoids) {
         const poids = String(l.quantite_reelle ?? '')
@@ -233,7 +239,7 @@ export default function FacturationPage() {
                   <button
                     onClick={() => {
                       const livs = transportEnAttente.filter(l => selectionTransport.has(l.id))
-                      const noms = new Set(livs.map(l => l.contrat_achat?.transporteur?.nom ?? '—'))
+                      const noms = new Set(livs.map(l => getTransporteurFactu(l) ?? '—'))
                       if (noms.size > 1) {
                         alert('Les livraisons sélectionnées appartiennent à plusieurs transporteurs différents.\nFiltrez par transporteur ou ne sélectionnez que des livraisons du même transporteur pour créer une facture groupée.')
                         return
@@ -251,7 +257,7 @@ export default function FacturationPage() {
 
               {(() => {
                 const livsT = filtTransporteurActif
-                  ? transportFiltres.filter((l: any) => (l.contrat_achat?.transporteur?.nom ?? '') === filtTransporteurActif)
+                  ? transportFiltres.filter((l: any) => (getTransporteurFactu(l) ?? '') === filtTransporteurActif)
                   : transportFiltres
                 if (livsT.length === 0) return <div className="px-5 py-8 text-center text-gray-400 text-sm">{filtTransporteurActif ? 'Aucune livraison non facturée pour ce transporteur' : 'Aucun résultat pour ces filtres'}</div>
                 return (
@@ -296,7 +302,7 @@ export default function FacturationPage() {
                             <td className="table-cell text-sm">{formatDate(l.date_reelle)}</td>
                             <td className="table-cell font-medium">{ca?.produit?.nom ?? '—'}</td>
                             {!filtTransporteurActif && (
-                              <td className="table-cell text-sm text-gray-500">{ca?.transporteur?.nom ?? '—'}</td>
+                              <td className="table-cell text-sm text-gray-500">{getTransporteurFactu(l) ?? '—'}</td>
                             )}
                             <td className="table-cell">
                               <a href={`/contrats/${ca?.id}`} className="text-green-700 hover:underline text-sm" onClick={e => e.stopPropagation()}>{ca?.numero_contrat}</a>

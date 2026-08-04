@@ -15,7 +15,7 @@ interface Props {
 }
 
 export default function SaisirFactureTransportGroupeModal({ selections, onClose, onSaved }: Props) {
-  const transporteurNom = selections[0]?.livraison?.contrat_achat?.transporteur?.nom ?? '—'
+  const transporteurNom = selections[0]?.livraison?.transporteur?.nom ?? selections[0]?.livraison?.contrat_achat?.transporteur?.nom ?? '—'
   const totalTonnes = selections.reduce((s, { livraison: l }) => s + (l.quantite_reelle ?? 0), 0)
   // montant = prix par tonne saisi pour cette livraison → coût réel = prix × tonnage
   const totalMontant = selections.reduce((s, { livraison: l, montant }) => s + (parseFloat(montant) || 0) * (l.quantite_reelle ?? 0), 0)
