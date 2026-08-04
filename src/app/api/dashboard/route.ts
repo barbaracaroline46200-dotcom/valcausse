@@ -116,10 +116,10 @@ export async function GET() {
   const facturationSelect = `
     *,
     transporteur:transporteurs(id,nom),
-    contrat_vente:contrats_vente(id, numero_contrat, destination_silo, prix_vente, produit:produits(nom), agriculteur:agriculteurs(id,civilite,nom)),
+    contrat_vente:contrats_vente(id, numero_contrat, destination_silo, prix_vente, produit:produits(id,nom), agriculteur:agriculteurs(id,civilite,nom)),
     contrat_achat:contrats_achat(
-      id, numero_contrat, famille, prix_achat,
-      produit:produits(nom),
+      id, numero_contrat, famille, prix_achat, mbm_autorise,
+      produit:produits(id,nom),
       transporteur:transporteurs(id,nom),
       fournisseur:fournisseurs(nom),
       contrats_vente(id, numero_contrat, destination_silo, prix_vente, agriculteur:agriculteurs(id,civilite,nom))
@@ -132,6 +132,37 @@ export async function GET() {
   const livraisonsRealisees = (livraisonsAFacturerRaw ?? []).filter(
     (l: any) => l.type === 'realisee' && !l.solde_ouverture
   )
+
+  // Majoration bi-mensuelle (MBM) : prime qui augmente par quinzaine sur la campagne,
+  // appliquée si le contrat d'achat négoce l'autorise (contrat_achat.mbm_autorise).
+  const { data: majorationsRaw } = await supabase
+    .from('majorations_negoce')
+    .select('produit_id,date_debut,valeur')
+    .order('date_debut', { ascending: true })
+  const majorationsParProduit = new Map<string, { date_debut: string; valeur: number }[]>()
+  for (const m of majorationsRaw ?? []) {
+    const arr = majorationsParProduit.get(m.produit_id) ?? []
+    arr.push({ date_debut: m.date_debut, valeur: Number(m.valeur) })
+    majorationsParProduit.set(m.produit_id, arr)
+  }
+  function calcMajoration(l: any): number {
+    const ca = l.contrat_achat
+    if (!ca?.mbm_autorise || ca.famille !== 'negoce' || !l.date_reelle) return 0
+    const produitId = ca.produit?.id
+    if (!produitId) return 0
+    const paliers = majorationsParProduit.get(produitId)
+    if (!paliers) return 0
+    let valeur = 0
+    for (const p of paliers) {
+      if (p.date_debut > l.date_reelle) break
+      valeur = p.valeur
+    }
+    return valeur
+  }
+  for (const l of livraisonsRealisees) {
+    ;(l as any).majoration_unitaire = calcMajoration(l)
+  }
+
   const livraisonsAFacturer = livraisonsRealisees.filter(
     // Pas de contrat d'achat (vente départ silo) → pas de fournisseur à facturer
     (l: any) => !l.transport_facture || (l.contrat_achat_id && !l.facture_fournisseur_id)

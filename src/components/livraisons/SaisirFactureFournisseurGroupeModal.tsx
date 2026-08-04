@@ -23,8 +23,9 @@ export default function SaisirFactureFournisseurGroupeModal({ livraisons, onClos
 
   const fournisseurNom = livraisons[0]?.contrat_achat?.fournisseur?.nom ?? '—'
   const totalTonnes = livraisons.reduce((s, l) => s + (l.quantite_reelle ?? 0), 0)
+  // Majoration bi-mensuelle (MBM) déjà calculée côté serveur, incluse si le contrat l'autorise
   const totalAttendu = livraisons.reduce((s, l) => {
-    const prix = l.contrat_achat?.prix_achat ?? 0
+    const prix = (l.contrat_achat?.prix_achat ?? 0) + (l.majoration_unitaire ?? 0)
     return s + prix * (l.quantite_reelle ?? 0)
   }, 0)
 
@@ -107,6 +108,7 @@ export default function SaisirFactureFournisseurGroupeModal({ livraisons, onClos
               <th className="px-4 py-1.5 text-left font-medium">Destinataire</th>
               <th className="px-4 py-1.5 text-right font-medium">Tonnes</th>
               <th className="px-4 py-1.5 text-right font-medium">Prix achat</th>
+              <th className="px-4 py-1.5 text-right font-medium">Majoration</th>
               <th className="px-4 py-1.5 text-right font-medium">Montant attendu</th>
             </tr>
           </thead>
@@ -115,7 +117,9 @@ export default function SaisirFactureFournisseurGroupeModal({ livraisons, onClos
               const ca = l.contrat_achat
               const agri = ca?.contrats_vente?.find((v: any) => v.id === l.contrat_vente_id)?.agriculteur
               const prixAchat = ca?.prix_achat
-              const montantAttendu = prixAchat != null ? prixAchat * (l.quantite_reelle ?? 0) : null
+              const majoration = l.majoration_unitaire ?? 0
+              const prixEffectif = prixAchat != null ? prixAchat + majoration : null
+              const montantAttendu = prixEffectif != null ? prixEffectif * (l.quantite_reelle ?? 0) : null
               return (
                 <tr key={l.id} className="border-b border-gray-50 last:border-0">
                   <td className="px-4 py-1.5 text-gray-500">{formatDate(l.date_reelle)}</td>
@@ -123,6 +127,9 @@ export default function SaisirFactureFournisseurGroupeModal({ livraisons, onClos
                   <td className="px-4 py-1.5 text-gray-500">{agri?.nom ?? ca?.numero_contrat ?? '—'}</td>
                   <td className="px-4 py-1.5 font-semibold text-right">{formatTonnes(l.quantite_reelle)}</td>
                   <td className="px-4 py-1.5 text-right text-gray-500 text-xs">{prixAchat != null ? `${prixAchat} €/t` : '—'}</td>
+                  <td className="px-4 py-1.5 text-right text-xs">
+                    {ca?.mbm_autorise ? <span className="text-amber-700 font-medium">+{majoration.toFixed(3)} €/t</span> : <span className="text-gray-300">—</span>}
+                  </td>
                   <td className="px-4 py-1.5 text-right font-semibold text-amber-700">{montantAttendu != null ? `${montantAttendu.toFixed(2)} €` : '—'}</td>
                 </tr>
               )
@@ -133,6 +140,7 @@ export default function SaisirFactureFournisseurGroupeModal({ livraisons, onClos
               <tr className="border-t-2 border-amber-200 bg-amber-50/50">
                 <td colSpan={3} className="px-4 py-2 text-xs font-semibold text-amber-800 uppercase tracking-wide">Total attendu</td>
                 <td className="px-4 py-2 text-right font-bold text-gray-700">{formatTonnes(totalTonnes)}</td>
+                <td className="px-4 py-2"></td>
                 <td className="px-4 py-2"></td>
                 <td className="px-4 py-2 text-right font-bold text-amber-700 text-base">{totalAttendu.toFixed(2)} €</td>
               </tr>

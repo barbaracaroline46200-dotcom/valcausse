@@ -525,7 +525,7 @@ export default function FacturationPage() {
               ) : (
                 <table className="w-full">
                   <thead><tr className="border-b border-gray-100">
-                    {['Date', 'Produit', 'Contrat', 'Agriculteur', 'Tonnes', 'Prix vente', ''].map((h, i) => (
+                    {['Date', 'Produit', 'Contrat', 'Agriculteur', 'Tonnes', 'Prix vente', 'Majoration', 'Prix total', ''].map((h, i) => (
                       <th key={i} className="table-header">{h}</th>
                     ))}
                   </tr></thead>
@@ -534,6 +534,7 @@ export default function FacturationPage() {
                       const ca = l.contrat_achat
                       const cv = getVenteFactu(l)
                       const agri = cv?.agriculteur
+                      const majoration = l.majoration_unitaire ?? 0
                       return (
                         <tr key={l.id} className="table-row">
                           <td className="table-cell text-sm">{formatDate(l.date_reelle)}</td>
@@ -549,6 +550,16 @@ export default function FacturationPage() {
                           <td className="table-cell font-semibold">{formatTonnes(l.quantite_reelle)}</td>
                           <td className="table-cell text-sm text-gray-500">
                             {cv?.prix_vente != null ? `${cv.prix_vente} €/t` : '—'}
+                          </td>
+                          <td className="table-cell text-sm">
+                            {ca?.mbm_autorise
+                              ? <span className="font-semibold text-amber-700">+{majoration.toFixed(3)} €/t</span>
+                              : <span className="text-gray-300">MBM non autorisées</span>}
+                          </td>
+                          <td className="table-cell text-sm font-semibold">
+                            {cv?.prix_vente != null
+                              ? `${(cv.prix_vente + majoration).toFixed(2)} €/t`
+                              : '—'}
                           </td>
                           <td className="table-cell text-center">
                             <button
@@ -595,7 +606,7 @@ export default function FacturationPage() {
               ) : (
                 <table className="w-full">
                   <thead><tr className="border-b border-gray-100">
-                    {['', 'Date', 'Produit', 'Contrat', 'Agriculteur', 'Tonnes', 'Prix vente'].map((h, i) => (
+                    {['', 'Date', 'Produit', 'Contrat', 'Agriculteur', 'Tonnes', 'Prix vente', 'Majoration', 'Prix total'].map((h, i) => (
                       <th key={i} className="table-header">{h}</th>
                     ))}
                   </tr></thead>
@@ -605,6 +616,7 @@ export default function FacturationPage() {
                       const cv = getVenteFactu(l)
                       const agri = cv?.agriculteur
                       const checked = selectionSaisie.has(l.id)
+                      const majoration = l.majoration_unitaire ?? 0
                       return (
                         <tr
                           key={l.id}
@@ -629,6 +641,16 @@ export default function FacturationPage() {
                           <td className="table-cell font-semibold">{formatTonnes(l.quantite_reelle)}</td>
                           <td className="table-cell text-sm text-gray-500">
                             {cv?.prix_vente != null ? `${cv.prix_vente} €/t` : '—'}
+                          </td>
+                          <td className="table-cell text-sm">
+                            {ca?.mbm_autorise
+                              ? <span className="font-semibold text-amber-700">+{majoration.toFixed(3)} €/t</span>
+                              : <span className="text-gray-300">—</span>}
+                          </td>
+                          <td className="table-cell text-sm font-semibold">
+                            {cv?.prix_vente != null
+                              ? `${(cv.prix_vente + majoration).toFixed(2)} €/t`
+                              : '—'}
                           </td>
                         </tr>
                       )
