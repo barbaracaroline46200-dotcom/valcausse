@@ -486,7 +486,7 @@ export default function ContratDetailPage() {
                       <td className="table-cell">{formatTonnes(l.quantite_prevue)}</td>
                       <td className="table-cell text-gray-500">{l.ville_chargement ?? contrat.ville_chargement ?? '—'}</td>
                       <td className="table-cell text-gray-500">{l.ville_destination ?? '—'}</td>
-                      <td className="table-cell text-gray-500">{contrat.transporteur?.nom ?? '—'}</td>
+                      <td className="table-cell text-gray-500">{l.transporteur?.nom ?? contrat.transporteur?.nom ?? '—'}</td>
                       <td className="table-cell text-xs">
                         {l.piece_fournisseur_prefixe && l.piece_fournisseur_numero
                           ? `${l.piece_fournisseur_prefixe} ${l.piece_fournisseur_numero}`

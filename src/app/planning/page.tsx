@@ -256,7 +256,7 @@ export default function PlanningPage() {
                         : <span className="text-gray-800">{clientNom}</span>
                       }
                     </td>
-                    <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{ca.transporteur?.nom ?? '—'}</td>
+                    <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{row.transporteur?.nom ?? ca.transporteur?.nom ?? '—'}</td>
                     {moisRange.map(k => (
                       <td key={k} className="px-2 py-2 text-center">
                         {moisRow === k

@@ -10,6 +10,7 @@ export async function GET(req: NextRequest) {
     .from('livraisons')
     .select(`
       *,
+      transporteur:transporteurs(id,nom),
       contrat_achat:contrats_achat(
         *,
         produit:produits(*),

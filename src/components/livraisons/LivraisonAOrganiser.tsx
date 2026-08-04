@@ -29,6 +29,8 @@ export default function LivraisonAOrganiser({ livraison: l, moisCourant, moisSui
   const ca = l.contrat_achat
   const agriDest = (ca?.contrats_vente ?? []).find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur
     ?? ca?.contrats_vente?.[0]?.agriculteur
+  // Le transporteur de la livraison peut avoir été réaffecté, différent du transporteur par défaut du contrat
+  const transporteurEffectif = l.transporteur ?? ca?.transporteur
   const moisLiv = l.mois_prevu?.slice(0, 7) ?? ''
   const isRetard = moisLiv < moisCourant.slice(0, 7)
   const isProchain = moisSuivant && moisLiv >= moisSuivant.slice(0, 7)
@@ -112,7 +114,7 @@ export default function LivraisonAOrganiser({ livraison: l, moisCourant, moisSui
           <span className="text-gray-400">·</span>
           <span className="text-sm text-gray-600">{[agriDest?.civilite, agriDest?.nom].filter(Boolean).join(' ') || '—'}</span>
           <span className="text-gray-400">·</span>
-          <span className="text-sm text-gray-500">{ca?.transporteur?.nom ?? '—'}</span>
+          <span className="text-sm text-gray-500">{transporteurEffectif?.nom ?? '—'}</span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {ca?.famille === 'appro' && !l.numero_mise_a_disposition && (
@@ -237,9 +239,9 @@ export default function LivraisonAOrganiser({ livraison: l, moisCourant, moisSui
             <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${step3ok ? 'bg-green-500 text-white' : etapeActive === 3 ? 'bg-green-500 text-white' : 'bg-green-100 text-green-700'}`}>3</span>
             <span className={`text-xs font-semibold ${etapeActive === 3 ? 'text-green-700' : 'text-gray-700'}`}>🚛 Transporteur confirmé</span>
           </div>
-          {ca?.transporteur?.telephone && (
-            <a href={`tel:${ca.transporteur.telephone}`} className="inline-flex items-center gap-1 text-xs font-medium text-green-700 hover:underline mb-2">
-              📞 {ca.transporteur.telephone}
+          {transporteurEffectif?.telephone && (
+            <a href={`tel:${transporteurEffectif.telephone}`} className="inline-flex items-center gap-1 text-xs font-medium text-green-700 hover:underline mb-2">
+              📞 {transporteurEffectif.telephone}
             </a>
           )}
           {step1ok ? (

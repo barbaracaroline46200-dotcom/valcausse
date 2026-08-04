@@ -64,13 +64,13 @@ export default function CmrPage() {
 
   const listeActive = onglet === 'normal' ? cmrNormal : onglet === 'negoce_silo' ? cmrNegoSilo : cmrApproGare
 
-  const transporteurs = useMemo(() => [...new Set(listeActive.map((l: any) => l.contrat_achat?.transporteur?.nom).filter(Boolean))].sort(), [listeActive])
+  const transporteurs = useMemo(() => [...new Set(listeActive.map((l: any) => l.transporteur?.nom ?? l.contrat_achat?.transporteur?.nom).filter(Boolean))].sort(), [listeActive])
   const fournisseurs  = useMemo(() => [...new Set(listeActive.map((l: any) => l.contrat_achat?.fournisseur?.nom).filter(Boolean))].sort(), [listeActive])
   const produits      = useMemo(() => [...new Set(listeActive.map((l: any) => l.contrat_achat?.produit?.nom).filter(Boolean))].sort(), [listeActive])
   const agriculteurs  = useMemo(() => [...new Set(listeActive.map((l: any) => getAgri(l)?.nom).filter(Boolean))].sort(), [listeActive])
 
   const cmrFiltres = useMemo(() => listeActive.filter((l: any) => {
-    if (filtTransporteur && l.contrat_achat?.transporteur?.nom !== filtTransporteur) return false
+    if (filtTransporteur && (l.transporteur?.nom ?? l.contrat_achat?.transporteur?.nom) !== filtTransporteur) return false
     if (filtFournisseur  && l.contrat_achat?.fournisseur?.nom  !== filtFournisseur)  return false
     if (filtProduit      && l.contrat_achat?.produit?.nom      !== filtProduit)      return false
     if (filtAgriculteur  && (getAgri(l)?.nom ?? '—')           !== filtAgriculteur)  return false
@@ -197,14 +197,14 @@ export default function CmrPage() {
                     <td className="table-cell text-sm">{l.contrat_achat?.fournisseur?.nom ?? '—'}</td>
                     <td className="table-cell font-medium">{l.contrat_achat?.produit?.nom ?? '—'}</td>
                     <td className="table-cell text-sm">{[agri?.civilite, agri?.nom].filter(Boolean).join(' ') || '—'}</td>
-                    <td className="table-cell">{l.contrat_achat?.transporteur?.nom ?? '—'}</td>
+                    <td className="table-cell">{l.transporteur?.nom ?? l.contrat_achat?.transporteur?.nom ?? '—'}</td>
                     <td className="table-cell">
                       <span className={!isRealisee ? 'text-amber-700 font-medium' : ''}>{dateAffichee}</span>
                       {!isRealisee && <span className="ml-1 text-xs text-amber-600">(prévue)</span>}
                     </td>
                     <td className="table-cell text-sm">
-                      {l.contrat_achat?.transporteur?.telephone && (
-                        <span className="text-gray-600">📞 {l.contrat_achat.transporteur.telephone}</span>
+                      {(l.transporteur?.telephone ?? l.contrat_achat?.transporteur?.telephone) && (
+                        <span className="text-gray-600">📞 {l.transporteur?.telephone ?? l.contrat_achat?.transporteur?.telephone}</span>
                       )}
                     </td>
                     <td className="table-cell">

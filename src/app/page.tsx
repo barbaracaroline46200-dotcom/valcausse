@@ -51,7 +51,7 @@ function MadTable({ livraisons, onSaved }: { livraisons: any[], onSaved: () => v
               <td className="table-cell">{ca?.produit?.nom ?? '—'}</td>
               <td className="table-cell">{ca?.fournisseur?.nom ?? '—'}</td>
               <td className="table-cell text-orange-600 font-medium">{mois}</td>
-              <td className="table-cell">{ca?.transporteur?.nom ?? '—'}</td>
+              <td className="table-cell">{l.transporteur?.nom ?? ca?.transporteur?.nom ?? '—'}</td>
               <td className="table-cell">
                 <div className="flex items-center gap-1.5">
                   <input
@@ -595,7 +595,7 @@ export default function DashboardPage() {
                     <td className="table-cell"><a href={`/contrats/${ca?.id}`} className="text-green-700 hover:underline font-medium">{ca?.numero_contrat ?? '—'}</a></td>
                     <td className="table-cell text-sm">{ca?.fournisseur?.nom ?? '—'}</td>
                     <td className="table-cell">{ca?.produit?.nom ?? '—'}</td>
-                    <td className="table-cell">{ca?.transporteur?.nom ?? '—'}</td>
+                    <td className="table-cell">{l.transporteur?.nom ?? ca?.transporteur?.nom ?? '—'}</td>
                     <td className="table-cell text-sm">{dateRef ? new Date(dateRef).toLocaleDateString('fr-FR') : '—'}</td>
                     <td className="table-cell"><span className="badge-alerte font-bold text-red-700">{jours}j</span></td>
                   </tr>

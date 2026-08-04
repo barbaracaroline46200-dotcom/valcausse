@@ -121,6 +121,12 @@ export default function LivraisonsPage() {
   }
 
   async function envoyerPdfGroupe() {
+    const livsSelectionnees = planifiees.filter((l: any) => selectedIds.includes(l.id))
+    const noms = new Set(livsSelectionnees.map((l: any) => l.transporteur?.nom ?? l.contrat_achat?.transporteur?.nom ?? '—'))
+    if (noms.size > 1) {
+      alert('Les livraisons sélectionnées appartiennent à plusieurs transporteurs différents.\nSélectionnez uniquement des livraisons du même transporteur pour un PDF groupé.')
+      return
+    }
     window.open(`/api/pdf/transporteur/groupe?livraison_ids=${selectedIds.join(',')}`, '_blank')
     await Promise.all(selectedIds.map(id =>
       fetch(`/api/livraisons/${id}`, {
@@ -153,13 +159,13 @@ export default function LivraisonsPage() {
   const optFournisseurs = useMemo(() => [...new Set(planifiees.map((l: any) => l.contrat_achat?.fournisseur?.nom).filter(Boolean))].sort() as string[], [planifiees])
   const optProduits = useMemo(() => [...new Set(planifiees.map((l: any) => l.contrat_achat?.produit?.nom).filter(Boolean))].sort() as string[], [planifiees])
   const optAgriculteurs = useMemo(() => [...new Set(planifiees.map((l: any) => getAgriNom(l)).filter(Boolean))].sort() as string[], [planifiees])
-  const optTransporteurs = useMemo(() => [...new Set(planifiees.map((l: any) => l.contrat_achat?.transporteur?.nom).filter(Boolean))].sort() as string[], [planifiees])
+  const optTransporteurs = useMemo(() => [...new Set(planifiees.map((l: any) => l.transporteur?.nom ?? l.contrat_achat?.transporteur?.nom).filter(Boolean))].sort() as string[], [planifiees])
 
   const filtrees = useMemo(() => planifiees.filter((l: any) => {
     if (filtFournisseurs.length > 0 && !filtFournisseurs.includes(l.contrat_achat?.fournisseur?.nom)) return false
     if (filtProduits.length > 0 && !filtProduits.includes(l.contrat_achat?.produit?.nom)) return false
     if (filtAgriculteurs.length > 0 && !filtAgriculteurs.includes(getAgriNom(l))) return false
-    if (filtTransporteurs.length > 0 && !filtTransporteurs.includes(l.contrat_achat?.transporteur?.nom)) return false
+    if (filtTransporteurs.length > 0 && !filtTransporteurs.includes(l.transporteur?.nom ?? l.contrat_achat?.transporteur?.nom)) return false
     return true
   }), [planifiees, filtFournisseurs, filtProduits, filtAgriculteurs, filtTransporteurs])
 

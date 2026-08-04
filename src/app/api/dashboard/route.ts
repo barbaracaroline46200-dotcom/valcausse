@@ -31,6 +31,7 @@ export async function GET() {
     .from('livraisons')
     .select(`
       *,
+      transporteur:transporteurs(id,nom,telephone),
       contrat_achat:contrats_achat(
         id,numero_contrat,famille,gere_par_silo,
         produit:produits(nom),
@@ -58,6 +59,7 @@ export async function GET() {
 
   const cmrSelect = `
     *,
+    transporteur:transporteurs(id,nom,email,telephone),
     contrat_achat:contrats_achat(
       id, numero_contrat, famille, prix_transport_prevu,
       produit:produits(nom),

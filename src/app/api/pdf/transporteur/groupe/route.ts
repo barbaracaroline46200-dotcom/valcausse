@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
     .from('livraisons')
     .select(`
       *,
+      transporteur:transporteurs(nom),
       contrat_achat:contrats_achat(
         *,
         produit:produits(nom),
@@ -170,7 +171,7 @@ export async function GET(req: NextRequest) {
   page.drawLine({ start: { x: 50, y }, end: { x: width - 50, y }, thickness: 0.5, color: gray })
   y -= 15
 
-  const nomTransporteur = ca?.transporteur?.nom ?? '—'
+  const nomTransporteur = first.transporteur?.nom ?? ca?.transporteur?.nom ?? '—'
   const dateEnvoi = new Date().toLocaleDateString('fr-FR')
   page.drawText(`Transporteur : ${nomTransporteur} — Envoyé le ${dateEnvoi}`, {
     x: 50, y, font, size: 8, color: gray

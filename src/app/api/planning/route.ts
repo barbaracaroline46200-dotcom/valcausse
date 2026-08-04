@@ -15,6 +15,7 @@ export async function GET() {
       date_reelle,
       quantite_reelle,
       contrat_vente_id,
+      transporteur:transporteurs(nom),
       contrat_achat:contrats_achat(
         numero_contrat,
         statut,
