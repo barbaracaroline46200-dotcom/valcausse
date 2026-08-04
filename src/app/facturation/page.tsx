@@ -224,7 +224,7 @@ export default function FacturationPage() {
                   onChange={e => { setFiltTransporteurActif(e.target.value); setSelectionTransport(new Set()); setPrixTransport({}) }}
                   className="input text-sm py-1.5 w-56"
                 >
-                  <option value="">— Choisir un transporteur —</option>
+                  <option value="">— Tous les transporteurs —</option>
                   {optTransporteurs.map((t: string) => (
                     <option key={t} value={t}>{t}</option>
                   ))}
@@ -233,6 +233,11 @@ export default function FacturationPage() {
                   <button
                     onClick={() => {
                       const livs = transportEnAttente.filter(l => selectionTransport.has(l.id))
+                      const noms = new Set(livs.map(l => l.contrat_achat?.transporteur?.nom ?? '—'))
+                      if (noms.size > 1) {
+                        alert('Les livraisons sélectionnées appartiennent à plusieurs transporteurs différents.\nFiltrez par transporteur ou ne sélectionnez que des livraisons du même transporteur pour créer une facture groupée.')
+                        return
+                      }
                       const selections = livs.map(l => ({ livraison: l, montant: prixTransport[l.id] ?? '' }))
                       setFactureTransportGroupeModal(selections)
                     }}
@@ -244,18 +249,15 @@ export default function FacturationPage() {
                 )}
               </div>
 
-              {!filtTransporteurActif ? (
-                <div className="px-5 py-8 text-center text-gray-400 text-sm">Sélectionnez un transporteur pour voir ses livraisons</div>
-              ) : (() => {
-                const livsT = transportFiltres.filter((l: any) => {
-                  const nomT = l.contrat_achat?.transporteur?.nom ?? ''
-                  return nomT === filtTransporteurActif
-                })
-                if (livsT.length === 0) return <div className="px-5 py-8 text-center text-gray-400 text-sm">Aucune livraison non facturée pour ce transporteur</div>
+              {(() => {
+                const livsT = filtTransporteurActif
+                  ? transportFiltres.filter((l: any) => (l.contrat_achat?.transporteur?.nom ?? '') === filtTransporteurActif)
+                  : transportFiltres
+                if (livsT.length === 0) return <div className="px-5 py-8 text-center text-gray-400 text-sm">{filtTransporteurActif ? 'Aucune livraison non facturée pour ce transporteur' : 'Aucun résultat pour ces filtres'}</div>
                 return (
                   <table className="w-full">
                     <thead><tr className="border-b border-gray-100">
-                      {['', 'Date', 'Produit', 'Contrat', 'Agriculteur', 'Tonnes', 'Prix prévu', 'Prix réel *', ''].map((h, i) => (
+                      {['', 'Date', 'Produit', ...(filtTransporteurActif ? [] : ['Transporteur']), 'Contrat', 'Agriculteur', 'Tonnes', 'Prix prévu', 'Prix réel *', ''].map((h, i) => (
                         <th key={i} className="table-header">{h}</th>
                       ))}
                     </tr></thead>
@@ -293,6 +295,9 @@ export default function FacturationPage() {
                             </td>
                             <td className="table-cell text-sm">{formatDate(l.date_reelle)}</td>
                             <td className="table-cell font-medium">{ca?.produit?.nom ?? '—'}</td>
+                            {!filtTransporteurActif && (
+                              <td className="table-cell text-sm text-gray-500">{ca?.transporteur?.nom ?? '—'}</td>
+                            )}
                             <td className="table-cell">
                               <a href={`/contrats/${ca?.id}`} className="text-green-700 hover:underline text-sm" onClick={e => e.stopPropagation()}>{ca?.numero_contrat}</a>
                               {l.note_alerte && <span className="ml-1"><AlerteNote note={l.note_alerte} size={13} /></span>}
@@ -364,20 +369,20 @@ export default function FacturationPage() {
                   onChange={e => { setFiltFournisseurActif(e.target.value); setSelectionFournisseur(new Set()) }}
                   className="input text-sm py-1.5 w-56"
                 >
-                  <option value="">— Choisir un fournisseur —</option>
+                  <option value="">— Tous les fournisseurs —</option>
                   {optFournisseurs.map((f: string) => (
                     <option key={f} value={f}>{f}</option>
                   ))}
                 </select>
-                {filtFournisseurActif && (
-                  <span className="text-xs text-gray-500">
-                    {fournisseurFiltres.filter((l: any) => (l.contrat_achat?.fournisseur?.nom ?? '') === filtFournisseurActif).length} livraison(s) non facturée(s)
-                  </span>
-                )}
                 {selectionFournisseur.size > 0 && (
                   <button
                     onClick={() => {
                       const livs = fournisseurEnAttente.filter(l => selectionFournisseur.has(l.id))
+                      const noms = new Set(livs.map(l => l.contrat_achat?.fournisseur?.nom ?? '—'))
+                      if (noms.size > 1) {
+                        alert('Les livraisons sélectionnées appartiennent à plusieurs fournisseurs différents.\nFiltrez par fournisseur ou ne sélectionnez que des livraisons du même fournisseur pour créer une facture groupée.')
+                        return
+                      }
                       setFactureFournisseurGroupeModal(livs)
                     }}
                     className="ml-auto px-4 py-1.5 rounded-lg text-white text-sm font-semibold"
@@ -388,15 +393,15 @@ export default function FacturationPage() {
                 )}
               </div>
 
-              {!filtFournisseurActif ? (
-                <div className="px-5 py-8 text-center text-gray-400 text-sm">Sélectionnez un fournisseur pour voir ses livraisons</div>
-              ) : (() => {
-                const livsF = fournisseurFiltres.filter((l: any) => (l.contrat_achat?.fournisseur?.nom ?? '') === filtFournisseurActif)
+              {(() => {
+                const livsF = filtFournisseurActif
+                  ? fournisseurFiltres.filter((l: any) => (l.contrat_achat?.fournisseur?.nom ?? '') === filtFournisseurActif)
+                  : fournisseurFiltres
                 if (livsF.length === 0) return <div className="px-5 py-8 text-center text-gray-400 text-sm">Aucun résultat</div>
                 return (
                   <table className="w-full">
                     <thead><tr className="border-b border-gray-100">
-                      {['', 'Date', 'Famille', 'Produit', 'Contrat', 'Agriculteur', 'Tonnes', ''].map((h, i) => (
+                      {['', 'Date', ...(filtFournisseurActif ? [] : ['Fournisseur']), 'Famille', 'Produit', 'Contrat', 'Agriculteur', 'Tonnes', ''].map((h, i) => (
                         <th key={i} className="table-header">{h}</th>
                       ))}
                     </tr></thead>
@@ -421,6 +426,9 @@ export default function FacturationPage() {
                                 : <Square size={16} className="text-gray-300 mx-auto" />}
                             </td>
                             <td className="table-cell text-sm">{formatDate(l.date_reelle)}</td>
+                            {!filtFournisseurActif && (
+                              <td className="table-cell text-sm text-gray-500">{ca?.fournisseur?.nom ?? '—'}</td>
+                            )}
                             <td className="table-cell text-xs">
                               <span className={`px-2 py-0.5 rounded-full font-semibold ${ca?.famille === 'appro' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
                                 {ca?.famille === 'appro' ? 'Appro' : 'Négoce'}
