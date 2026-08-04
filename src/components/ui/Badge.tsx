@@ -1,10 +1,20 @@
 import { cn } from '@/lib/utils'
 import type { FamilleType, StatutContrat } from '@/types'
+import { getAnneeAgricoleLabel } from '@/lib/annee-agricole'
 
 export function BadgeFamille({ famille }: { famille: FamilleType }) {
   return (
     <span className={famille === 'negoce' ? 'badge-negoce' : 'badge-appro'}>
       {famille === 'negoce' ? '🌾 Négoce' : '🌿 Appro'}
+    </span>
+  )
+}
+
+export function BadgeAnnee({ dateStr }: { dateStr?: string | null }) {
+  if (!dateStr) return null
+  return (
+    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700">
+      📅 {getAnneeAgricoleLabel(new Date(dateStr))}
     </span>
   )
 }

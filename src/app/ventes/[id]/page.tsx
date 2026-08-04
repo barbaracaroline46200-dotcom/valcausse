@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { Loader2, Pencil, ArrowLeft, Link2, CheckCircle, RotateCcw } from 'lucide-react'
 import { formatTonnes, formatEurosParTonne, formatDate } from '@/lib/annee-agricole'
-import { BadgeStatut } from '@/components/ui/Badge'
+import { BadgeStatut, BadgeAnnee } from '@/components/ui/Badge'
 import { useAdmin } from '@/components/ui/AdminProvider'
 import Link from 'next/link'
 import Modal from '@/components/ui/Modal'
@@ -46,6 +46,7 @@ export default function VenteDetailPage() {
             <div className="flex items-center gap-3 mb-1">
               <h1 className="text-2xl font-bold" style={{ color: '#7B2820' }}>{vente.numero_contrat}</h1>
               <BadgeStatut statut={vente.statut} />
+              <BadgeAnnee dateStr={vente.date_debut} />
             </div>
             <p className="text-gray-500 text-sm">Contrat de vente · {[vente.agriculteur?.civilite, vente.agriculteur?.nom].filter(Boolean).join(' ') || '—'}</p>
           </div>

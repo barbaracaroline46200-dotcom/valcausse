@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Loader2, ArrowLeft, AlertTriangle, Plus, FileDown, Edit, CheckCircle, Pencil, Trash2, Link2Off, PackageOpen } from 'lucide-react'
-import { BadgeFamille, BadgeStatut } from '@/components/ui/Badge'
+import { BadgeFamille, BadgeStatut, BadgeAnnee } from '@/components/ui/Badge'
 import ProgressBar from '@/components/ui/ProgressBar'
 import { formatDate, formatTonnes, formatEurosParTonne, formatEuros } from '@/lib/annee-agricole'
 import { quantiteLivree, reliquat, ecartTransport } from '@/lib/utils'
@@ -137,6 +137,7 @@ export default function ContratDetailPage() {
             <h1 className="text-2xl font-bold text-gray-900">{contrat.numero_contrat}</h1>
             <BadgeFamille famille={contrat.famille} />
             <BadgeStatut statut={contrat.statut} />
+            <BadgeAnnee dateStr={contrat.date_debut} />
           </div>
           <p className="text-gray-500 text-sm mt-1">{contrat.produit?.nom} · {contrat.fournisseur?.nom}</p>
         </div>
