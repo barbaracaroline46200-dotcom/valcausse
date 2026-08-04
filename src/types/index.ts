@@ -156,6 +156,7 @@ export interface FactureClient {
   id: string
   contrat_vente_id: string
   numero_facture_logiciel?: string
+  date_facture?: string
   montant_ht?: number
   montant_ttc?: number
   mode_paiement?: string

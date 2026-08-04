@@ -24,6 +24,7 @@ const MODES_PAIEMENT = [
 
 const FORM_VIDE = {
   numero_facture_logiciel: '',
+  date_facture: '',
   montant_ht: '',
   montant_ttc: '',
   mode_paiement: '',
@@ -50,6 +51,7 @@ export default function GererFacturesClientModal({ contratVente, contratAchatId,
     const body = {
       contrat_vente_id: contratVente.id,
       numero_facture_logiciel: form.numero_facture_logiciel,
+      date_facture: form.date_facture || null,
       montant_ht: form.montant_ht ? parseFloat(form.montant_ht) : null,
       montant_ttc: form.montant_ttc ? parseFloat(form.montant_ttc) : null,
       mode_paiement: form.mode_paiement || null,
@@ -106,10 +108,11 @@ export default function GererFacturesClientModal({ contratVente, contratAchatId,
             <div key={fac.id} className="flex items-center justify-between bg-green-50 border border-green-100 rounded-lg px-4 py-2.5 text-sm">
               <div className="flex gap-4 flex-wrap">
                 <span className="font-semibold text-green-800">{fac.numero_facture_logiciel}</span>
+                {fac.date_facture && <span className="text-gray-500">{formatDate(fac.date_facture)}</span>}
                 {fac.montant_ht != null && <span className="text-gray-600">HT : {fac.montant_ht} €</span>}
                 {fac.montant_ttc != null && <span className="text-gray-600">TTC : {fac.montant_ttc} €</span>}
                 {fac.mode_paiement && <span className="text-gray-500">{MODES_PAIEMENT.find(m => m.value === fac.mode_paiement)?.label ?? fac.mode_paiement}</span>}
-                {fac.date_paiement && <span className="text-gray-500">{formatDate(fac.date_paiement)}</span>}
+                {fac.date_paiement && <span className="text-gray-500">Payé le {formatDate(fac.date_paiement)}</span>}
               </div>
               <button onClick={() => supprimerFacture(fac.id)} className="text-gray-300 hover:text-red-500 transition-colors ml-3 flex-shrink-0">
                 <Trash2 size={15} />
@@ -126,6 +129,10 @@ export default function GererFacturesClientModal({ contratVente, contratAchatId,
           <div className="col-span-2">
             <label className="label">N° FAT (logiciel comptable) *</label>
             <input className="input" value={form.numero_facture_logiciel} onChange={f('numero_facture_logiciel')} placeholder="Ex: FAT-2026-0042" />
+          </div>
+          <div className="col-span-2">
+            <label className="label">Date de facturation</label>
+            <input type="date" className="input" value={form.date_facture} onChange={f('date_facture')} />
           </div>
           <div>
             <label className="label">Montant HT (€)</label>

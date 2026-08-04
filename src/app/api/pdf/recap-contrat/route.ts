@@ -49,13 +49,19 @@ export async function GET(req: NextRequest) {
   const totalLivre = livraisonsRealisees.reduce((s: number, l: any) => s + (Number(l.quantite_reelle) || 0), 0)
   const qteTotale = Number(contrat.quantite_totale) || 0
 
-  // Répartition par destination (agriculteur du contrat de vente lié, sinon silo)
-  const parDestination = new Map<string, number>()
-  for (const l of livraisonsRealisees) {
-    const cv = (contrat.contrats_vente ?? []).find((v: any) => v.id === l.contrat_vente_id)
-    const nom = cv?.agriculteur ? [cv.agriculteur.civilite, cv.agriculteur.nom].filter(Boolean).join(' ') : (l.destination_silo || 'Silo / non affecté')
-    parDestination.set(nom, (parDestination.get(nom) || 0) + (Number(l.quantite_reelle) || 0))
-  }
+  // Détail des livraisons (date, destination, transporteur, quantité), triées chronologiquement
+  const livraisonsDetail = livraisonsRealisees
+    .map((l: any) => {
+      const cv = (contrat.contrats_vente ?? []).find((v: any) => v.id === l.contrat_vente_id)
+      const destination = cv?.agriculteur ? [cv.agriculteur.civilite, cv.agriculteur.nom].filter(Boolean).join(' ') : (l.destination_silo || 'Silo / non affecté')
+      return {
+        date: l.date_reelle as string | null,
+        destination,
+        transporteur: l.transporteur?.nom ?? contrat.transporteur?.nom ?? '—',
+        quantite: Number(l.quantite_reelle) || 0,
+      }
+    })
+    .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
 
   // Répartition par transporteur
   const parTransporteur = new Map<string, { tonnes: number; montant: number; nbFactures: number; nbLivraisons: number }>()
@@ -144,16 +150,25 @@ export async function GET(req: NextRequest) {
   row('Quantité contractuelle', fmtTonnes(qteTotale), true)
   row('Quantité livrée', `${fmtTonnes(totalLivre)}  (reliquat ${fmtTonnes(Math.max(0, qteTotale - totalLivre))})`, true)
 
-  // ── Répartition par destination ─────────────────────────
-  sectionTitle('TONNAGE LIVRÉ PAR DESTINATION')
-  if (parDestination.size === 0) {
+  // ── Détail des livraisons ───────────────────────────────
+  sectionTitle('DÉTAIL DES LIVRAISONS')
+  if (livraisonsDetail.length === 0) {
     page.drawText('Aucune livraison réalisée.', { x: 50, y, font, size: 9.5, color: gray })
     y -= 16
   } else {
-    tableHeader([{ label: 'Destination', x: 50 }, { label: 'Quantité', x: 400 }])
-    for (const [nom, tonnes] of parDestination) {
-      tableRow([{ text: nom, x: 50 }, { text: fmtTonnes(tonnes), x: 400 }])
+    tableHeader([{ label: 'Date', x: 50 }, { label: 'Destination', x: 115 }, { label: 'Transporteur', x: 290 }, { label: 'Quantité', x: 440 }])
+    for (const d of livraisonsDetail) {
+      tableRow([
+        { text: fmtDate(d.date), x: 50 },
+        { text: d.destination, x: 115 },
+        { text: d.transporteur, x: 290 },
+        { text: fmtTonnes(d.quantite), x: 440 },
+      ])
     }
+    ensureSpace(18)
+    y -= 2
+    page.drawLine({ start: { x: 50, y: y + 12 }, end: { x: PAGE_W - 50, y: y + 12 }, thickness: 0.5, color: rgb(0.88, 0.88, 0.88) })
+    tableRow([{ text: 'TOTAL', x: 50, bold: true, color: brun }, { text: '', x: 115 }, { text: '', x: 290 }, { text: fmtTonnes(totalLivre), x: 440, bold: true, color: brun }])
   }
 
   // ── Transports ───────────────────────────────────────────
@@ -200,13 +215,18 @@ export async function GET(req: NextRequest) {
     page.drawText('Aucune facture client.', { x: 50, y, font, size: 9.5, color: gray })
     y -= 16
   } else {
-    tableHeader([{ label: 'Destinataire', x: 50 }, { label: 'N° Facture', x: 220 }, { label: 'Montant HT', x: 400 }])
+    tableHeader([{ label: 'Destinataire', x: 50 }, { label: 'Date', x: 220 }, { label: 'N° Facture', x: 300 }, { label: 'Montant HT', x: 430 }])
     for (const f of facturesClient) {
-      tableRow([{ text: f.destinataire ?? '—', x: 50 }, { text: f.numero_facture_logiciel ?? f.numero_facture ?? '—', x: 220 }, { text: fmtEuros(Number(f.montant_ht) || 0), x: 400 }])
+      tableRow([
+        { text: f.destinataire ?? '—', x: 50 },
+        { text: fmtDate(f.date_facture), x: 220 },
+        { text: f.numero_facture_logiciel ?? f.numero_facture ?? '—', x: 300 },
+        { text: fmtEuros(Number(f.montant_ht) || 0), x: 430 },
+      ])
     }
     ensureSpace(18)
     page.drawLine({ start: { x: 50, y: y + 12 }, end: { x: PAGE_W - 50, y: y + 12 }, thickness: 0.5, color: rgb(0.88, 0.88, 0.88) })
-    tableRow([{ text: 'TOTAL', x: 50, bold: true, color: brun }, { text: '', x: 220 }, { text: fmtEuros(totalClientHt), x: 400, bold: true, color: brun }])
+    tableRow([{ text: 'TOTAL', x: 50, bold: true, color: brun }, { text: '', x: 220 }, { text: '', x: 300 }, { text: fmtEuros(totalClientHt), x: 430, bold: true, color: brun }])
   }
 
   // ── Marge ────────────────────────────────────────────────

@@ -19,6 +19,7 @@ interface Props {
 
 export default function SaisirFactureClientModal({ livraisons, onClose, onSaved }: Props) {
   const [numeroFacture, setNumeroFacture] = useState('')
+  const [dateFacture, setDateFacture] = useState('')
   const [montantHt, setMontantHt] = useState('')
   const [montantTtc, setMontantTtc] = useState('')
   const [saving, setSaving] = useState(false)
@@ -43,6 +44,7 @@ export default function SaisirFactureClientModal({ livraisons, onClose, onSaved 
       body: JSON.stringify({
         contrat_vente_id: livraisons[0].contrat_vente_id,
         numero_facture_logiciel: numeroFacture.trim(),
+        date_facture: dateFacture || null,
         montant_ht: montantHt ? parseFloat(montantHt) : null,
         montant_ttc: montantTtc ? parseFloat(montantTtc) : null,
         livraison_ids: livraisons.map(l => l.id),
@@ -97,6 +99,10 @@ export default function SaisirFactureClientModal({ livraisons, onClose, onSaved 
             placeholder="Ex : FAT-2026-0042"
             autoFocus
           />
+        </div>
+        <div>
+          <label className="label">Date de facturation</label>
+          <input type="date" className="input" value={dateFacture} onChange={e => setDateFacture(e.target.value)} />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
