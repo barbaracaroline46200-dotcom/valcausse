@@ -514,9 +514,11 @@ export default function FacturationPage() {
                           <td className="table-cell text-sm">{formatDate(l.date_reelle)}</td>
                           <td className="table-cell font-medium">{ca?.produit?.nom ?? '—'}</td>
                           <td className="table-cell">
-                            <a href={`/contrats/${ca?.id}`} className="text-green-700 hover:underline text-sm">{ca?.numero_contrat}</a>
+                            {cv
+                              ? <a href={`/ventes/${cv.id}`} className="text-green-700 hover:underline text-sm">{cv.numero_contrat || 'Sans n°'}</a>
+                              : <span className="text-gray-400 text-sm">—</span>}
                             {l.note_alerte && <span className="ml-1"><AlerteNote note={l.note_alerte} size={13} /></span>}
-                            {ca?.note_alerte && <span className="ml-1"><AlerteNote note={`Contrat : ${ca.note_alerte}`} size={13} /></span>}
+                            {ca?.note_alerte && <span className="ml-1"><AlerteNote note={`Contrat achat : ${ca.note_alerte}`} size={13} /></span>}
                           </td>
                           <td className="table-cell text-sm">{[agri?.civilite, agri?.nom].filter(Boolean).join(' ') || '—'}</td>
                           <td className="table-cell font-semibold">{formatTonnes(l.quantite_reelle)}</td>
@@ -592,9 +594,11 @@ export default function FacturationPage() {
                           <td className="table-cell text-sm">{formatDate(l.date_reelle)}</td>
                           <td className="table-cell font-medium">{ca?.produit?.nom ?? '—'}</td>
                           <td className="table-cell">
-                            <a href={`/contrats/${ca?.id}`} className="text-green-700 hover:underline text-sm" onClick={e => e.stopPropagation()}>{ca?.numero_contrat}</a>
+                            {cv
+                              ? <a href={`/ventes/${cv.id}`} className="text-green-700 hover:underline text-sm" onClick={e => e.stopPropagation()}>{cv.numero_contrat || 'Sans n°'}</a>
+                              : <span className="text-gray-400 text-sm">—</span>}
                             {l.note_alerte && <span className="ml-1"><AlerteNote note={l.note_alerte} size={13} /></span>}
-                            {ca?.note_alerte && <span className="ml-1"><AlerteNote note={`Contrat : ${ca.note_alerte}`} size={13} /></span>}
+                            {ca?.note_alerte && <span className="ml-1"><AlerteNote note={`Contrat achat : ${ca.note_alerte}`} size={13} /></span>}
                           </td>
                           <td className="table-cell text-sm">{[agri?.civilite, agri?.nom].filter(Boolean).join(' ') || '—'}</td>
                           <td className="table-cell font-semibold">{formatTonnes(l.quantite_reelle)}</td>
