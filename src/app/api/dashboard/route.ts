@@ -118,7 +118,7 @@ export async function GET() {
     transporteur:transporteurs(id,nom),
     contrat_vente:contrats_vente(id, numero_contrat, destination_silo, prix_vente, produit:produits(id,nom), agriculteur:agriculteurs(id,civilite,nom)),
     contrat_achat:contrats_achat(
-      id, numero_contrat, famille, prix_achat, mbm_autorise,
+      id, numero_contrat, famille, prix_achat, mbm_autorise, prix_transport_prevu,
       produit:produits(id,nom),
       transporteur:transporteurs(id,nom),
       fournisseur:fournisseurs(nom),
