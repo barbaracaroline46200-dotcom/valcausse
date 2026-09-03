@@ -199,7 +199,6 @@ export default function DashboardPage() {
   const contratsClos = contrats.filter((c: any) => c.statut === 'clos').length
 
   const alertes = (data?.contratsAlerte ?? []).filter((c: any) => !c.gere_par_silo && reliquat(c.quantite_totale, c.livraisons ?? []) > 0)
-  const cmrEnRetard = data?.cmrEnRetard ?? []
   const approSansMad = (data?.livraisonsPlanifiees ?? []).filter((l: any) =>
     l.contrat_achat?.famille === 'appro' && !l.numero_mise_a_disposition
   )
@@ -561,50 +560,6 @@ export default function DashboardPage() {
                         </span>
                       ) : <span className="text-gray-300">Pas de date</span>}
                     </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </Section>
-      )}
-
-      {/* CMR en retard > 7 jours */}
-      {cmrEnRetard.length > 0 && (
-        <Section
-          icon={<AlertTriangle size={20} />}
-          title="CMR en retard — plus de 7 jours"
-          count={cmrEnRetard.length}
-          color="red"
-          subtitle="Ces livraisons réalisées n'ont toujours pas de lettre de voiture saisie"
-          collapsible
-        >
-          <table className="w-full">
-            <thead><tr className="border-b border-gray-100">
-              {['Contrat', 'Fournisseur', 'Produit', 'Transporteur', 'Date', 'Délai'].map(h => (
-                <th key={h} className="table-header">{h}</th>
-              ))}
-            </tr></thead>
-            <tbody>
-              {cmrEnRetard.map((l: any) => {
-                const ca = l.contrat_achat
-                const cv = l.contrat_vente
-                const dateRef = l.type === 'realisee' ? l.date_reelle : l.date_prevue
-                const jours = dateRef ? Math.floor((Date.now() - new Date(dateRef).getTime()) / 86400000) : '?'
-                return (
-                  <tr key={l.id} className="table-row">
-                    <td className="table-cell">
-                      {ca
-                        ? <a href={`/contrats/${ca.id}`} className="text-green-700 hover:underline font-medium">{ca.numero_contrat ?? '—'}</a>
-                        : cv
-                          ? <a href={`/ventes/${cv.id}`} className="text-green-700 hover:underline font-medium">{cv.numero_contrat ?? '—'}</a>
-                          : '—'}
-                    </td>
-                    <td className="table-cell text-sm">{ca?.fournisseur?.nom ?? (cv ? 'Vente directe (silo)' : '—')}</td>
-                    <td className="table-cell">{ca?.produit?.nom ?? cv?.produit?.nom ?? '—'}</td>
-                    <td className="table-cell">{l.transporteur?.nom ?? ca?.transporteur?.nom ?? '—'}</td>
-                    <td className="table-cell text-sm">{dateRef ? new Date(dateRef).toLocaleDateString('fr-FR') : '—'}</td>
-                    <td className="table-cell"><span className="badge-alerte font-bold text-red-700">{jours}j</span></td>
                   </tr>
                 )
               })}

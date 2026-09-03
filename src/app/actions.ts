@@ -29,28 +29,6 @@ export async function getDashboardData() {
     (l: any) => !l.transporteur_contacte && l.mois_prevu && l.mois_prevu.slice(0, 10) <= moisFin
   )
 
-  const cmrSelect = `*,contrat_achat:contrats_achat(id,numero_contrat,famille,prix_transport_prevu,produit:produits(nom),transporteur:transporteurs(id,nom,email,telephone),contrats_vente(id,numero_contrat,quantite,agriculteur:agriculteurs(id,nom,ville_livraison)))`
-
-  const { data: toutesLivraisons } = await supabase
-    .from('livraisons')
-    .select(cmrSelect)
-    .order('date_reelle', { ascending: true })
-
-  const cmrRealisees = (toutesLivraisons ?? []).filter((l: any) => l.type === 'realisee' && !l.numero_lettre_voiture)
-  const cmrPlanifiees = (toutesLivraisons ?? []).filter((l: any) => l.type === 'planifiee' && !!l.transporteur_contacte)
-  const cmrMap = new Map<string, any>()
-  for (const l of [...cmrRealisees, ...cmrPlanifiees]) cmrMap.set(l.id, l)
-  const cmrEnAttente = Array.from(cmrMap.values()).sort((a, b) => {
-    const da = a.date_prevue || a.date_souhaitee || a.date_reelle || a.mois_prevu || ''
-    const db = b.date_prevue || b.date_souhaitee || b.date_reelle || b.mois_prevu || ''
-    return da < db ? -1 : da > db ? 1 : 0
-  })
-  const cutoff7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-  const cmrEnRetard = cmrEnAttente.filter((l: any) => {
-    const dateRef = l.type === 'realisee' ? l.date_reelle : l.date_prevue
-    return dateRef && dateRef <= cutoff7
-  })
-
   const facturationSelect = `*,contrat_achat:contrats_achat(id,numero_contrat,famille,prix_achat,produit:produits(nom),transporteur:transporteurs(nom),fournisseur:fournisseurs(nom),contrats_vente(id,numero_contrat,destination_silo,agriculteur:agriculteurs(id,civilite,nom)))`
   const { data: livraisonsAFacturerRaw } = await supabase
     .from('livraisons')
@@ -97,8 +75,6 @@ export async function getDashboardData() {
   return {
     contrats: contrats ?? [],
     livraisonsPlanifiees,
-    cmrEnAttente,
-    cmrEnRetard,
     livraisonsAFacturer,
     rfManquants: rfManquants ?? [],
     livraisonsAVerifierClient,
