@@ -1,10 +1,17 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import {
-  Loader2, CalendarRange, Download, CheckCircle2, AlertTriangle, Clock, CalendarCheck, PackageSearch
+  Loader2, CalendarRange, Download, CheckCircle2, Clock, PackageSearch, ChevronUp, ChevronDown, X
 } from 'lucide-react'
+import {
+  trierLignes, filtrerLignes, filtrerNonPlanifiees,
+  type TriChamp, type Ordre, type FiltresRapport,
+} from '@/lib/rapport-transports'
 
 const BRUN = '#7B2820'
+const VERT = '#16a34a'
+const ORANGE = '#ea580c'
+const ROUGE = '#dc2626'
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10)
@@ -36,6 +43,13 @@ export default function RapportTransportsPage() {
   const [data, setData] = useState<Rapport | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const [tri, setTri] = useState<TriChamp>('date')
+  const [ordre, setOrdre] = useState<Ordre>('asc')
+  const [filtreFournisseur, setFiltreFournisseur] = useState('')
+  const [filtreAgriculteur, setFiltreAgriculteur] = useState('')
+  const [filtreContrat, setFiltreContrat] = useState('')
+  const [filtreStatut, setFiltreStatut] = useState<FiltresRapport['statut']>('')
+
   const charger = useCallback((debut: string, fin: string) => {
     setLoading(true)
     fetch(`/api/rapport-transports?date_debut=${debut}&date_fin=${fin}`)
@@ -55,7 +69,44 @@ export default function RapportTransportsPage() {
     setDateFin(v)
   }
 
-  const pdfHref = `/api/pdf/rapport-transports?date_debut=${dateDebut}&date_fin=${dateFin}`
+  function onSort(field: TriChamp) {
+    if (tri === field) setOrdre(o => (o === 'asc' ? 'desc' : 'asc'))
+    else { setTri(field); setOrdre('asc') }
+  }
+
+  const fournisseurs = useMemo(() => {
+    const s = new Set<string>()
+    ;[...(data?.realisees ?? []), ...(data?.planifiees ?? [])].forEach(r => { if (r.fournisseur && r.fournisseur !== '—') s.add(r.fournisseur) })
+    return [...s].sort((a, b) => a.localeCompare(b, 'fr'))
+  }, [data])
+
+  const agriculteurs = useMemo(() => {
+    const s = new Set<string>()
+    ;[...(data?.realisees ?? []), ...(data?.planifiees ?? [])].forEach(r => { if (r.agriculteur && r.agriculteur !== '—') s.add(r.agriculteur) })
+    return [...s].sort((a, b) => a.localeCompare(b, 'fr'))
+  }, [data])
+
+  const filtres: FiltresRapport = {
+    fournisseur: filtreFournisseur || undefined,
+    agriculteur: filtreAgriculteur || undefined,
+    contrat: filtreContrat || undefined,
+    statut: filtreStatut,
+  }
+  const filtresActifs = !!(filtreFournisseur || filtreAgriculteur || filtreContrat || filtreStatut)
+  function resetFiltres() {
+    setFiltreFournisseur(''); setFiltreAgriculteur(''); setFiltreContrat(''); setFiltreStatut('')
+  }
+
+  const realiseesAffichees = data ? trierLignes(filtrerLignes(data.realisees, filtres), tri, ordre) : []
+  const planifieesAffichees = data ? trierLignes(filtrerLignes(data.planifiees, filtres), tri, ordre) : []
+  const nonPlanifieesAffichees = data ? filtrerNonPlanifiees(data.nonPlanifiees, filtres) : []
+
+  const pdfParams = new URLSearchParams({ date_debut: dateDebut, date_fin: dateFin, tri, ordre })
+  if (filtreFournisseur) pdfParams.set('fournisseur', filtreFournisseur)
+  if (filtreAgriculteur) pdfParams.set('agriculteur', filtreAgriculteur)
+  if (filtreContrat) pdfParams.set('contrat', filtreContrat)
+  if (filtreStatut) pdfParams.set('statut', filtreStatut)
+  const pdfHref = `/api/pdf/rapport-transports?${pdfParams.toString()}`
 
   return (
     <div className="space-y-4 pb-10">
@@ -85,15 +136,51 @@ export default function RapportTransportsPage() {
         </div>
       </div>
 
+      {/* Filtres */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <select value={filtreFournisseur} onChange={e => setFiltreFournisseur(e.target.value)} className="input text-sm py-1.5 w-44">
+          <option value="">Tous fournisseurs</option>
+          {fournisseurs.map(f => <option key={f} value={f}>{f}</option>)}
+        </select>
+        <select value={filtreAgriculteur} onChange={e => setFiltreAgriculteur(e.target.value)} className="input text-sm py-1.5 w-48">
+          <option value="">Tous agriculteurs</option>
+          {agriculteurs.map(a => <option key={a} value={a}>{a}</option>)}
+        </select>
+        <input
+          type="text"
+          placeholder="N° de contrat..."
+          value={filtreContrat}
+          onChange={e => setFiltreContrat(e.target.value)}
+          className="input text-sm py-1.5 w-40"
+        />
+        <select value={filtreStatut} onChange={e => setFiltreStatut(e.target.value as FiltresRapport['statut'])} className="input text-sm py-1.5 w-40">
+          <option value="">Tous statuts</option>
+          <option value="ok">OK uniquement</option>
+          <option value="attention">À traiter uniquement</option>
+        </select>
+        {filtresActifs && (
+          <button onClick={resetFiltres} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 px-2 py-1.5">
+            <X size={14} /> Réinitialiser
+          </button>
+        )}
+      </div>
+
+      {/* Légende */}
+      <div className="flex items-center gap-4 text-xs text-gray-500 flex-wrap">
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: VERT }} />OK — réalisé complet / transporteur confirmé</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: ORANGE }} />À confirmer / date à préciser</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: ROUGE }} />Document (CMR/BA) manquant</span>
+      </div>
+
       {loading || !data ? (
         <div className="flex items-center justify-center h-64">
           <Loader2 className="animate-spin text-green-600" size={32} />
         </div>
       ) : (
         <>
-          <SectionRealisees rows={data.realisees} />
-          <SectionPlanifiees rows={data.planifiees} />
-          <SectionNonPlanifiees rows={data.nonPlanifiees} />
+          <SectionRealisees rows={realiseesAffichees} tri={tri} ordre={ordre} onSort={onSort} />
+          <SectionPlanifiees rows={planifieesAffichees} tri={tri} ordre={ordre} onSort={onSort} />
+          <SectionNonPlanifiees rows={nonPlanifieesAffichees} />
         </>
       )}
     </div>
@@ -103,11 +190,30 @@ export default function RapportTransportsPage() {
 function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return <th className={`px-3 py-2 text-left font-semibold text-gray-600 whitespace-nowrap ${className}`}>{children}</th>
 }
+function ThSort({ label, field, tri, ordre, onSort, className = '' }: {
+  label: string; field: TriChamp; tri: TriChamp; ordre: Ordre; onSort: (f: TriChamp) => void; className?: string
+}) {
+  const active = tri === field
+  return (
+    <th
+      onClick={() => onSort(field)}
+      className={`px-3 py-2 text-left font-semibold whitespace-nowrap cursor-pointer select-none transition-colors ${active ? 'text-gray-900' : 'text-gray-600 hover:text-gray-800'} ${className}`}
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        {active && (ordre === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+      </span>
+    </th>
+  )
+}
 function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-3 py-2 whitespace-nowrap ${className}`}>{children}</td>
+  return <td className={`px-3 py-2 ${className}`}>{children}</td>
+}
+function StatutDot({ color, title }: { color: string; title: string }) {
+  return <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: color }} title={title} />
 }
 
-function SectionRealisees({ rows }: { rows: any[] }) {
+function SectionRealisees({ rows, tri, ordre, onSort }: { rows: any[]; tri: TriChamp; ordre: Ordre; onSort: (f: TriChamp) => void }) {
   const total = rows.reduce((s, r) => s + (r.quantite ?? 0), 0)
   return (
     <div className="card overflow-hidden p-0">
@@ -120,20 +226,27 @@ function SectionRealisees({ rows }: { rows: any[] }) {
         {rows.length > 0 && <span className="text-sm font-semibold text-green-700">{fmtTonnes(total)}</span>}
       </div>
       {rows.length === 0 ? (
-        <p className="px-5 py-6 text-center text-gray-400 text-sm">Aucun transport réalisé sur cette période.</p>
+        <p className="px-5 py-6 text-center text-gray-400 text-sm">Aucun transport réalisé sur cette période (ou filtré par les critères actifs).</p>
       ) : (
         <div className="overflow-auto">
-          <table className="w-full text-xs">
+          <table className="w-full text-xs table-fixed">
             <thead style={{ backgroundColor: '#fdf5f3' }}>
               <tr>
-                <Th>Date</Th><Th>Produit</Th><Th>N° Contrat</Th><Th>Fournisseur</Th>
-                <Th>Origine</Th><Th>Destination</Th><Th>Agriculteur</Th><Th>Transporteur</Th>
-                <Th className="text-right">Quantité</Th><Th>Document</Th>
+                <ThSort label="Date" field="date" tri={tri} ordre={ordre} onSort={onSort} className="w-24" />
+                <Th className="w-28">Produit</Th>
+                <ThSort label="N° Contrat" field="contrat" tri={tri} ordre={ordre} onSort={onSort} className="w-28" />
+                <ThSort label="Fournisseur" field="fournisseur" tri={tri} ordre={ordre} onSort={onSort} className="w-28" />
+                <Th className="w-32">Origine</Th>
+                <Th className="w-28">Destination</Th>
+                <ThSort label="Agriculteur" field="agriculteur" tri={tri} ordre={ordre} onSort={onSort} className="w-32" />
+                <Th className="w-24">Transporteur</Th>
+                <Th className="text-right w-20">Quantité</Th>
+                <ThSort label="Statut" field="statut" tri={tri} ordre={ordre} onSort={onSort} className="w-16" />
               </tr>
             </thead>
             <tbody>
               {rows.map(r => (
-                <tr key={r.id} className="border-t border-gray-100">
+                <tr key={r.id} className="border-t border-gray-100" style={{ borderLeft: `4px solid ${r.cmrManquant ? ROUGE : VERT}` }}>
                   <Td>{fmtLigneDate(r)}</Td>
                   <Td className="font-medium text-gray-800">{r.produit}</Td>
                   <Td className="font-mono text-gray-600">{r.numeroContrat}</Td>
@@ -142,12 +255,8 @@ function SectionRealisees({ rows }: { rows: any[] }) {
                   <Td>{r.destination}</Td>
                   <Td>{r.agriculteur}</Td>
                   <Td>{r.transporteur}</Td>
-                  <Td className="text-right font-semibold">{fmtTonnes(r.quantite)}</Td>
-                  <Td>
-                    {r.cmrManquant
-                      ? <span className="flex items-center gap-1 text-red-600 font-semibold"><AlertTriangle size={13} />Manquant</span>
-                      : <span className="flex items-center gap-1 text-green-700 font-semibold"><CheckCircle2 size={13} />Complet</span>}
-                  </Td>
+                  <Td className="text-right font-semibold whitespace-nowrap">{fmtTonnes(r.quantite)}</Td>
+                  <Td><StatutDot color={r.cmrManquant ? ROUGE : VERT} title={r.cmrManquant ? 'CMR/BA manquant' : 'Complet'} /></Td>
                 </tr>
               ))}
             </tbody>
@@ -158,7 +267,7 @@ function SectionRealisees({ rows }: { rows: any[] }) {
   )
 }
 
-function SectionPlanifiees({ rows }: { rows: any[] }) {
+function SectionPlanifiees({ rows, tri, ordre, onSort }: { rows: any[]; tri: TriChamp; ordre: Ordre; onSort: (f: TriChamp) => void }) {
   const total = rows.reduce((s, r) => s + (r.quantite ?? 0), 0)
   return (
     <div className="card overflow-hidden p-0">
@@ -171,21 +280,30 @@ function SectionPlanifiees({ rows }: { rows: any[] }) {
         {rows.length > 0 && <span className="text-sm font-semibold" style={{ color: BRUN }}>{fmtTonnes(total)}</span>}
       </div>
       {rows.length === 0 ? (
-        <p className="px-5 py-6 text-center text-gray-400 text-sm">Aucun transport planifié sur cette période.</p>
+        <p className="px-5 py-6 text-center text-gray-400 text-sm">Aucun transport planifié sur cette période (ou filtré par les critères actifs).</p>
       ) : (
         <div className="overflow-auto">
-          <table className="w-full text-xs">
+          <table className="w-full text-xs table-fixed">
             <thead style={{ backgroundColor: '#fff3d0' }}>
               <tr>
-                <Th>Date demandée</Th><Th>Produit</Th><Th>N° Contrat</Th><Th>Fournisseur</Th>
-                <Th>Origine</Th><Th>Destination</Th><Th>Agriculteur</Th><Th>Transporteur</Th>
-                <Th className="text-right">Quantité</Th><Th>Statut</Th>
+                <ThSort label="Date confirmée" field="date" tri={tri} ordre={ordre} onSort={onSort} className="w-28" />
+                <Th className="w-28">Produit</Th>
+                <ThSort label="N° Contrat" field="contrat" tri={tri} ordre={ordre} onSort={onSort} className="w-28" />
+                <ThSort label="Fournisseur" field="fournisseur" tri={tri} ordre={ordre} onSort={onSort} className="w-28" />
+                <Th className="w-32">Origine</Th>
+                <Th className="w-28">Destination</Th>
+                <ThSort label="Agriculteur" field="agriculteur" tri={tri} ordre={ordre} onSort={onSort} className="w-32" />
+                <Th className="w-24">Transporteur</Th>
+                <Th className="text-right w-20">Quantité</Th>
+                <ThSort label="Statut" field="statut" tri={tri} ordre={ordre} onSort={onSort} className="w-16" />
               </tr>
             </thead>
             <tbody>
               {rows.map(r => (
-                <tr key={r.id} className="border-t border-gray-100">
-                  <Td>{fmtLigneDate(r)}</Td>
+                <tr key={r.id} className="border-t border-gray-100" style={{ borderLeft: `4px solid ${r.transporteurConfirme ? VERT : ORANGE}` }}>
+                  <Td className={r.dateApproximative ? 'text-orange-600 italic' : ''}>
+                    {r.dateApproximative && '~ '}{fmtLigneDate(r)}
+                  </Td>
                   <Td className="font-medium text-gray-800">{r.produit}</Td>
                   <Td className="font-mono text-gray-600">{r.numeroContrat}</Td>
                   <Td>{r.fournisseur}</Td>
@@ -193,12 +311,8 @@ function SectionPlanifiees({ rows }: { rows: any[] }) {
                   <Td>{r.destination}</Td>
                   <Td>{r.agriculteur}</Td>
                   <Td>{r.transporteur}</Td>
-                  <Td className="text-right font-semibold">{fmtTonnes(r.quantite)}</Td>
-                  <Td>
-                    {r.transporteurConfirme
-                      ? <span className="flex items-center gap-1 text-blue-700 font-semibold"><CalendarCheck size={13} />Confirmé</span>
-                      : <span className="flex items-center gap-1 text-orange-600 font-semibold"><Clock size={13} />À confirmer</span>}
-                  </Td>
+                  <Td className="text-right font-semibold whitespace-nowrap">{fmtTonnes(r.quantite)}</Td>
+                  <Td><StatutDot color={r.transporteurConfirme ? VERT : ORANGE} title={r.transporteurConfirme ? 'Confirmé' : 'À confirmer'} /></Td>
                 </tr>
               ))}
             </tbody>
@@ -225,14 +339,14 @@ function SectionNonPlanifiees({ rows }: { rows: any[] }) {
         Contrats dont la date de fin tombe avant la fin de période choisie, avec du reliquat, sans aucun transport programmé sur ces dates.
       </p>
       {rows.length === 0 ? (
-        <p className="px-5 py-6 text-center text-gray-400 text-sm">Aucun contrat en alerte sur cette période.</p>
+        <p className="px-5 py-6 text-center text-gray-400 text-sm">Aucun contrat en alerte sur cette période (ou filtré par les critères actifs).</p>
       ) : (
         <div className="overflow-auto">
-          <table className="w-full text-xs mt-1">
+          <table className="w-full text-xs mt-1 table-fixed">
             <thead style={{ backgroundColor: '#fee2e2' }}>
               <tr>
-                <Th>N° Contrat</Th><Th>Produit</Th><Th>Fournisseur</Th>
-                <Th>Agriculteur(s)</Th><Th>Transporteur habituel</Th><Th>Fin contrat</Th><Th className="text-right">Reliquat</Th>
+                <Th className="w-28">N° Contrat</Th><Th className="w-28">Produit</Th><Th className="w-36">Fournisseur</Th>
+                <Th className="w-48">Agriculteur(s)</Th><Th className="w-32">Transporteur habituel</Th><Th className="w-24">Fin contrat</Th><Th className="text-right w-20">Reliquat</Th>
               </tr>
             </thead>
             <tbody>
@@ -243,8 +357,8 @@ function SectionNonPlanifiees({ rows }: { rows: any[] }) {
                   <Td>{r.fournisseur}</Td>
                   <Td>{r.agriculteurs}</Td>
                   <Td>{r.transporteur}</Td>
-                  <Td>{fmtDate(r.dateFinContrat)}</Td>
-                  <Td className="text-right font-semibold text-red-600">{fmtTonnes(r.quantiteRestante)}</Td>
+                  <Td className="whitespace-nowrap">{fmtDate(r.dateFinContrat)}</Td>
+                  <Td className="text-right font-semibold text-red-600 whitespace-nowrap">{fmtTonnes(r.quantiteRestante)}</Td>
                 </tr>
               ))}
             </tbody>

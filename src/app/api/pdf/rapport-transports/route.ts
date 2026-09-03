@@ -1,8 +1,11 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
-import { getRapportTransports, type LigneRapport, type LigneNonPlanifiee } from '@/lib/rapport-transports'
-import { PDFDocument, PDFPage, rgb, StandardFonts } from 'pdf-lib'
+import {
+  getRapportTransports, trierLignes, filtrerLignes, filtrerNonPlanifiees,
+  type LigneRapport, type LigneNonPlanifiee, type TriChamp, type Ordre, type FiltresRapport,
+} from '@/lib/rapport-transports'
+import { PDFDocument, PDFPage, PDFFont, rgb, StandardFonts } from 'pdf-lib'
 
 const brun = rgb(0.482, 0.157, 0.125)
 const or = rgb(0.784, 0.580, 0.102)
@@ -13,11 +16,14 @@ const red = rgb(0.792, 0.149, 0.149)
 const PAGE_W = 842
 const PAGE_H = 595
 const MARGIN_BOTTOM = 55
+const LINE_H = 10
+const ROW_PAD = 6
 
 function fmtTonnes(n: number | null | undefined) {
-  // Helvetica (WinAnsi) ne sait pas encoder l'espace fine insécable (U+202F)
-  // que toLocaleString('fr-FR') utilise comme séparateur de milliers.
-  return (n ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/ /g, ' ') + ' t'
+  // Helvetica (WinAnsi) ne sait pas encoder l'espace fine insecable (U+202F)
+  // que toLocaleString('fr-FR') utilise comme separateur de milliers.
+  const s = (n ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return s.replace(/\u202f/g, '\u0020') + ' t'
 }
 function fmtDate(d: string | null) {
   return d ? new Date(d).toLocaleDateString('fr-FR') : '—'
@@ -26,6 +32,8 @@ function fmtLigneDate(l: LigneRapport) {
   return l.date ? fmtDate(l.date) : (l.periodeLabel || '—')
 }
 
+const TRI_VALIDES: TriChamp[] = ['date', 'agriculteur', 'contrat', 'fournisseur', 'statut']
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const dateDebut = searchParams.get('date_debut')
@@ -33,9 +41,21 @@ export async function GET(req: NextRequest) {
   if (!dateDebut || !dateFin) {
     return NextResponse.json({ error: 'date_debut et date_fin sont requis' }, { status: 400 })
   }
+  const triParam = searchParams.get('tri') as TriChamp | null
+  const tri: TriChamp = triParam && TRI_VALIDES.includes(triParam) ? triParam : 'date'
+  const ordre: Ordre = searchParams.get('ordre') === 'desc' ? 'desc' : 'asc'
+  const filtres: FiltresRapport = {
+    fournisseur: searchParams.get('fournisseur') || undefined,
+    agriculteur: searchParams.get('agriculteur') || undefined,
+    contrat: searchParams.get('contrat') || undefined,
+    statut: (searchParams.get('statut') as FiltresRapport['statut']) || '',
+  }
 
   const supabase = getServiceClient()
-  const { realisees, planifiees, nonPlanifiees } = await getRapportTransports(supabase, dateDebut, dateFin)
+  const rapportBrut = await getRapportTransports(supabase, dateDebut, dateFin)
+  const realisees = trierLignes(filtrerLignes(rapportBrut.realisees, filtres), tri, ordre)
+  const planifiees = trierLignes(filtrerLignes(rapportBrut.planifiees, filtres), tri, ordre)
+  const nonPlanifiees = filtrerNonPlanifiees(rapportBrut.nonPlanifiees, filtres)
 
   const pdfDoc = await PDFDocument.create()
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
@@ -64,6 +84,37 @@ export async function GET(req: NextRequest) {
   }
   drawHeader()
 
+  function drawLegend() {
+    ensureSpace(20)
+    const items: [any, string][] = [
+      [green, 'OK (réalisé complet / transporteur confirmé)'],
+      [or, 'À confirmer ou date à préciser'],
+      [red, 'Document (CMR/BA) manquant'],
+    ]
+    let x = 50
+    page.drawText('Légende :', { x, y, font: fontBold, size: 8, color: gray })
+    x += 46
+    items.forEach(([color, label]) => {
+      page.drawRectangle({ x, y: y - 1, width: 8, height: 8, color })
+      page.drawText(label, { x: x + 12, y, font, size: 8, color: gray })
+      x += 12 + font.widthOfTextAtSize(label, 8) + 22
+    })
+    y -= 20
+    const filtresActifs = [
+      filtres.fournisseur && `Fournisseur : ${filtres.fournisseur}`,
+      filtres.agriculteur && `Agriculteur : ${filtres.agriculteur}`,
+      filtres.contrat && `Contrat : ${filtres.contrat}`,
+      filtres.statut === 'ok' && 'Statut : OK uniquement',
+      filtres.statut === 'attention' && 'Statut : à traiter uniquement',
+    ].filter(Boolean)
+    if (filtresActifs.length) {
+      ensureSpace(16)
+      page.drawText(`Filtres actifs — ${filtresActifs.join(' · ')}`, { x: 50, y, font, size: 8, color: brun })
+      y -= 16
+    }
+  }
+  drawLegend()
+
   function sectionTitle(title: string, subtitle?: string) {
     ensureSpace(subtitle ? 46 : 35)
     y -= 4
@@ -78,16 +129,16 @@ export async function GET(req: NextRequest) {
   }
 
   const COLS_LIVRAISON = [
-    { key: 'date', label: 'Date', x: 50, w: 68 },
-    { key: 'produit', label: 'Produit', x: 118, w: 72 },
-    { key: 'contrat', label: 'N° Contrat', x: 190, w: 80 },
-    { key: 'fournisseur', label: 'Fournisseur', x: 270, w: 92 },
-    { key: 'origine', label: 'Origine', x: 362, w: 80 },
-    { key: 'destination', label: 'Destination', x: 442, w: 80 },
-    { key: 'agriculteur', label: 'Agriculteur', x: 522, w: 100 },
-    { key: 'transporteur', label: 'Transporteur', x: 622, w: 90 },
-    { key: 'quantite', label: 'Quantité', x: 712, w: 55 },
-    { key: 'statut', label: 'Statut', x: 767, w: 60 },
+    { key: 'date', label: 'Date', x: 54, w: 58 },
+    { key: 'produit', label: 'Produit', x: 116, w: 64 },
+    { key: 'contrat', label: 'N° Contrat', x: 184, w: 68 },
+    { key: 'fournisseur', label: 'Fournisseur', x: 256, w: 68 },
+    { key: 'origine', label: 'Origine', x: 328, w: 82 },
+    { key: 'destination', label: 'Destination', x: 414, w: 72 },
+    { key: 'agriculteur', label: 'Agriculteur', x: 490, w: 82 },
+    { key: 'transporteur', label: 'Transporteur', x: 576, w: 58 },
+    { key: 'quantite', label: 'Quantité', x: 638, w: 44 },
+    { key: 'notes', label: 'Notes', x: 696, w: 96 },
   ]
 
   function tableHeaderLivraisons() {
@@ -121,27 +172,52 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Tronque en mesurant la largeur réelle du texte avec la police (un nombre fixe
-  // de caractères par point sous-estime la largeur des textes en majuscules, très
-  // fréquents ici : fournisseurs, villes, agriculteurs).
-  function truncate(s: string, w: number, size = 8.5) {
-    const maxWidth = w - 8 // marge pour ne jamais coller à la colonne suivante
-    if (font.widthOfTextAtSize(s, size) <= maxWidth) return s
-    let lo = 0
-    let hi = s.length
-    while (lo < hi) {
-      const mid = Math.ceil((lo + hi) / 2)
-      const candidate = s.slice(0, mid) + '…'
-      if (font.widthOfTextAtSize(candidate, size) <= maxWidth) lo = mid
-      else hi = mid - 1
+  // Découpe un texte en au plus `maxLines` lignes tenant dans `maxWidth`, mesurée
+  // avec la vraie police (un nombre fixe de caractères par point sous-estime la
+  // largeur des textes en majuscules, très fréquents ici). Au-delà, ellipse.
+  function wrapLines(rawText: string, maxWidth: number, size = 8.5, maxLines = 2): string[] {
+    const text = (rawText || '').trim()
+    if (!text) return ['']
+    const words = text.split(/\s+/)
+    const allLines: string[] = []
+    let current = ''
+    for (const word of words) {
+      const candidate = current ? `${current} ${word}` : word
+      if (font.widthOfTextAtSize(candidate, size) <= maxWidth) {
+        current = candidate
+        continue
+      }
+      if (current) allLines.push(current)
+      if (font.widthOfTextAtSize(word, size) <= maxWidth) {
+        current = word
+      } else {
+        current = ''
+        for (const ch of word) {
+          const cand = current + ch
+          if (font.widthOfTextAtSize(cand, size) <= maxWidth) current = cand
+          else { allLines.push(current); current = ch }
+        }
+      }
     }
-    return s.slice(0, lo) + '…'
+    if (current) allLines.push(current)
+    if (allLines.length === 0) allLines.push('')
+
+    if (allLines.length <= maxLines) return allLines
+    const shown = allLines.slice(0, maxLines)
+    let last = shown[maxLines - 1]
+    while (last.length > 0 && font.widthOfTextAtSize(last + '…', size) > maxWidth) {
+      last = last.slice(0, -1)
+    }
+    shown[maxLines - 1] = last + '…'
+    return shown
   }
 
-  function tableRowLivraison(l: LigneRapport, statutText: string, statutColor: any) {
-    ensureSpace(16)
+  function tableRowLivraison(l: LigneRapport, statutColor: any) {
     const values: Record<string, string> = {
-      date: sanitizeForPdf(fmtLigneDate(l)),
+      // sanitizeForPdf s'applique après concaténation du préfixe : ça évite qu'un
+      // caractère ajouté ici (comme le "≈" utilisé un temps, non encodable en
+      // WinAnsi) ne fasse planter le rendu sans passer par le filtre.
+      date: sanitizeForPdf((l.dateApproximative ? '~ ' : '') + fmtLigneDate(l)),
       produit: sanitizeForPdf(l.produit),
       contrat: sanitizeForPdf(l.numeroContrat),
       fournisseur: sanitizeForPdf(l.fournisseur),
@@ -151,14 +227,37 @@ export async function GET(req: NextRequest) {
       transporteur: sanitizeForPdf(l.transporteur),
       quantite: l.quantite != null ? fmtTonnes(l.quantite) : '—',
     }
+    const linesByCol: Record<string, string[]> = {}
+    let maxLines = 1
     COLS_LIVRAISON.forEach(c => {
-      if (c.key === 'statut') {
-        page.drawText(statutText, { x: c.x, y, font: fontBold, size: 8, color: statutColor })
-      } else {
-        page.drawText(truncate(values[c.key] ?? '—', c.w), { x: c.x, y, font, size: 8.5, color: black })
-      }
+      if (c.key === 'notes') return
+      const lines = wrapLines(values[c.key] ?? '—', c.w - 8)
+      linesByCol[c.key] = lines
+      maxLines = Math.max(maxLines, lines.length)
     })
-    y -= 15
+    const rowHeight = maxLines * LINE_H + ROW_PAD
+    ensureSpace(rowHeight)
+
+    // Bandeau couleur en début de ligne au lieu d'une colonne "Statut" en texte
+    page.drawRectangle({ x: 44, y: y - rowHeight + ROW_PAD - 1, width: 4, height: rowHeight - 3, color: statutColor })
+    // Séparateur avant la colonne Notes, vierge pour annotation manuscrite
+    page.drawLine({
+      start: { x: 690, y: y + 6 }, end: { x: 690, y: y - rowHeight + 6 },
+      thickness: 0.4, color: rgb(0.85, 0.85, 0.85),
+    })
+
+    COLS_LIVRAISON.forEach(c => {
+      if (c.key === 'notes') return
+      const lines = linesByCol[c.key]
+      lines.forEach((line, i) => {
+        page.drawText(line, {
+          x: c.x, y: y - i * LINE_H, font,
+          size: 8.5,
+          color: c.key === 'date' && l.dateApproximative ? or : black,
+        })
+      })
+    })
+    y -= rowHeight
   }
 
   function totalTonnage(rows: LigneRapport[]) {
@@ -168,7 +267,7 @@ export async function GET(req: NextRequest) {
   // ── Réalisés ─────────────────────────────────────────────
   sectionTitle(
     `TRANSPORTS RÉALISÉS (${realisees.length})`,
-    'Livraisons effectuées sur la période. "CMR manquant" signale un document (CMR ou BA) encore à récupérer.'
+    'Livraisons effectuées sur la période. Bandeau rouge = document (CMR/BA) manquant. Colonne Notes vierge pour vos annotations.'
   )
   if (realisees.length === 0) {
     page.drawText('Aucun transport réalisé sur cette période.', { x: 50, y, font, size: 9, color: gray })
@@ -176,7 +275,7 @@ export async function GET(req: NextRequest) {
   } else {
     tableHeaderLivraisons()
     for (const l of realisees) {
-      tableRowLivraison(l, l.cmrManquant ? 'CMR manquant' : 'Complet', l.cmrManquant ? red : green)
+      tableRowLivraison(l, l.cmrManquant ? red : green)
     }
     ensureSpace(16)
     page.drawText(`Total réalisé : ${fmtTonnes(totalTonnage(realisees))}`, { x: 50, y, font: fontBold, size: 9, color: brun })
@@ -186,7 +285,7 @@ export async function GET(req: NextRequest) {
   // ── Planifiés / en attente ──────────────────────────────
   sectionTitle(
     `PLANIFIÉS — EN ATTENTE (${planifiees.length})`,
-    'Transports prévus sur la période mais pas encore réalisés. "Confirmé" = transporteur déjà contacté.'
+    'Transports prévus sur la période mais pas encore réalisés. Bandeau vert = transporteur confirmé. "~" = date approximative (mois seulement, à préciser).'
   )
   if (planifiees.length === 0) {
     page.drawText('Aucun transport planifié sur cette période.', { x: 50, y, font, size: 9, color: gray })
@@ -194,7 +293,7 @@ export async function GET(req: NextRequest) {
   } else {
     tableHeaderLivraisons()
     for (const l of planifiees) {
-      tableRowLivraison(l, l.transporteurConfirme ? 'Confirmé' : 'À confirmer', l.transporteurConfirme ? green : or)
+      tableRowLivraison(l, l.transporteurConfirme ? green : or)
     }
     ensureSpace(16)
     page.drawText(`Total planifié : ${fmtTonnes(totalTonnage(planifiees))}`, { x: 50, y, font: fontBold, size: 9, color: brun })
@@ -226,7 +325,6 @@ export async function GET(req: NextRequest) {
     page.drawLine({ start: { x: 50, y: y + 4 }, end: { x: PAGE_W - 50, y: y + 4 }, thickness: 0.5, color: rgb(0.88, 0.88, 0.88) })
     y -= 4
     for (const c of nonPlanifiees as LigneNonPlanifiee[]) {
-      ensureSpace(16)
       const values: Record<string, string> = {
         contrat: sanitizeForPdf(c.numeroContrat),
         produit: sanitizeForPdf(c.produit),
@@ -236,12 +334,25 @@ export async function GET(req: NextRequest) {
         dateFin: fmtDate(c.dateFinContrat),
         reliquat: fmtTonnes(c.quantiteRestante),
       }
+      const linesByCol: Record<string, string[]> = {}
+      let maxLines = 1
       COLS_ALERTE.forEach(col => {
-        page.drawText(truncate(values[col.key] ?? '—', col.w), {
-          x: col.x, y, font: col.key === 'reliquat' ? fontBold : font, size: 8.5, color: col.key === 'reliquat' ? red : black,
+        const lines = wrapLines(values[col.key] ?? '—', col.w - 8)
+        linesByCol[col.key] = lines
+        maxLines = Math.max(maxLines, lines.length)
+      })
+      const rowHeight = maxLines * LINE_H + ROW_PAD
+      ensureSpace(rowHeight)
+      COLS_ALERTE.forEach(col => {
+        linesByCol[col.key].forEach((line, i) => {
+          page.drawText(line, {
+            x: col.x, y: y - i * LINE_H,
+            font: col.key === 'reliquat' ? fontBold : font, size: 8.5,
+            color: col.key === 'reliquat' ? red : black,
+          })
         })
       })
-      y -= 15
+      y -= rowHeight
     }
   }
 

@@ -30,6 +30,8 @@ export interface LigneRapport {
   type: 'planifiee' | 'realisee'
   date: string | null
   periodeLabel: string
+  /** true si aucune date ni semaine précise n'est connue (juste le mois du contrat) */
+  dateApproximative: boolean
   quantite: number | null
   produit: string
   numeroContrat: string
@@ -151,11 +153,13 @@ function periodeLabel(l: any): string {
 
 function mapRow(l: any): LigneRapport {
   const date = l.type === 'realisee' ? (l.date_reelle ?? null) : datePlanifieeConnue(l)
+  const semaine = l.semaine_prevue || l.semaine_souhaitee || null
   return {
     id: l.id,
     type: l.type,
     date,
     periodeLabel: date ? '' : periodeLabel(l),
+    dateApproximative: l.type === 'planifiee' && !date && !semaine,
     quantite: l.type === 'realisee' ? (l.quantite_reelle ?? null) : (l.quantite_prevue ?? null),
     produit: getProduitNom(l),
     numeroContrat: getNumeroContrat(l),
@@ -171,6 +175,57 @@ function mapRow(l: any): LigneRapport {
 
 function parAncienneteCroissante(a: { date: string | null }, b: { date: string | null }) {
   return (a.date ?? '9999-99-99').localeCompare(b.date ?? '9999-99-99')
+}
+
+export type TriChamp = 'date' | 'agriculteur' | 'contrat' | 'fournisseur' | 'statut'
+export type Ordre = 'asc' | 'desc'
+
+/** "OK" = rien à faire (réalisé complet, ou planifié avec transporteur confirmé) */
+export function ligneOk(l: LigneRapport): boolean {
+  return l.type === 'realisee' ? !l.cmrManquant : l.transporteurConfirme
+}
+
+export function trierLignes(rows: LigneRapport[], tri: TriChamp, ordre: Ordre = 'asc'): LigneRapport[] {
+  const sorted = [...rows].sort((a, b) => {
+    let cmp = 0
+    switch (tri) {
+      case 'agriculteur': cmp = a.agriculteur.localeCompare(b.agriculteur, 'fr'); break
+      case 'contrat': cmp = a.numeroContrat.localeCompare(b.numeroContrat, 'fr'); break
+      case 'fournisseur': cmp = a.fournisseur.localeCompare(b.fournisseur, 'fr'); break
+      case 'statut': cmp = Number(ligneOk(a)) - Number(ligneOk(b)); break
+      case 'date':
+      default: cmp = (a.date ?? '9999-99-99').localeCompare(b.date ?? '9999-99-99')
+    }
+    return ordre === 'desc' ? -cmp : cmp
+  })
+  return sorted
+}
+
+export interface FiltresRapport {
+  fournisseur?: string
+  agriculteur?: string
+  contrat?: string
+  statut?: 'ok' | 'attention' | ''
+}
+
+export function filtrerLignes(rows: LigneRapport[], f: FiltresRapport): LigneRapport[] {
+  return rows.filter(r => {
+    if (f.fournisseur && r.fournisseur !== f.fournisseur) return false
+    if (f.agriculteur && r.agriculteur !== f.agriculteur) return false
+    if (f.contrat && !r.numeroContrat.toLowerCase().includes(f.contrat.toLowerCase())) return false
+    if (f.statut === 'ok' && !ligneOk(r)) return false
+    if (f.statut === 'attention' && ligneOk(r)) return false
+    return true
+  })
+}
+
+export function filtrerNonPlanifiees(rows: LigneNonPlanifiee[], f: FiltresRapport): LigneNonPlanifiee[] {
+  return rows.filter(r => {
+    if (f.fournisseur && r.fournisseur !== f.fournisseur) return false
+    if (f.agriculteur && !r.agriculteurs.toLowerCase().includes(f.agriculteur.toLowerCase())) return false
+    if (f.contrat && !r.numeroContrat.toLowerCase().includes(f.contrat.toLowerCase())) return false
+    return true
+  })
 }
 
 /** Contrats dont la date de fin tombe dans/avant la période demandée, avec du
