@@ -91,8 +91,11 @@ export async function GET() {
     if (estSiloSansGare(l)) return !l.piece_fournisseur_numero  // BA manquant
     return !l.numero_lettre_voiture
   })
+  // Dès que la demande d'exécution (PDF) est envoyée au transporteur, le CMR est
+  // attendu — le transporteur peut effectuer le transport sans jamais passer par
+  // la case "confirmé", donc on n'attend pas cette confirmation pour l'inclure ici.
   const cmrPlanifiees = (toutesLivraisons ?? []).filter(
-    (l: any) => l.type === 'planifiee' && !!l.transporteur_contacte && !l.solde_ouverture
+    (l: any) => l.type === 'planifiee' && (!!l.pdf_envoye || !!l.transporteur_contacte) && !l.solde_ouverture
   )
 
   // Fusion + dédoublonnage + tri : plus vieille date en premier

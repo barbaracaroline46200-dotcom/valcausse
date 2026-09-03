@@ -4,14 +4,15 @@ import {
   Loader2, CalendarRange, Download, CheckCircle2, Clock, PackageSearch, ChevronUp, ChevronDown, X
 } from 'lucide-react'
 import {
-  trierLignes, filtrerLignes, filtrerNonPlanifiees,
-  type TriChamp, type Ordre, type FiltresRapport,
+  trierLignes, filtrerLignes, filtrerNonPlanifiees, NIVEAUX,
+  type TriChamp, type Ordre, type FiltresRapport, type NiveauLivraison,
 } from '@/lib/rapport-transports'
 
 const BRUN = '#7B2820'
-const VERT = '#16a34a'
-const ORANGE = '#ea580c'
-const ROUGE = '#dc2626'
+
+function niveauInfo(key: NiveauLivraison) {
+  return NIVEAUX.find(n => n.key === key) ?? NIVEAUX[0]
+}
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10)
@@ -153,10 +154,9 @@ export default function RapportTransportsPage() {
           onChange={e => setFiltreContrat(e.target.value)}
           className="input text-sm py-1.5 w-40"
         />
-        <select value={filtreStatut} onChange={e => setFiltreStatut(e.target.value as FiltresRapport['statut'])} className="input text-sm py-1.5 w-40">
+        <select value={filtreStatut} onChange={e => setFiltreStatut(e.target.value as FiltresRapport['statut'])} className="input text-sm py-1.5 w-44">
           <option value="">Tous statuts</option>
-          <option value="ok">OK uniquement</option>
-          <option value="attention">À traiter uniquement</option>
+          {NIVEAUX.map(n => <option key={n.key} value={n.key}>{n.label}</option>)}
         </select>
         {filtresActifs && (
           <button onClick={resetFiltres} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 px-2 py-1.5">
@@ -167,9 +167,12 @@ export default function RapportTransportsPage() {
 
       {/* Légende */}
       <div className="flex items-center gap-4 text-xs text-gray-500 flex-wrap">
-        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: VERT }} />OK — réalisé complet / transporteur confirmé</span>
-        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: ORANGE }} />À confirmer / date à préciser</span>
-        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: ROUGE }} />Document (CMR/BA) manquant</span>
+        {NIVEAUX.map(n => (
+          <span key={n.key} className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: n.hex }} />
+            {n.label}
+          </span>
+        ))}
       </div>
 
       {loading || !data ? (
@@ -245,20 +248,23 @@ function SectionRealisees({ rows, tri, ordre, onSort }: { rows: any[]; tri: TriC
               </tr>
             </thead>
             <tbody>
-              {rows.map(r => (
-                <tr key={r.id} className="border-t border-gray-100" style={{ borderLeft: `4px solid ${r.cmrManquant ? ROUGE : VERT}` }}>
-                  <Td>{fmtLigneDate(r)}</Td>
-                  <Td className="font-medium text-gray-800">{r.produit}</Td>
-                  <Td className="font-mono text-gray-600">{r.numeroContrat}</Td>
-                  <Td>{r.fournisseur}</Td>
-                  <Td>{r.origine}</Td>
-                  <Td>{r.destination}</Td>
-                  <Td>{r.agriculteur}</Td>
-                  <Td>{r.transporteur}</Td>
-                  <Td className="text-right font-semibold whitespace-nowrap">{fmtTonnes(r.quantite)}</Td>
-                  <Td><StatutDot color={r.cmrManquant ? ROUGE : VERT} title={r.cmrManquant ? 'CMR/BA manquant' : 'Complet'} /></Td>
-                </tr>
-              ))}
+              {rows.map(r => {
+                const n = niveauInfo(r.niveau)
+                return (
+                  <tr key={r.id} className="border-t border-gray-100" style={{ borderLeft: `4px solid ${n.hex}` }}>
+                    <Td>{fmtLigneDate(r)}</Td>
+                    <Td className="font-medium text-gray-800">{r.produit}</Td>
+                    <Td className="font-mono text-gray-600">{r.numeroContrat}</Td>
+                    <Td>{r.fournisseur}</Td>
+                    <Td>{r.origine}</Td>
+                    <Td>{r.destination}</Td>
+                    <Td>{r.agriculteur}</Td>
+                    <Td>{r.transporteur}</Td>
+                    <Td className="text-right font-semibold whitespace-nowrap">{fmtTonnes(r.quantite)}</Td>
+                    <Td><StatutDot color={n.hex} title={n.label} /></Td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -299,22 +305,25 @@ function SectionPlanifiees({ rows, tri, ordre, onSort }: { rows: any[]; tri: Tri
               </tr>
             </thead>
             <tbody>
-              {rows.map(r => (
-                <tr key={r.id} className="border-t border-gray-100" style={{ borderLeft: `4px solid ${r.transporteurConfirme ? VERT : ORANGE}` }}>
-                  <Td className={r.dateApproximative ? 'text-orange-600 italic' : ''}>
-                    {r.dateApproximative && '~ '}{fmtLigneDate(r)}
-                  </Td>
-                  <Td className="font-medium text-gray-800">{r.produit}</Td>
-                  <Td className="font-mono text-gray-600">{r.numeroContrat}</Td>
-                  <Td>{r.fournisseur}</Td>
-                  <Td>{r.origine}</Td>
-                  <Td>{r.destination}</Td>
-                  <Td>{r.agriculteur}</Td>
-                  <Td>{r.transporteur}</Td>
-                  <Td className="text-right font-semibold whitespace-nowrap">{fmtTonnes(r.quantite)}</Td>
-                  <Td><StatutDot color={r.transporteurConfirme ? VERT : ORANGE} title={r.transporteurConfirme ? 'Confirmé' : 'À confirmer'} /></Td>
-                </tr>
-              ))}
+              {rows.map(r => {
+                const n = niveauInfo(r.niveau)
+                return (
+                  <tr key={r.id} className="border-t border-gray-100" style={{ borderLeft: `4px solid ${n.hex}` }}>
+                    <Td className={r.dateApproximative ? 'text-orange-600 italic' : ''}>
+                      {r.dateApproximative && '~ '}{fmtLigneDate(r)}
+                    </Td>
+                    <Td className="font-medium text-gray-800">{r.produit}</Td>
+                    <Td className="font-mono text-gray-600">{r.numeroContrat}</Td>
+                    <Td>{r.fournisseur}</Td>
+                    <Td>{r.origine}</Td>
+                    <Td>{r.destination}</Td>
+                    <Td>{r.agriculteur}</Td>
+                    <Td>{r.transporteur}</Td>
+                    <Td className="text-right font-semibold whitespace-nowrap">{fmtTonnes(r.quantite)}</Td>
+                    <Td><StatutDot color={n.hex} title={n.label} /></Td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

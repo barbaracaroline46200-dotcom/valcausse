@@ -10,7 +10,7 @@ const LIVRAISON_SELECT = `
   date_prevue, semaine_prevue, date_souhaitee, semaine_souhaitee,
   ville_chargement, ville_destination, destination_silo,
   numero_lettre_voiture, piece_fournisseur_numero,
-  transporteur_contacte, solde_ouverture,
+  transporteur_contacte, agriculteur_contacte, pdf_envoye, solde_ouverture,
   transporteur:transporteurs(id, nom),
   contrat_achat:contrats_achat(
     id, numero_contrat, ville_chargement,
@@ -24,6 +24,22 @@ const LIVRAISON_SELECT = `
     agriculteur:agriculteurs(civilite, nom, ville_livraison)
   )
 `
+
+/** Les 5 niveaux d'avancement d'une livraison, alignés sur les 3 étapes de
+ *  l'onglet "À organiser" + un 4ᵉ niveau "complet" (document reçu). Le document
+ *  reçu prime sur tout le reste : un transport peut être effectué par le
+ *  transporteur sans qu'il ait jamais été "confirmé" dans l'outil — ce n'est
+ *  qu'un indicateur, ça ne doit rien bloquer. */
+export type NiveauLivraison = 'non_demarre' | 'agri_contacte' | 'execution_demandee' | 'confirme' | 'complet'
+
+export const NIVEAUX: { key: NiveauLivraison; label: string; hex: string; rang: number }[] = [
+  { key: 'non_demarre', label: 'Non démarré', hex: '#9ca3af', rang: 0 },
+  { key: 'agri_contacte', label: 'Agri contacté', hex: '#2563eb', rang: 1 },
+  { key: 'execution_demandee', label: 'Exécution demandée', hex: '#ea580c', rang: 2 },
+  { key: 'confirme', label: 'Transport confirmé', hex: '#7c3aed', rang: 3 },
+  { key: 'complet', label: 'Complet', hex: '#16a34a', rang: 4 },
+]
+const RANG_NIVEAU: Record<NiveauLivraison, number> = Object.fromEntries(NIVEAUX.map(n => [n.key, n.rang])) as Record<NiveauLivraison, number>
 
 export interface LigneRapport {
   id: string
@@ -40,8 +56,7 @@ export interface LigneRapport {
   destination: string
   agriculteur: string
   transporteur: string
-  transporteurConfirme: boolean
-  cmrManquant: boolean
+  niveau: NiveauLivraison
 }
 
 export interface LigneNonPlanifiee {
@@ -98,10 +113,20 @@ function estSiloSansGare(l: any): boolean {
   return !(cv?.silo_nom ?? '').toLowerCase().includes('gare')
 }
 
-function cmrManquant(l: any): boolean {
-  if (l.type !== 'realisee') return false
-  if (estSiloSansGare(l)) return !l.piece_fournisseur_numero
-  return !l.numero_lettre_voiture
+// Le document (CMR, ou BA pour une livraison silo hors gare) est-il renseigné ?
+// Indépendant du type : une livraison encore "planifiee" pourrait en théorie déjà
+// l'avoir (saisie en avance), et une "realisee" peut très bien ne pas l'avoir.
+function documentRecu(l: any): boolean {
+  if (estSiloSansGare(l)) return !!l.piece_fournisseur_numero
+  return !!l.numero_lettre_voiture
+}
+
+function niveauLivraison(l: any): NiveauLivraison {
+  if (documentRecu(l)) return 'complet'
+  if (l.transporteur_contacte) return 'confirme'
+  if (l.pdf_envoye) return 'execution_demandee'
+  if (l.agriculteur_contacte || l.date_souhaitee || l.semaine_souhaitee) return 'agri_contacte'
+  return 'non_demarre'
 }
 
 function getProduitNom(l: any): string {
@@ -168,8 +193,7 @@ function mapRow(l: any): LigneRapport {
     destination: getVilleDestination(l),
     agriculteur: getAgriculteurNom(l),
     transporteur: getTransporteurNom(l),
-    transporteurConfirme: !!l.transporteur_contacte,
-    cmrManquant: cmrManquant(l),
+    niveau: niveauLivraison(l),
   }
 }
 
@@ -180,11 +204,6 @@ function parAncienneteCroissante(a: { date: string | null }, b: { date: string |
 export type TriChamp = 'date' | 'agriculteur' | 'contrat' | 'fournisseur' | 'statut'
 export type Ordre = 'asc' | 'desc'
 
-/** "OK" = rien à faire (réalisé complet, ou planifié avec transporteur confirmé) */
-export function ligneOk(l: LigneRapport): boolean {
-  return l.type === 'realisee' ? !l.cmrManquant : l.transporteurConfirme
-}
-
 export function trierLignes(rows: LigneRapport[], tri: TriChamp, ordre: Ordre = 'asc'): LigneRapport[] {
   const sorted = [...rows].sort((a, b) => {
     let cmp = 0
@@ -192,7 +211,7 @@ export function trierLignes(rows: LigneRapport[], tri: TriChamp, ordre: Ordre = 
       case 'agriculteur': cmp = a.agriculteur.localeCompare(b.agriculteur, 'fr'); break
       case 'contrat': cmp = a.numeroContrat.localeCompare(b.numeroContrat, 'fr'); break
       case 'fournisseur': cmp = a.fournisseur.localeCompare(b.fournisseur, 'fr'); break
-      case 'statut': cmp = Number(ligneOk(a)) - Number(ligneOk(b)); break
+      case 'statut': cmp = RANG_NIVEAU[a.niveau] - RANG_NIVEAU[b.niveau]; break
       case 'date':
       default: cmp = (a.date ?? '9999-99-99').localeCompare(b.date ?? '9999-99-99')
     }
@@ -205,7 +224,7 @@ export interface FiltresRapport {
   fournisseur?: string
   agriculteur?: string
   contrat?: string
-  statut?: 'ok' | 'attention' | ''
+  statut?: NiveauLivraison | ''
 }
 
 export function filtrerLignes(rows: LigneRapport[], f: FiltresRapport): LigneRapport[] {
@@ -213,8 +232,7 @@ export function filtrerLignes(rows: LigneRapport[], f: FiltresRapport): LigneRap
     if (f.fournisseur && r.fournisseur !== f.fournisseur) return false
     if (f.agriculteur && r.agriculteur !== f.agriculteur) return false
     if (f.contrat && !r.numeroContrat.toLowerCase().includes(f.contrat.toLowerCase())) return false
-    if (f.statut === 'ok' && !ligneOk(r)) return false
-    if (f.statut === 'attention' && ligneOk(r)) return false
+    if (f.statut && r.niveau !== f.statut) return false
     return true
   })
 }

@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import {
-  getRapportTransports, trierLignes, filtrerLignes, filtrerNonPlanifiees,
+  getRapportTransports, trierLignes, filtrerLignes, filtrerNonPlanifiees, NIVEAUX,
   type LigneRapport, type LigneNonPlanifiee, type TriChamp, type Ordre, type FiltresRapport,
 } from '@/lib/rapport-transports'
 import { PDFDocument, PDFPage, PDFFont, rgb, StandardFonts } from 'pdf-lib'
@@ -11,8 +11,15 @@ const brun = rgb(0.482, 0.157, 0.125)
 const or = rgb(0.784, 0.580, 0.102)
 const gray = rgb(0.4, 0.4, 0.4)
 const black = rgb(0, 0, 0)
-const green = rgb(0.086, 0.639, 0.290)
 const red = rgb(0.792, 0.149, 0.149)
+
+function hexToRgb(hex: string) {
+  const n = parseInt(hex.replace('#', ''), 16)
+  return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255)
+}
+function niveauInfo(key: string) {
+  return NIVEAUX.find(n => n.key === key) ?? NIVEAUX[0]
+}
 const PAGE_W = 842
 const PAGE_H = 595
 const MARGIN_BOTTOM = 55
@@ -86,26 +93,21 @@ export async function GET(req: NextRequest) {
 
   function drawLegend() {
     ensureSpace(20)
-    const items: [any, string][] = [
-      [green, 'OK (réalisé complet / transporteur confirmé)'],
-      [or, 'À confirmer ou date à préciser'],
-      [red, 'Document (CMR/BA) manquant'],
-    ]
     let x = 50
     page.drawText('Légende :', { x, y, font: fontBold, size: 8, color: gray })
     x += 46
-    items.forEach(([color, label]) => {
+    NIVEAUX.forEach(n => {
+      const color = hexToRgb(n.hex)
       page.drawRectangle({ x, y: y - 1, width: 8, height: 8, color })
-      page.drawText(label, { x: x + 12, y, font, size: 8, color: gray })
-      x += 12 + font.widthOfTextAtSize(label, 8) + 22
+      page.drawText(n.label, { x: x + 12, y, font, size: 8, color: gray })
+      x += 12 + font.widthOfTextAtSize(n.label, 8) + 16
     })
     y -= 20
     const filtresActifs = [
       filtres.fournisseur && `Fournisseur : ${filtres.fournisseur}`,
       filtres.agriculteur && `Agriculteur : ${filtres.agriculteur}`,
       filtres.contrat && `Contrat : ${filtres.contrat}`,
-      filtres.statut === 'ok' && 'Statut : OK uniquement',
-      filtres.statut === 'attention' && 'Statut : à traiter uniquement',
+      filtres.statut && `Statut : ${niveauInfo(filtres.statut).label}`,
     ].filter(Boolean)
     if (filtresActifs.length) {
       ensureSpace(16)
@@ -212,7 +214,8 @@ export async function GET(req: NextRequest) {
     return shown
   }
 
-  function tableRowLivraison(l: LigneRapport, statutColor: any) {
+  function tableRowLivraison(l: LigneRapport) {
+    const statutColor = hexToRgb(niveauInfo(l.niveau).hex)
     const values: Record<string, string> = {
       // sanitizeForPdf s'applique après concaténation du préfixe : ça évite qu'un
       // caractère ajouté ici (comme le "≈" utilisé un temps, non encodable en
@@ -267,7 +270,7 @@ export async function GET(req: NextRequest) {
   // ── Réalisés ─────────────────────────────────────────────
   sectionTitle(
     `TRANSPORTS RÉALISÉS (${realisees.length})`,
-    'Livraisons effectuées sur la période. Bandeau rouge = document (CMR/BA) manquant. Colonne Notes vierge pour vos annotations.'
+    'Livraisons effectuées sur la période. Bandeau coloré = statut de suivi (voir légende). Colonne Notes vierge pour vos annotations.'
   )
   if (realisees.length === 0) {
     page.drawText('Aucun transport réalisé sur cette période.', { x: 50, y, font, size: 9, color: gray })
@@ -275,7 +278,7 @@ export async function GET(req: NextRequest) {
   } else {
     tableHeaderLivraisons()
     for (const l of realisees) {
-      tableRowLivraison(l, l.cmrManquant ? red : green)
+      tableRowLivraison(l)
     }
     ensureSpace(16)
     page.drawText(`Total réalisé : ${fmtTonnes(totalTonnage(realisees))}`, { x: 50, y, font: fontBold, size: 9, color: brun })
@@ -285,7 +288,7 @@ export async function GET(req: NextRequest) {
   // ── Planifiés / en attente ──────────────────────────────
   sectionTitle(
     `PLANIFIÉS — EN ATTENTE (${planifiees.length})`,
-    'Transports prévus sur la période mais pas encore réalisés. Bandeau vert = transporteur confirmé. "~" = date approximative (mois seulement, à préciser).'
+    'Transports prévus sur la période mais pas encore réalisés. Bandeau coloré = statut de suivi (voir légende). "~" = date approximative (mois seulement, à préciser).'
   )
   if (planifiees.length === 0) {
     page.drawText('Aucun transport planifié sur cette période.', { x: 50, y, font, size: 9, color: gray })
@@ -293,7 +296,7 @@ export async function GET(req: NextRequest) {
   } else {
     tableHeaderLivraisons()
     for (const l of planifiees) {
-      tableRowLivraison(l, l.transporteurConfirme ? green : or)
+      tableRowLivraison(l)
     }
     ensureSpace(16)
     page.drawText(`Total planifié : ${fmtTonnes(totalTonnage(planifiees))}`, { x: 50, y, font: fontBold, size: 9, color: brun })
