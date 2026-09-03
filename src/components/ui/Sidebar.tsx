@@ -3,7 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, FileText, ShoppingCart, Truck, BookOpen, Search, LogOut, ShieldCheck, Eye, BarChart2, CalendarDays, FileWarning, Receipt, Archive, CreditCard
+  LayoutDashboard, FileText, ShoppingCart, Truck, BookOpen, Search, LogOut, ShieldCheck, Eye, BarChart2, CalendarDays, FileWarning, Receipt, Archive, CreditCard, Printer
 } from 'lucide-react'
 import { useAdmin } from './AdminProvider'
 import { cn } from '@/lib/utils'
@@ -78,6 +78,7 @@ export default function Sidebar() {
         <NavItem href="/livraisons"    label="À organiser"       icon={<Truck size={18} />}           active={active('/livraisons')} badge={counts.livraisons > 0 ? counts.livraisons : undefined} badgeColor={BRUN} />
         <NavItem href="/cmr"           label="CMR en attente"    icon={<FileWarning size={18} />}     active={active('/cmr')}        badge={counts.cmr > 0 ? counts.cmr : undefined}               badgeColor="#dc2626" />
         <NavItem href="/planning"      label="Planning"          icon={<LayoutDashboard size={18} />} active={active('/planning')} />
+        <NavItem href="/rapport-transports" label="Rapport imprimable" icon={<Printer size={18} />} active={active('/rapport-transports')} />
 
         {/* FACTURATION */}
         <SectionLabel label="Facturation" />
