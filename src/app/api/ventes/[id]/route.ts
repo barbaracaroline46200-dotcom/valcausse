@@ -23,7 +23,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         destination_silo, transporteur_id, transporteur:transporteurs(nom,telephone),
         piece_fournisseur_prefixe, piece_fournisseur_numero,
         piece_client_prefixe, piece_client_numero,
-        montant_transport_reel, transport_facture, numero_mise_a_disposition, note_alerte
+        montant_transport_reel, transport_facture, numero_mise_a_disposition, note_alerte,
+        agriculteur_contacte, date_souhaitee, semaine_souhaitee, pdf_envoye
       ),
       factures_client(id, numero_facture_logiciel, montant_ht, montant_ttc, mode_paiement, date_paiement)
     `)

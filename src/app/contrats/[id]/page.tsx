@@ -22,6 +22,7 @@ import SoldeOuvertureModal from '@/components/livraisons/SoldeOuvertureModal'
 import AlerteNote from '@/components/ui/AlerteNote'
 import ModifierFactureFournisseurModal from '@/components/livraisons/ModifierFactureFournisseurModal'
 import CalendrierContrat from '@/components/ui/CalendrierContrat'
+import AvancementLivraison from '@/components/livraisons/AvancementLivraison'
 
 export default function ContratDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -101,11 +102,11 @@ export default function ContratDetailPage() {
     window.location.reload()
   }
 
-  async function toggleTransporteurContacte(livId: string, current: boolean) {
+  async function toggleLivraisonFlag(livId: string, field: string, current: boolean) {
     await fetch(`/api/livraisons/${livId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ transporteur_contacte: !current }),
+      body: JSON.stringify({ [field]: !current }),
     })
     window.location.reload()
   }
@@ -466,7 +467,7 @@ export default function ContratDetailPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50/50">
-                    {['Mois prévu', 'Client / Destination', 'Tonnes prévues', 'Ville enlèv.', 'Ville dest.', 'Transporteur', 'Pièce fourn.', 'Pièce client', 'Contacté ?', 'Actions'].map(h => (
+                    {['Mois prévu', 'Client / Destination', 'Tonnes prévues', 'Ville enlèv.', 'Ville dest.', 'Transporteur', 'Pièce fourn.', 'Pièce client', 'Avancement', 'Actions'].map(h => (
                       <th key={h} className="table-header">{h}</th>
                     ))}
                   </tr>
@@ -498,16 +499,7 @@ export default function ContratDetailPage() {
                           : <span className="text-gray-300">{prefixes.client} —</span>}
                       </td>
                       <td className="table-cell">
-                        <label className="flex items-center gap-1.5 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={l.transporteur_contacte}
-                            onChange={() => toggleTransporteurContacte(l.id, l.transporteur_contacte)}
-                            disabled={!isAdmin}
-                            className="w-4 h-4 rounded accent-green-600"
-                          />
-                          <span className="text-xs text-gray-500">{l.transporteur_contacte ? 'Oui' : 'Non'}</span>
-                        </label>
+                        <AvancementLivraison livraison={l} isAdmin={isAdmin} onToggle={toggleLivraisonFlag} />
                       </td>
                       <td className="table-cell">
                         <div className="flex gap-1 flex-wrap">

@@ -12,6 +12,7 @@ import CalendrierContrat from '@/components/ui/CalendrierContrat'
 import AjouterLivraisonSiloModal from '@/components/livraisons/AjouterLivraisonSiloModal'
 import RealiserLivraisonModal from '@/components/livraisons/RealiserLivraisonModal'
 import ModifierLivraisonModal from '@/components/livraisons/ModifierLivraisonModal'
+import AvancementLivraison from '@/components/livraisons/AvancementLivraison'
 
 export default function VenteDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -199,7 +200,9 @@ export default function VenteDetailPage() {
                   </td>
                   <td className="table-cell text-sm">{l.mois_prevu ? new Date(l.mois_prevu).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—'}</td>
                   <td className="table-cell text-sm">
-                    {l.date_reelle ? formatDate(l.date_reelle) : l.date_prevue ? formatDate(l.date_prevue) : l.semaine_prevue ?? '—'}
+                    {l.type === 'realisee'
+                      ? formatDate(l.date_reelle)
+                      : <AvancementLivraison livraison={l} />}
                   </td>
                   <td className="table-cell text-sm">{l.ville_chargement ?? '—'}</td>
                   <td className="table-cell text-sm">{l.ville_destination ?? '—'}</td>
