@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import {
   Loader2, CalendarRange, Download, CheckCircle2, Clock, PackageSearch, ChevronUp, ChevronDown, X
 } from 'lucide-react'
@@ -46,11 +46,14 @@ export default function RapportTransportsPage() {
 
   const [tri, setTri] = useState<TriChamp>('date')
   const [ordre, setOrdre] = useState<Ordre>('asc')
-  const [filtreFournisseur, setFiltreFournisseur] = useState('')
-  const [filtreAgriculteur, setFiltreAgriculteur] = useState('')
+  // Cases décochées = valeurs exclues de l'affichage. Tout est coché (rien
+  // d'exclu) par défaut ; décocher une valeur l'exclut immédiatement, cocher
+  // "Tout décocher" exclut toutes les valeurs actuellement listées.
+  const [exclusFournisseurs, setExclusFournisseurs] = useState<string[]>([])
+  const [exclusAgriculteurs, setExclusAgriculteurs] = useState<string[]>([])
+  const [exclusStatuts, setExclusStatuts] = useState<NiveauLivraison[]>([])
   const [filtreContrat, setFiltreContrat] = useState('')
   const [filtreProduit, setFiltreProduit] = useState('')
-  const [filtreStatut, setFiltreStatut] = useState<FiltresRapport['statut']>('')
 
   const charger = useCallback((debut: string, fin: string) => {
     setLoading(true)
@@ -94,16 +97,20 @@ export default function RapportTransportsPage() {
     return [...s].sort((a, b) => a.localeCompare(b, 'fr'))
   }, [data])
 
+  const statutsInclus = NIVEAUX.map(n => n.key).filter(k => !exclusStatuts.includes(k))
+  const fournisseursInclus = fournisseurs.filter(f => !exclusFournisseurs.includes(f))
+  const agriculteursInclus = agriculteurs.filter(a => !exclusAgriculteurs.includes(a))
+
   const filtres: FiltresRapport = {
-    fournisseur: filtreFournisseur || undefined,
-    agriculteur: filtreAgriculteur || undefined,
+    fournisseurs: exclusFournisseurs.length ? fournisseursInclus : undefined,
+    agriculteurs: exclusAgriculteurs.length ? agriculteursInclus : undefined,
     contrat: filtreContrat || undefined,
     produit: filtreProduit || undefined,
-    statut: filtreStatut,
+    statuts: exclusStatuts.length ? statutsInclus : undefined,
   }
-  const filtresActifs = !!(filtreFournisseur || filtreAgriculteur || filtreContrat || filtreProduit || filtreStatut)
+  const filtresActifs = !!(exclusFournisseurs.length || exclusAgriculteurs.length || filtreContrat || filtreProduit || exclusStatuts.length)
   function resetFiltres() {
-    setFiltreFournisseur(''); setFiltreAgriculteur(''); setFiltreContrat(''); setFiltreProduit(''); setFiltreStatut('')
+    setExclusFournisseurs([]); setExclusAgriculteurs([]); setFiltreContrat(''); setFiltreProduit(''); setExclusStatuts([])
   }
 
   const realiseesAffichees = data ? trierLignes(filtrerLignes(data.realisees, filtres), tri, ordre) : []
@@ -111,11 +118,11 @@ export default function RapportTransportsPage() {
   const nonPlanifieesAffichees = data ? filtrerNonPlanifiees(data.nonPlanifiees, filtres) : []
 
   const pdfParams = new URLSearchParams({ date_debut: dateDebut, date_fin: dateFin, tri, ordre })
-  if (filtreFournisseur) pdfParams.set('fournisseur', filtreFournisseur)
-  if (filtreAgriculteur) pdfParams.set('agriculteur', filtreAgriculteur)
+  if (exclusFournisseurs.length) fournisseursInclus.forEach(f => pdfParams.append('fournisseur', f))
+  if (exclusAgriculteurs.length) agriculteursInclus.forEach(a => pdfParams.append('agriculteur', a))
   if (filtreContrat) pdfParams.set('contrat', filtreContrat)
   if (filtreProduit) pdfParams.set('produit', filtreProduit)
-  if (filtreStatut) pdfParams.set('statut', filtreStatut)
+  if (exclusStatuts.length) statutsInclus.forEach(s => pdfParams.append('statut', s))
   const pdfHref = `/api/pdf/rapport-transports?${pdfParams.toString()}`
 
   return (
@@ -148,14 +155,18 @@ export default function RapportTransportsPage() {
 
       {/* Filtres */}
       <div className="flex items-center gap-2 flex-wrap">
-        <select value={filtreFournisseur} onChange={e => setFiltreFournisseur(e.target.value)} className="input text-sm py-1.5 w-44">
-          <option value="">Tous fournisseurs</option>
-          {fournisseurs.map(f => <option key={f} value={f}>{f}</option>)}
-        </select>
-        <select value={filtreAgriculteur} onChange={e => setFiltreAgriculteur(e.target.value)} className="input text-sm py-1.5 w-48">
-          <option value="">Tous agriculteurs</option>
-          {agriculteurs.map(a => <option key={a} value={a}>{a}</option>)}
-        </select>
+        <FiltreCoches
+          label="Fournisseurs"
+          options={fournisseurs.map(f => ({ value: f, label: f }))}
+          exclus={exclusFournisseurs}
+          onChange={setExclusFournisseurs}
+        />
+        <FiltreCoches
+          label="Agriculteurs"
+          options={agriculteurs.map(a => ({ value: a, label: a }))}
+          exclus={exclusAgriculteurs}
+          onChange={setExclusAgriculteurs}
+        />
         <input
           type="text"
           placeholder="N° de contrat..."
@@ -167,10 +178,12 @@ export default function RapportTransportsPage() {
           <option value="">Toutes céréales</option>
           {produits.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
-        <select value={filtreStatut} onChange={e => setFiltreStatut(e.target.value as FiltresRapport['statut'])} className="input text-sm py-1.5 w-44">
-          <option value="">Tous statuts</option>
-          {NIVEAUX.map(n => <option key={n.key} value={n.key}>{n.label}</option>)}
-        </select>
+        <FiltreCoches
+          label="Statuts"
+          options={NIVEAUX.map(n => ({ value: n.key, label: n.label, dot: n.hex }))}
+          exclus={exclusStatuts}
+          onChange={v => setExclusStatuts(v as NiveauLivraison[])}
+        />
         {filtresActifs && (
           <button onClick={resetFiltres} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 px-2 py-1.5">
             <X size={14} /> Réinitialiser
@@ -227,6 +240,80 @@ function Td({ children, className = '' }: { children: React.ReactNode; className
 }
 function StatutDot({ color, title }: { color: string; title: string }) {
   return <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: color }} title={title} />
+}
+
+/** Menu à cases à cocher : tout est coché (visible) par défaut, décocher une
+ *  valeur l'exclut de l'affichage. `exclus` porte donc les valeurs à masquer,
+ *  pas celles à montrer — une nouvelle valeur (ex: nouveau fournisseur après
+ *  changement de période) apparaît donc cochée/visible tant qu'on ne l'exclut
+ *  pas explicitement. */
+function FiltreCoches({ label, options, exclus, onChange }: {
+  label: string
+  options: { value: string; label: string; dot?: string }[]
+  exclus: string[]
+  onChange: (exclus: string[]) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  function toggle(v: string) {
+    onChange(exclus.includes(v) ? exclus.filter(x => x !== v) : [...exclus, v])
+  }
+
+  const nbCoches = options.filter(o => !exclus.includes(o.value)).length
+  const actif = nbCoches < options.length
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="input text-sm py-1.5 px-3 flex items-center gap-1.5"
+        style={actif ? { borderColor: BRUN, color: BRUN, fontWeight: 600 } : {}}
+      >
+        {label}
+        {actif && (
+          <span className="min-w-[18px] h-[18px] px-1 rounded-full text-white text-[11px] font-bold flex items-center justify-center" style={{ backgroundColor: BRUN }}>
+            {nbCoches}
+          </span>
+        )}
+        <ChevronDown size={14} />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full mt-1 w-64 max-h-72 overflow-auto rounded-lg border shadow-xl z-20" style={{ borderColor: '#ede9e3', backgroundColor: '#fff' }}>
+          <div className="flex items-center justify-between px-3 py-2 border-b text-xs sticky top-0" style={{ borderColor: '#f0ece6', backgroundColor: '#fff' }}>
+            <button type="button" onClick={() => onChange([])} className="text-gray-500 hover:text-gray-800 underline">
+              Tout cocher
+            </button>
+            <button type="button" onClick={() => onChange(options.map(o => o.value))} className="text-gray-500 hover:text-gray-800 underline">
+              Tout décocher
+            </button>
+          </div>
+          {options.length === 0 ? (
+            <p className="px-3 py-4 text-center text-xs text-gray-400">Aucune option</p>
+          ) : (
+            <div className="py-1">
+              {options.map(opt => (
+                <label key={opt.value} className="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-gray-50 cursor-pointer">
+                  <input type="checkbox" checked={!exclus.includes(opt.value)} onChange={() => toggle(opt.value)} />
+                  {opt.dot && <span className="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0" style={{ backgroundColor: opt.dot }} />}
+                  <span className="flex-1 truncate">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function SectionRealisees({ rows, tri, ordre, onSort }: { rows: any[]; tri: TriChamp; ordre: Ordre; onSort: (f: TriChamp) => void }) {

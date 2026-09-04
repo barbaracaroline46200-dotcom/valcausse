@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import {
   getRapportTransports, trierLignes, filtrerLignes, filtrerNonPlanifiees, NIVEAUX,
-  type LigneRapport, type LigneNonPlanifiee, type TriChamp, type Ordre, type FiltresRapport,
+  type LigneRapport, type LigneNonPlanifiee, type TriChamp, type Ordre, type FiltresRapport, type NiveauLivraison,
 } from '@/lib/rapport-transports'
 import { PDFDocument, PDFPage, PDFFont, rgb, StandardFonts } from 'pdf-lib'
 
@@ -51,12 +51,16 @@ export async function GET(req: NextRequest) {
   const triParam = searchParams.get('tri') as TriChamp | null
   const tri: TriChamp = triParam && TRI_VALIDES.includes(triParam) ? triParam : 'date'
   const ordre: Ordre = searchParams.get('ordre') === 'desc' ? 'desc' : 'asc'
+  const NIVEAUX_VALIDES = NIVEAUX.map(n => n.key)
+  const fournisseurs = searchParams.getAll('fournisseur')
+  const agriculteurs = searchParams.getAll('agriculteur')
+  const statuts = searchParams.getAll('statut').filter((s): s is NiveauLivraison => NIVEAUX_VALIDES.includes(s as NiveauLivraison))
   const filtres: FiltresRapport = {
-    fournisseur: searchParams.get('fournisseur') || undefined,
-    agriculteur: searchParams.get('agriculteur') || undefined,
+    fournisseurs: fournisseurs.length ? fournisseurs : undefined,
+    agriculteurs: agriculteurs.length ? agriculteurs : undefined,
     contrat: searchParams.get('contrat') || undefined,
     produit: searchParams.get('produit') || undefined,
-    statut: (searchParams.get('statut') as FiltresRapport['statut']) || '',
+    statuts: statuts.length ? statuts : undefined,
   }
 
   const supabase = getServiceClient()
@@ -105,11 +109,11 @@ export async function GET(req: NextRequest) {
     })
     y -= 20
     const filtresActifs = [
-      filtres.fournisseur && `Fournisseur : ${filtres.fournisseur}`,
-      filtres.agriculteur && `Agriculteur : ${filtres.agriculteur}`,
+      filtres.fournisseurs?.length && `Fournisseurs : ${filtres.fournisseurs.join(', ')}`,
+      filtres.agriculteurs?.length && `Agriculteurs : ${filtres.agriculteurs.join(', ')}`,
       filtres.contrat && `Contrat : ${filtres.contrat}`,
       filtres.produit && `Céréale : ${filtres.produit}`,
-      filtres.statut && `Statut : ${niveauInfo(filtres.statut).label}`,
+      filtres.statuts?.length && `Statuts : ${filtres.statuts.map(s => niveauInfo(s).label).join(', ')}`,
     ].filter(Boolean)
     if (filtresActifs.length) {
       ensureSpace(16)

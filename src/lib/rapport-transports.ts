@@ -221,28 +221,30 @@ export function trierLignes(rows: LigneRapport[], tri: TriChamp, ordre: Ordre = 
 }
 
 export interface FiltresRapport {
-  fournisseur?: string
-  agriculteur?: string
+  /** Non défini/vide = pas de restriction. Sinon, seules les valeurs listées
+   *  sont montrées (liste des valeurs cochées, pas des valeurs exclues). */
+  fournisseurs?: string[]
+  agriculteurs?: string[]
   contrat?: string
   produit?: string
-  statut?: NiveauLivraison | ''
+  statuts?: NiveauLivraison[]
 }
 
 export function filtrerLignes(rows: LigneRapport[], f: FiltresRapport): LigneRapport[] {
   return rows.filter(r => {
-    if (f.fournisseur && r.fournisseur !== f.fournisseur) return false
-    if (f.agriculteur && r.agriculteur !== f.agriculteur) return false
+    if (f.fournisseurs?.length && !f.fournisseurs.includes(r.fournisseur)) return false
+    if (f.agriculteurs?.length && !f.agriculteurs.includes(r.agriculteur)) return false
     if (f.contrat && !r.numeroContrat.toLowerCase().includes(f.contrat.toLowerCase())) return false
     if (f.produit && r.produit !== f.produit) return false
-    if (f.statut && r.niveau !== f.statut) return false
+    if (f.statuts?.length && !f.statuts.includes(r.niveau)) return false
     return true
   })
 }
 
 export function filtrerNonPlanifiees(rows: LigneNonPlanifiee[], f: FiltresRapport): LigneNonPlanifiee[] {
   return rows.filter(r => {
-    if (f.fournisseur && r.fournisseur !== f.fournisseur) return false
-    if (f.agriculteur && !r.agriculteurs.toLowerCase().includes(f.agriculteur.toLowerCase())) return false
+    if (f.fournisseurs?.length && !f.fournisseurs.includes(r.fournisseur)) return false
+    if (f.agriculteurs?.length && !f.agriculteurs.some(a => r.agriculteurs.toLowerCase().includes(a.toLowerCase()))) return false
     if (f.contrat && !r.numeroContrat.toLowerCase().includes(f.contrat.toLowerCase())) return false
     if (f.produit && r.produit !== f.produit) return false
     return true
