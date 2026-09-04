@@ -224,6 +224,7 @@ export interface FiltresRapport {
   fournisseur?: string
   agriculteur?: string
   contrat?: string
+  produit?: string
   statut?: NiveauLivraison | ''
 }
 
@@ -232,6 +233,7 @@ export function filtrerLignes(rows: LigneRapport[], f: FiltresRapport): LigneRap
     if (f.fournisseur && r.fournisseur !== f.fournisseur) return false
     if (f.agriculteur && r.agriculteur !== f.agriculteur) return false
     if (f.contrat && !r.numeroContrat.toLowerCase().includes(f.contrat.toLowerCase())) return false
+    if (f.produit && r.produit !== f.produit) return false
     if (f.statut && r.niveau !== f.statut) return false
     return true
   })
@@ -242,6 +244,7 @@ export function filtrerNonPlanifiees(rows: LigneNonPlanifiee[], f: FiltresRappor
     if (f.fournisseur && r.fournisseur !== f.fournisseur) return false
     if (f.agriculteur && !r.agriculteurs.toLowerCase().includes(f.agriculteur.toLowerCase())) return false
     if (f.contrat && !r.numeroContrat.toLowerCase().includes(f.contrat.toLowerCase())) return false
+    if (f.produit && r.produit !== f.produit) return false
     return true
   })
 }

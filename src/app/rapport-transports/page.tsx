@@ -49,6 +49,7 @@ export default function RapportTransportsPage() {
   const [filtreFournisseur, setFiltreFournisseur] = useState('')
   const [filtreAgriculteur, setFiltreAgriculteur] = useState('')
   const [filtreContrat, setFiltreContrat] = useState('')
+  const [filtreProduit, setFiltreProduit] = useState('')
   const [filtreStatut, setFiltreStatut] = useState<FiltresRapport['statut']>('')
 
   const charger = useCallback((debut: string, fin: string) => {
@@ -87,15 +88,22 @@ export default function RapportTransportsPage() {
     return [...s].sort((a, b) => a.localeCompare(b, 'fr'))
   }, [data])
 
+  const produits = useMemo(() => {
+    const s = new Set<string>()
+    ;[...(data?.realisees ?? []), ...(data?.planifiees ?? [])].forEach(r => { if (r.produit && r.produit !== '—') s.add(r.produit) })
+    return [...s].sort((a, b) => a.localeCompare(b, 'fr'))
+  }, [data])
+
   const filtres: FiltresRapport = {
     fournisseur: filtreFournisseur || undefined,
     agriculteur: filtreAgriculteur || undefined,
     contrat: filtreContrat || undefined,
+    produit: filtreProduit || undefined,
     statut: filtreStatut,
   }
-  const filtresActifs = !!(filtreFournisseur || filtreAgriculteur || filtreContrat || filtreStatut)
+  const filtresActifs = !!(filtreFournisseur || filtreAgriculteur || filtreContrat || filtreProduit || filtreStatut)
   function resetFiltres() {
-    setFiltreFournisseur(''); setFiltreAgriculteur(''); setFiltreContrat(''); setFiltreStatut('')
+    setFiltreFournisseur(''); setFiltreAgriculteur(''); setFiltreContrat(''); setFiltreProduit(''); setFiltreStatut('')
   }
 
   const realiseesAffichees = data ? trierLignes(filtrerLignes(data.realisees, filtres), tri, ordre) : []
@@ -106,6 +114,7 @@ export default function RapportTransportsPage() {
   if (filtreFournisseur) pdfParams.set('fournisseur', filtreFournisseur)
   if (filtreAgriculteur) pdfParams.set('agriculteur', filtreAgriculteur)
   if (filtreContrat) pdfParams.set('contrat', filtreContrat)
+  if (filtreProduit) pdfParams.set('produit', filtreProduit)
   if (filtreStatut) pdfParams.set('statut', filtreStatut)
   const pdfHref = `/api/pdf/rapport-transports?${pdfParams.toString()}`
 
@@ -154,6 +163,10 @@ export default function RapportTransportsPage() {
           onChange={e => setFiltreContrat(e.target.value)}
           className="input text-sm py-1.5 w-40"
         />
+        <select value={filtreProduit} onChange={e => setFiltreProduit(e.target.value)} className="input text-sm py-1.5 w-40">
+          <option value="">Toutes céréales</option>
+          {produits.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
         <select value={filtreStatut} onChange={e => setFiltreStatut(e.target.value as FiltresRapport['statut'])} className="input text-sm py-1.5 w-44">
           <option value="">Tous statuts</option>
           {NIVEAUX.map(n => <option key={n.key} value={n.key}>{n.label}</option>)}

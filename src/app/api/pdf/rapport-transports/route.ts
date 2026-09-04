@@ -55,6 +55,7 @@ export async function GET(req: NextRequest) {
     fournisseur: searchParams.get('fournisseur') || undefined,
     agriculteur: searchParams.get('agriculteur') || undefined,
     contrat: searchParams.get('contrat') || undefined,
+    produit: searchParams.get('produit') || undefined,
     statut: (searchParams.get('statut') as FiltresRapport['statut']) || '',
   }
 
@@ -107,6 +108,7 @@ export async function GET(req: NextRequest) {
       filtres.fournisseur && `Fournisseur : ${filtres.fournisseur}`,
       filtres.agriculteur && `Agriculteur : ${filtres.agriculteur}`,
       filtres.contrat && `Contrat : ${filtres.contrat}`,
+      filtres.produit && `Céréale : ${filtres.produit}`,
       filtres.statut && `Statut : ${niveauInfo(filtres.statut).label}`,
     ].filter(Boolean)
     if (filtresActifs.length) {
