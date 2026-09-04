@@ -91,12 +91,17 @@ export async function GET() {
     if (estSiloSansGare(l)) return !l.piece_fournisseur_numero  // BA manquant
     return !l.numero_lettre_voiture
   })
-  // Dès que la demande d'exécution (PDF) est envoyée au transporteur, le CMR est
+  // Dès que la demande d'exécution (PDF) est envoyée au transporteur, le CMR sera
   // attendu — le transporteur peut effectuer le transport sans jamais passer par
-  // la case "confirmé", donc on n'attend pas cette confirmation pour l'inclure ici.
-  const cmrPlanifiees = (toutesLivraisons ?? []).filter(
-    (l: any) => l.type === 'planifiee' && (!!l.pdf_envoye || !!l.transporteur_contacte) && !l.solde_ouverture
-  )
+  // la case "confirmé". Mais on ne la fait apparaître en "attente" qu'une fois la
+  // date (ou à défaut le mois) prévue dépassée : sinon la livraison n'a pas encore
+  // eu lieu, il n'y a donc rien à relancer.
+  const cmrPlanifiees = (toutesLivraisons ?? []).filter((l: any) => {
+    if (l.type !== 'planifiee' || l.solde_ouverture) return false
+    if (!l.pdf_envoye && !l.transporteur_contacte) return false
+    if (l.date_prevue) return l.date_prevue < today
+    return !!l.mois_prevu && l.mois_prevu.slice(0, 10) < moisCourant
+  })
 
   // Fusion + dédoublonnage + tri : plus vieille date en premier
   const cmrMap = new Map<string, any>()
