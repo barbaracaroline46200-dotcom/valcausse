@@ -1,17 +1,22 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { Loader2, Pencil, ArrowLeft, Link2, CheckCircle, RotateCcw, Plus, Trash2 } from 'lucide-react'
-import { formatTonnes, formatEurosParTonne, formatDate } from '@/lib/annee-agricole'
-import { BadgeStatut, BadgeAnnee } from '@/components/ui/Badge'
+import { Loader2, Pencil, ArrowLeft, Link2, CheckCircle, RotateCcw, Plus, Trash2, AlertTriangle } from 'lucide-react'
+import { formatTonnes, formatEurosParTonne, formatEuros, formatDate } from '@/lib/annee-agricole'
+import { BadgeStatut, BadgeAnnee, BadgeFamille } from '@/components/ui/Badge'
+import ProgressBar from '@/components/ui/ProgressBar'
 import { useAdmin } from '@/components/ui/AdminProvider'
-import { contratSyntheticFromVente } from '@/lib/utils'
+import { contratSyntheticFromVente, quantiteLivree, reliquat, ecartTransport, nomEntite } from '@/lib/utils'
+import { getPrefixes } from '@/lib/prefixes'
 import Link from 'next/link'
 import Modal from '@/components/ui/Modal'
 import CalendrierContrat from '@/components/ui/CalendrierContrat'
 import AjouterLivraisonSiloModal from '@/components/livraisons/AjouterLivraisonSiloModal'
 import RealiserLivraisonModal from '@/components/livraisons/RealiserLivraisonModal'
 import ModifierLivraisonModal from '@/components/livraisons/ModifierLivraisonModal'
+import ModifierLivraisonRealiseeModal from '@/components/livraisons/ModifierLivraisonRealiseeModal'
+import ModifierFactureClientModal from '@/components/livraisons/ModifierFactureClientModal'
+import AlerteNote from '@/components/ui/AlerteNote'
 import AvancementLivraison from '@/components/livraisons/AvancementLivraison'
 
 export default function VenteDetailPage() {
@@ -24,10 +29,14 @@ export default function VenteDetailPage() {
   const [showAjoutLiv, setShowAjoutLiv] = useState(false)
   const [realiserLiv, setRealiserLiv] = useState<any>(null)
   const [modifierLiv, setModifierLiv] = useState<any>(null)
+  const [modifierLivRealisee, setModifierLivRealisee] = useState<any>(null)
+  const [modifierFactureClient, setModifierFactureClient] = useState<any>(null)
 
   function reload() {
     fetch(`/api/ventes/${id}`).then(r => r.json()).then(v => { setVente(v); setLoading(false) })
   }
+
+  useEffect(() => { reload() }, [id])
 
   async function supprimerLivraison(livId: string) {
     if (!confirm('Supprimer cette livraison ?')) return
@@ -35,212 +44,416 @@ export default function VenteDetailPage() {
     reload()
   }
 
-  useEffect(() => { reload() }, [id])
+  async function supprimerFactureTransport(livId: string) {
+    if (!confirm('Supprimer la facture transport de cette livraison ? Elle repassera en attente de facturation.')) return
+    await fetch(`/api/livraisons/${livId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transport_facture: false, numero_facture_transport: null, date_facture_transport: null }),
+    })
+    reload()
+  }
 
-  if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin" size={32} /></div>
+  async function supprimerFactureClient(factureId: string) {
+    if (!confirm('Supprimer cette facture client ? Les livraisons concernées repasseront dans "à saisir".')) return
+    await fetch(`/api/factures/client/${factureId}`, { method: 'DELETE' })
+    reload()
+  }
+
+  async function toggleLivraisonFlag(livId: string, field: string, current: boolean) {
+    await fetch(`/api/livraisons/${livId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [field]: !current }),
+    })
+    reload()
+  }
+
+  if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-green-600" size={32} /></div>
   if (!vente || vente.error) return <div className="p-8 text-red-600">Contrat de vente introuvable.</div>
 
   const livraisons = vente.livraisons ?? []
-  const qteLivree = livraisons.filter((l: any) => l.type === 'realisee').reduce((s: number, l: any) => s + (l.quantite_reelle ?? 0), 0)
-  const reliquat = (vente.quantite ?? 0) - qteLivree
+  const qteTotale: number = vente.quantite ?? 0
+  const livre = quantiteLivree(livraisons)
+  const rel = reliquat(qteTotale, livraisons)
+  const famille = vente.contrat_achat?.famille ?? vente.produit?.famille ?? 'negoce'
+  const prefixes = getPrefixes(famille)
+  // Vente directe départ silo (pas de contrat d'achat lié) : les livraisons se
+  // gèrent ici. Sinon, elles se gèrent depuis le contrat d'achat lié (un achat
+  // peut alimenter plusieurs ventes, la logistique y est centralisée).
+  const peutGererLivraisons = !vente.contrat_achat_id
+
+  const livraisonsPlanifiees = livraisons.filter((l: any) => l.type === 'planifiee')
+  const livraisonsRealisees = livraisons
+    .filter((l: any) => l.type === 'realisee')
+    .sort((a: any, b: any) => (a.date_reelle ?? '').localeCompare(b.date_reelle ?? ''))
 
   return (
-    <div className="space-y-6 pb-10">
-      {/* Retour */}
-      <div className="flex items-center gap-3">
-        <Link href="/ventes" className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
-          <ArrowLeft size={16} /> Contrats de vente
-        </Link>
+    <div className="space-y-6 pb-10 max-w-7xl">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <Link href="/ventes" className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-2">
+            <ArrowLeft size={16} /> Retour
+          </Link>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl font-bold text-gray-900">
+              {vente.numero_contrat || <span className="italic text-gray-400 text-lg">Sans numéro</span>}
+            </h1>
+            <BadgeFamille famille={famille} />
+            <BadgeStatut statut={vente.statut} />
+            <BadgeAnnee dateStr={vente.date_debut} />
+            {vente.destination_silo && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">
+                🏚 {vente.silo_nom || 'Silo'}
+              </span>
+            )}
+          </div>
+          <p className="text-gray-500 text-sm mt-1">
+            {vente.produit?.nom} · {vente.destination_silo ? 'Stock propre' : nomEntite(vente.agriculteur)}
+          </p>
+        </div>
+        {isAdmin && (
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => setShowRelierContrat(true)} className="btn-secondary">
+              <Link2 size={15} /> {vente.contrat_achat ? 'Changer le contrat lié' : 'Lier un contrat d\'achat'}
+            </button>
+            <button onClick={() => setShowEdit(true)} className="btn-secondary">
+              <Pencil size={15} /> Modifier
+            </button>
+            {vente.statut === 'en_cours' ? (
+              <button
+                onClick={async () => {
+                  if (!confirm('Clore ce contrat de vente ?')) return
+                  await fetch(`/api/ventes/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ statut: 'clos' }) })
+                  reload()
+                }}
+                className="btn-primary"
+              >
+                <CheckCircle size={16} /> Clôturer
+              </button>
+            ) : (
+              <button
+                onClick={async () => {
+                  if (!confirm('Réouvrir ce contrat de vente ?')) return
+                  await fetch(`/api/ventes/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ statut: 'en_cours' }) })
+                  reload()
+                }}
+                className="btn-secondary"
+              >
+                <RotateCcw size={15} /> Réouvrir
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Header */}
-      <div className="card">
-        <div className="flex items-start justify-between gap-4">
+      {/* Alerte prix de vente non défini */}
+      {!vente.prix_vente && (
+        <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-5 py-3">
+          <AlertTriangle size={20} className="text-red-600 flex-shrink-0" />
           <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl font-bold" style={{ color: '#7B2820' }}>{vente.numero_contrat}</h1>
-              <BadgeStatut statut={vente.statut} />
-              <BadgeAnnee dateStr={vente.date_debut} />
-            </div>
-            <p className="text-gray-500 text-sm">Contrat de vente · {[vente.agriculteur?.civilite, vente.agriculteur?.nom].filter(Boolean).join(' ') || '—'}</p>
+            <span className="font-bold text-red-700">Prix de vente non défini.</span>
+            <span className="text-red-600 ml-1">Pensez à le renseigner via "Modifier".</span>
           </div>
-          {isAdmin && (
-            <div className="flex gap-2 flex-wrap">
-              <button onClick={() => setShowRelierContrat(true)} className="btn-secondary flex items-center gap-1.5 text-sm">
-                <Link2 size={15} /> Relier à un autre contrat
-              </button>
-              {vente.statut === 'en_cours' ? (
-                <button
-                  onClick={async () => {
-                    if (!confirm('Clore ce contrat de vente ?')) return
-                    await fetch(`/api/ventes/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ statut: 'clos' }) })
-                    reload()
-                  }}
-                  className="btn-secondary flex items-center gap-1.5 text-sm text-green-700 border-green-200 hover:bg-green-50"
-                >
-                  <CheckCircle size={15} /> Clore
-                </button>
-              ) : (
-                <button
-                  onClick={async () => {
-                    if (!confirm('Réouvrir ce contrat de vente ?')) return
-                    await fetch(`/api/ventes/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ statut: 'en_cours' }) })
-                    reload()
-                  }}
-                  className="btn-secondary flex items-center gap-1.5 text-sm"
-                >
-                  <RotateCcw size={15} /> Réouvrir
-                </button>
-              )}
-              <button onClick={() => setShowEdit(true)} className="btn-primary flex items-center gap-1.5 text-sm">
-                <Pencil size={15} /> Modifier
-              </button>
+        </div>
+      )}
+
+      {/* Informations + barre progression */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Infos contrat */}
+        <div className="lg:col-span-2 card space-y-4">
+          <h2 className="font-bold text-gray-800 text-base">Informations du contrat</h2>
+          <dl className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
+            {[
+              ['Produit', vente.produit?.nom],
+              ['Famille', famille === 'negoce' ? 'Négoce' : 'Appro'],
+              ...(vente.destination_silo ? [] : [['Agriculteur', nomEntite(vente.agriculteur)]]),
+              ['Prix vente', formatEurosParTonne(vente.prix_vente)],
+              ['Date début', formatDate(vente.date_debut)],
+              ['Date fin', formatDate(vente.date_fin)],
+            ].filter(([, v]) => v).map(([label, value]) => (
+              <div key={label as string}>
+                <dt className="text-gray-500 font-medium">{label}</dt>
+                <dd className="text-gray-900 mt-0.5">{value}</dd>
+              </div>
+            ))}
+          </dl>
+          {vente.notes && (
+            <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600 border border-gray-100">
+              {vente.notes}
             </div>
           )}
-        </div>
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-5">
-          {[
-            { label: 'Agriculteur', value: [vente.agriculteur?.civilite, vente.agriculteur?.nom].filter(Boolean).join(' ') || '—' ?? '—' },
-            { label: 'Produit', value: vente.produit?.nom ?? '—' },
-            { label: 'Quantité', value: formatTonnes(vente.quantite) },
-            { label: 'Prix vente', value: formatEurosParTonne(vente.prix_vente) },
-            ...(vente.date_debut ? [{ label: 'Date début', value: formatDate(vente.date_debut) }] : []),
-            ...(vente.date_fin ? [{ label: 'Date fin', value: formatDate(vente.date_fin) }] : []),
-          ].map(({ label, value }) => (
-            <div key={label} className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-              <p className="font-semibold text-gray-800">{value}</p>
-            </div>
-          ))}
-        </div>
-
-        {vente.notes && (
-          <div className="mt-4 bg-amber-50 border border-amber-100 rounded-lg px-4 py-2 text-sm text-amber-700">
-            📝 {vente.notes}
-          </div>
-        )}
-      </div>
-
-      {/* Contrat d'achat lié */}
-      <div className="card">
-        <h2 className="font-bold text-sm mb-3" style={{ color: '#7B2820' }}>Contrat d'achat lié</h2>
-        {vente.contrat_achat ? (
-          <div className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3">
-            <div>
-              <Link href={`/contrats/${vente.contrat_achat.id}`} className="font-semibold text-green-700 hover:underline">
-                {vente.contrat_achat.numero_contrat}
+          <div className="pt-3 border-t border-gray-100">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Contrat d'achat lié</p>
+            {vente.contrat_achat ? (
+              <Link href={`/contrats/${vente.contrat_achat.id}`} className="inline-flex items-center gap-2 text-sm flex-wrap">
+                <span className="font-semibold text-green-700 hover:underline">{vente.contrat_achat.numero_contrat}</span>
+                <span className="text-gray-500">{vente.contrat_achat.fournisseur?.nom} · {vente.contrat_achat.produit?.nom}</span>
               </Link>
-              <span className="ml-2 text-sm text-gray-500">
-                {vente.contrat_achat.fournisseur?.nom} · {vente.contrat_achat.produit?.nom} · {vente.contrat_achat.famille}
-              </span>
-            </div>
-            {isAdmin && (
-              <button onClick={() => setShowRelierContrat(true)} className="text-xs text-blue-600 hover:underline flex items-center gap-1">
-                <Link2 size={13} /> Changer
-              </button>
+            ) : (
+              <span className="text-sm text-gray-400 italic">Aucun — vente directe départ silo</span>
             )}
           </div>
-        ) : (
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-400 italic">Aucun contrat d'achat lié (départ silo)</span>
-            {isAdmin && (
-              <button onClick={() => setShowRelierContrat(true)} className="btn-secondary text-xs">
-                <Link2 size={13} /> Lier un contrat
-              </button>
-            )}
+        </div>
+
+        {/* Barre de progression */}
+        <div className="card space-y-4">
+          <h2 className="font-bold text-gray-800 text-base">Avancement</h2>
+          <div className="text-center">
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Contrat total</div>
+            <div className="text-3xl font-extrabold text-gray-900">{formatTonnes(qteTotale)}</div>
+            <div className="mt-2 text-sm text-gray-500">dont <span className="font-semibold text-gray-700">{formatTonnes(livre)}</span> livrées</div>
           </div>
-        )}
+          <ProgressBar value={livre} total={qteTotale} />
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-orange-600">{formatTonnes(rel)}</div>
+            <div className="text-xs text-orange-700 font-medium">Reliquat à livrer</div>
+          </div>
+        </div>
       </div>
 
       {/* Calendrier */}
       {livraisons.length > 0 && (
-        <CalendrierContrat livraisons={livraisons} />
+        <CalendrierContrat livraisons={livraisons} produitNom={vente.produit?.nom} />
       )}
 
-      {/* Avancement livraisons */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-sm" style={{ color: '#7B2820' }}>Livraisons</h2>
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-gray-500">
-              <span className="font-semibold text-green-700">{formatTonnes(qteLivree)}</span> livrées
-              {reliquat > 0 && <span className="ml-2 text-orange-600 font-semibold">· {formatTonnes(reliquat)} restantes</span>}
-            </div>
-            {isAdmin && !vente.contrat_achat_id && (
-              <button onClick={() => setShowAjoutLiv(true)} className="btn-primary text-xs">
-                <Plus size={14} /> Ajouter livraison
-              </button>
-            )}
-          </div>
+      {/* Planning des livraisons */}
+      <div className="card-section">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="font-bold text-gray-800">Planning des livraisons</h2>
+          {isAdmin && peutGererLivraisons && (
+            <button onClick={() => setShowAjoutLiv(true)} className="btn-primary text-xs">
+              <Plus size={14} /> Ajouter livraison planifiée
+            </button>
+          )}
         </div>
-        {!vente.contrat_achat_id && (
-          <p className="text-xs text-gray-400 mb-3">
-            Vente directe départ silo — les livraisons se gèrent ici (pas de contrat d'achat lié).
+        {!peutGererLivraisons && (
+          <p className="px-5 pt-3 text-xs text-gray-400">
+            Livraisons gérées depuis le contrat d'achat lié — <Link href={`/contrats/${vente.contrat_achat.id}`} className="text-green-700 hover:underline">{vente.contrat_achat.numero_contrat}</Link>.
           </p>
         )}
-        {livraisons.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-4">Aucune livraison</p>
-        ) : (
+
+        {/* Planifiées */}
+        {livraisonsPlanifiees.length > 0 && (
+          <div>
+            <div className="px-5 py-2 bg-orange-50 text-xs font-semibold text-orange-700 uppercase tracking-wide">
+              Planifiées ({livraisonsPlanifiees.length})
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-100 bg-gray-50/50">
+                    {['Mois prévu', 'Tonnes prévues', 'Ville enlèv.', 'Ville dest.', 'Transporteur', 'Pièce fourn.', 'Pièce client', 'Avancement', ...(peutGererLivraisons ? ['Actions'] : [])].map(h => (
+                      <th key={h} className="table-header">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {livraisonsPlanifiees.map((l: any) => (
+                    <tr key={l.id} className="table-row">
+                      <td className="table-cell font-medium">
+                        {formatDate(l.mois_prevu)}{l.note_alerte && <span className="ml-1"><AlerteNote note={l.note_alerte} size={13} /></span>}
+                      </td>
+                      <td className="table-cell">{formatTonnes(l.quantite_prevue)}</td>
+                      <td className="table-cell text-gray-500">{l.ville_chargement ?? vente.contrat_achat?.ville_chargement ?? '—'}</td>
+                      <td className="table-cell text-gray-500">{l.ville_destination ?? '—'}</td>
+                      <td className="table-cell text-gray-500">{l.transporteur?.nom ?? vente.contrat_achat?.transporteur?.nom ?? '—'}</td>
+                      <td className="table-cell text-xs">
+                        {l.piece_fournisseur_prefixe && l.piece_fournisseur_numero
+                          ? `${l.piece_fournisseur_prefixe} ${l.piece_fournisseur_numero}`
+                          : <span className="text-gray-300">{prefixes.fournisseur} —</span>}
+                      </td>
+                      <td className="table-cell text-xs">
+                        {l.piece_client_prefixe && l.piece_client_numero
+                          ? `${l.piece_client_prefixe} ${l.piece_client_numero}`
+                          : <span className="text-gray-300">{prefixes.client} —</span>}
+                      </td>
+                      <td className="table-cell">
+                        <AvancementLivraison
+                          livraison={l}
+                          isAdmin={isAdmin && peutGererLivraisons}
+                          onToggle={peutGererLivraisons ? toggleLivraisonFlag : undefined}
+                        />
+                      </td>
+                      {peutGererLivraisons && (
+                        <td className="table-cell">
+                          {isAdmin && (
+                            <div className="flex gap-1 flex-wrap">
+                              <button onClick={() => setRealiserLiv(l)} className="btn-primary text-xs py-1 px-2">Réaliser</button>
+                              <button onClick={() => setModifierLiv(l)} className="btn-secondary text-xs py-1 px-2"><Pencil size={11} /></button>
+                              <button onClick={() => supprimerLivraison(l.id)} className="btn-danger text-xs py-1 px-2"><Trash2 size={11} /></button>
+                            </div>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Réalisées */}
+        {livraisonsRealisees.length > 0 && (
+          <div className="border-t-4 border-green-200">
+            <div className="px-5 py-2.5 bg-green-600 text-xs font-bold text-white uppercase tracking-wide flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-white/70" />
+              Réalisées ({livraisonsRealisees.length})
+            </div>
+            <div className="overflow-x-auto bg-green-50/30">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-green-100 bg-green-50/60">
+                    {['Date réelle', 'Tonnes réelles', 'Ville enlèv.', 'Ville dest.', 'CMR', 'Pièce fourn.', 'Pièce client', 'Transport prévu', 'Transport réel', 'Écart', 'Facturé', ...(peutGererLivraisons ? [''] : [])].map(h => (
+                      <th key={h} className="table-header">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {livraisonsRealisees.map((l: any) => {
+                    const prevu = vente.contrat_achat?.prix_transport_prevu ?? null
+                    const ecart = ecartTransport(l.montant_transport_reel, prevu)
+                    return (
+                      <tr key={l.id} className="table-row bg-green-50/40 hover:bg-green-50/80">
+                        <td className="table-cell font-medium">
+                          {formatDate(l.date_reelle)}{l.note_alerte && <span className="ml-1"><AlerteNote note={l.note_alerte} size={13} /></span>}
+                        </td>
+                        <td className="table-cell font-semibold">{formatTonnes(l.quantite_reelle)}</td>
+                        <td className="table-cell text-gray-500">{l.ville_chargement ?? '—'}</td>
+                        <td className="table-cell text-gray-500">{l.ville_destination ?? '—'}</td>
+                        <td className="table-cell">
+                          {l.numero_lettre_voiture
+                            ? <span className="badge-clos text-xs">{l.numero_lettre_voiture}</span>
+                            : <span className="badge-alerte text-xs">Manquant</span>}
+                        </td>
+                        <td className="table-cell text-xs">
+                          {l.piece_fournisseur_prefixe && l.piece_fournisseur_numero ? `${l.piece_fournisseur_prefixe} ${l.piece_fournisseur_numero}` : '—'}
+                        </td>
+                        <td className="table-cell text-xs">
+                          {l.piece_client_prefixe && l.piece_client_numero ? `${l.piece_client_prefixe} ${l.piece_client_numero}` : '—'}
+                        </td>
+                        <td className="table-cell text-xs text-gray-500">{prevu != null ? formatEurosParTonne(prevu) : '—'}</td>
+                        <td className="table-cell text-xs">{l.montant_transport_reel != null ? formatEurosParTonne(l.montant_transport_reel) : '—'}</td>
+                        <td className="table-cell">
+                          {ecart != null && (
+                            <span className={`text-xs font-bold ${ecart <= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {ecart >= 0 ? '+' : ''}{formatEurosParTonne(ecart)}
+                            </span>
+                          )}
+                        </td>
+                        <td className="table-cell">
+                          {l.transport_facture ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="badge-clos text-xs">✓</span>
+                              {isAdmin && peutGererLivraisons && (
+                                <button onClick={() => supprimerFactureTransport(l.id)} className="text-gray-300 hover:text-red-500 transition-colors p-0.5 rounded" title="Supprimer la facture transport">
+                                  <Trash2 size={12} />
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="badge-en_cours text-xs">Non</span>
+                          )}
+                        </td>
+                        {peutGererLivraisons && (
+                          <td className="table-cell">
+                            {isAdmin && (
+                              <div className="flex gap-1">
+                                <button onClick={() => setModifierLivRealisee(l)} className="btn-secondary text-xs py-1 px-2"><Pencil size={11} /></button>
+                                <button onClick={() => supprimerLivraison(l.id)} className="btn-danger text-xs py-1 px-2"><Trash2 size={11} /></button>
+                              </div>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {(livraisonsPlanifiees.length === 0 && livraisonsRealisees.length === 0) && (
+          <div className="px-5 py-8 text-center text-gray-400 text-sm">Aucune livraison enregistrée</div>
+        )}
+      </div>
+
+      {/* Chiffres clés */}
+      {(() => {
+        const facturesClient = vente.factures_client ?? []
+        const caClient = facturesClient.reduce((s: number, f: any) => s + (f.montant_ht ?? 0), 0)
+        const coutTransport = livraisonsRealisees.reduce((s: number, l: any) => s + (l.montant_transport_reel ?? 0) * (l.quantite_reelle ?? 0), 0)
+        if (caClient === 0 && coutTransport === 0) return null
+        return (
+          <div className="card">
+            <h2 className="font-bold text-gray-800 text-base mb-4">Chiffres clés</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-green-50 border border-green-100 rounded-xl p-3 text-center">
+                <p className="text-xs text-green-600 font-medium mb-1">CA client (HT)</p>
+                <p className="text-lg font-bold text-green-700">{caClient > 0 ? formatEuros(caClient) : <span className="text-gray-300 text-sm">Non facturé</span>}</p>
+              </div>
+              <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-center">
+                <p className="text-xs text-amber-600 font-medium mb-1">Coût transport</p>
+                <p className="text-lg font-bold text-amber-700">{coutTransport > 0 ? formatEuros(coutTransport) : <span className="text-gray-300 text-sm">—</span>}</p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 mt-3">
+              Ne comprend pas le coût fournisseur — réparti sur plusieurs ventes le cas échéant, il ne peut être isolé à ce niveau. Voir le contrat d'achat lié pour la marge complète.
+            </p>
+          </div>
+        )
+      })()}
+
+      {/* Factures client */}
+      <div className="card-section">
+        <div className="px-5 py-4 border-b border-gray-100">
+          <h2 className="font-bold text-gray-800">Factures client</h2>
+        </div>
+        <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-100">
-                {['Statut', 'Mois prévu', 'Date / Semaine', 'Enlèvement', 'Destination', 'Transporteur', 'Tonnes', 'CMR', ...(vente.contrat_achat_id ? [] : ['Actions'])].map(h => (
+              <tr className="border-b border-gray-100 bg-gray-50/50">
+                {['N° Facture', 'Date facture', 'Montant HT', 'Montant TTC', 'Mode paiement', 'Date paiement', ''].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {livraisons.map((l: any) => (
-                <tr key={l.id} className="table-row">
+              {(vente.factures_client ?? []).length === 0 && (
+                <tr><td colSpan={7} className="px-4 py-6 text-center text-gray-400 text-sm">
+                  {livraisonsRealisees.length > 0
+                    ? <span className="text-orange-500 font-medium">⚠️ Des livraisons réalisées n'ont pas encore de facture</span>
+                    : 'Aucune facture'}
+                </td></tr>
+              )}
+              {(vente.factures_client ?? []).map((f: any) => (
+                <tr key={f.id} className="table-row">
+                  <td className="table-cell font-medium">{f.numero_facture_logiciel ?? '—'}</td>
+                  <td className="table-cell">{formatDate(f.date_facture)}</td>
+                  <td className="table-cell">{formatEuros(f.montant_ht)}</td>
+                  <td className="table-cell font-semibold">{formatEuros(f.montant_ttc)}</td>
+                  <td className="table-cell">{f.mode_paiement ?? '—'}</td>
+                  <td className="table-cell">{formatDate(f.date_paiement)}</td>
                   <td className="table-cell">
-                    {l.type === 'realisee'
-                      ? <span className="badge-clos text-xs">Réalisée</span>
-                      : <span className="badge-en_cours text-xs">Planifiée</span>}
-                  </td>
-                  <td className="table-cell text-sm">{l.mois_prevu ? new Date(l.mois_prevu).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—'}</td>
-                  <td className="table-cell text-sm">
-                    {l.type === 'realisee'
-                      ? formatDate(l.date_reelle)
-                      : <AvancementLivraison livraison={l} />}
-                  </td>
-                  <td className="table-cell text-sm">{l.ville_chargement ?? '—'}</td>
-                  <td className="table-cell text-sm">{l.ville_destination ?? '—'}</td>
-                  <td className="table-cell text-sm">{l.transporteur?.nom ?? '—'}</td>
-                  <td className="table-cell font-semibold">{formatTonnes(l.type === 'realisee' ? l.quantite_reelle : l.quantite_prevue)}</td>
-                  <td className="table-cell">
-                    {l.type === 'realisee'
-                      ? l.numero_lettre_voiture
-                        ? <span className="badge-clos text-xs">{l.numero_lettre_voiture}</span>
-                        : <span className="badge-alerte text-xs">Manquant</span>
-                      : <span className="text-gray-400 text-xs">—</span>}
-                  </td>
-                  {!vente.contrat_achat_id && (
-                    <td className="table-cell">
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => setModifierFactureClient(f)} className="text-gray-300 hover:text-blue-500 transition-colors p-1 rounded" title="Modifier cette facture">
+                        <Pencil size={14} />
+                      </button>
                       {isAdmin && (
-                        <div className="flex gap-1 flex-wrap">
-                          {l.type === 'planifiee' && (
-                            <>
-                              <button onClick={() => setRealiserLiv(l)} className="btn-primary text-xs py-1 px-2">
-                                Réaliser
-                              </button>
-                              <button onClick={() => setModifierLiv(l)} className="btn-secondary text-xs py-1 px-2">
-                                <Pencil size={12} />
-                              </button>
-                            </>
-                          )}
-                          <button onClick={() => supprimerLivraison(l.id)} className="btn-danger text-xs py-1 px-2">
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
+                        <button onClick={() => supprimerFactureClient(f.id)} className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded" title="Supprimer cette facture">
+                          <Trash2 size={14} />
+                        </button>
                       )}
-                    </td>
-                  )}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
+        </div>
       </div>
 
       {/* Modals */}
@@ -267,6 +480,21 @@ export default function VenteDetailPage() {
           contrat={contratSyntheticFromVente(vente)}
           onClose={() => setModifierLiv(null)}
           onSaved={() => { setModifierLiv(null); reload() }}
+        />
+      )}
+      {modifierLivRealisee && (
+        <ModifierLivraisonRealiseeModal
+          livraison={modifierLivRealisee}
+          contrat={contratSyntheticFromVente(vente)}
+          onClose={() => setModifierLivRealisee(null)}
+          onSaved={() => { setModifierLivRealisee(null); reload() }}
+        />
+      )}
+      {modifierFactureClient && (
+        <ModifierFactureClientModal
+          facture={modifierFactureClient}
+          onClose={() => setModifierFactureClient(null)}
+          onSaved={() => { setModifierFactureClient(null); reload() }}
         />
       )}
     </div>
@@ -395,7 +623,7 @@ function RelierContratModal({ vente, onClose, onSaved }: { vente: any; onClose: 
     <Modal title="Relier à un contrat d'achat" onClose={onClose} size="md">
       <form onSubmit={submit} className="space-y-4">
         <div className="bg-blue-50 border border-blue-100 rounded-lg px-4 py-2 text-sm text-blue-700 mb-2">
-          Contrat de vente : <strong>{vente.numero_contrat}</strong> · {[vente.agriculteur?.civilite, vente.agriculteur?.nom].filter(Boolean).join(' ') || '—'}
+          Contrat de vente : <strong>{vente.numero_contrat}</strong> · {nomEntite(vente.agriculteur)}
         </div>
         <div>
           <label className="label">Contrat d'achat à lier</label>

@@ -11,10 +11,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       agriculteur:agriculteurs(*),
       produit:produits(*),
       contrat_achat:contrats_achat(
-        id, numero_contrat, famille,
+        id, numero_contrat, famille, ville_chargement, prix_transport_prevu,
         produit:produits(nom),
         fournisseur:fournisseurs(nom),
-        transporteur:transporteurs(nom)
+        transporteur:transporteurs(id,nom,telephone)
       ),
       livraisons(
         id, type, mois_prevu, date_prevue, date_reelle, semaine_prevue,
@@ -26,7 +26,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         montant_transport_reel, transport_facture, numero_mise_a_disposition, note_alerte,
         agriculteur_contacte, date_souhaitee, semaine_souhaitee, pdf_envoye
       ),
-      factures_client(id, numero_facture_logiciel, montant_ht, montant_ttc, mode_paiement, date_paiement)
+      factures_client(id, numero_facture_logiciel, date_facture, montant_ht, montant_ttc, mode_paiement, date_paiement)
     `)
     .eq('id', params.id)
     .single()
