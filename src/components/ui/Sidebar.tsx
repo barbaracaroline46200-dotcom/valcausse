@@ -3,7 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, FileText, ShoppingCart, Truck, BookOpen, Search, LogOut, ShieldCheck, Eye, BarChart2, CalendarDays, FileWarning, Receipt, Archive, CreditCard, Printer
+  LayoutDashboard, FileText, ShoppingCart, Truck, BookOpen, Search, LogOut, ShieldCheck, Eye, BarChart2, CalendarDays, FileWarning, Receipt, Archive, CreditCard, Printer, AlertTriangle
 } from 'lucide-react'
 import { useAdmin } from './AdminProvider'
 import { cn } from '@/lib/utils'
@@ -84,6 +84,7 @@ export default function Sidebar() {
         <SectionLabel label="Facturation" />
         <NavItem href="/facturation"   label="En attente"        icon={<CreditCard size={18} />}      active={active('/facturation')} badge={counts.facturation > 0 ? counts.facturation : undefined} badgeColor="#448ab5" />
         <NavItem href="/rf"            label="RF à récupérer"    icon={<FileWarning size={18} />}     active={active('/rf')}          badge={counts.rf > 0 ? counts.rf : undefined}                   badgeColor="#dc2626" />
+        <NavItem href="/controle-facturation" label="Contrôle facturation" icon={<AlertTriangle size={18} />} active={active('/controle-facturation')} />
 
         {/* TRANSPORT */}
         <SectionLabel label="Transport" />
