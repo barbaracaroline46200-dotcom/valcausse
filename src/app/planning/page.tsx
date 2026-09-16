@@ -309,8 +309,9 @@ export default function PlanningPage() {
     for (const contractKey of blockOrder) {
       const block = blocks.get(contractKey)!
       const buyers = Array.from(block.buyers.values())
+      const blockIsSilo = buyers[0]?.isSilo ?? false
       buyers.forEach((g, i) => {
-        flat.push({ ...g, ca: block.ca, isFirstOfBlock: i === 0, isLastOfBlock: i === buyers.length - 1, blockBuyerCount: buyers.length })
+        flat.push({ ...g, ca: block.ca, isFirstOfBlock: i === 0, isLastOfBlock: i === buyers.length - 1, blockBuyerCount: buyers.length, blockIsSilo })
       })
     }
     return flat
@@ -435,7 +436,7 @@ export default function PlanningPage() {
                 </tr>
               )}
               {planningRows.map((g) => {
-                const rowSty = rowStyle(g.ca.famille, g.isSilo)
+                const rowSty = rowStyle(g.ca.famille, g.blockIsSilo)
                 const transporteurLabel = [...g.transporteurs].join(' / ')
                 const etat = g.realiseeCount === g.total
                   ? 'livre'
