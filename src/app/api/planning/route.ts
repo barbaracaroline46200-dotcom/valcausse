@@ -24,6 +24,7 @@ export async function GET() {
         numero_contrat,
         statut,
         famille,
+        quantite_totale,
         produit:produits(nom),
         fournisseur:fournisseurs(nom),
         transporteur:transporteurs(nom)
@@ -31,6 +32,7 @@ export async function GET() {
       contrat_vente:contrats_vente(
         id,
         numero_contrat,
+        quantite,
         destination_silo,
         silo_nom,
         agriculteur:agriculteurs(civilite,nom)

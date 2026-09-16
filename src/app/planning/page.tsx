@@ -42,7 +42,7 @@ function familleColor(famille: string) {
 }
 
 // Colonnes fixes (gelées) : État, Céréale, N° Contrat, Fournisseur, N° Contrat V., Agriculteur, Transporteur
-const FROZEN_WIDTHS = [80, 144, 128, 128, 128, 176, 128]
+const FROZEN_WIDTHS = [80, 144, 180, 128, 160, 176, 128]
 const FROZEN_LEFTS = FROZEN_WIDTHS.reduce<number[]>((acc, w, i) => {
   acc.push(i === 0 ? 0 : acc[i - 1] + FROZEN_WIDTHS[i - 1])
   return acc
@@ -492,6 +492,9 @@ export default function PlanningPage() {
                             ? <Link href={`/contrats/${g.ca.id}`} className="font-semibold hover:underline" style={{ color: familleColor(g.ca.famille) }}>{g.ca.numero_contrat}</Link>
                             : (g.ca.numero_contrat ?? '—')
                           }
+                          {typeof g.ca.quantite_totale === 'number' && (
+                            <span className="text-gray-400 font-normal"> ({formatT(g.ca.quantite_totale)})</span>
+                          )}
                           {g.blockBuyerCount > 1 && (
                             <span className="ml-1.5 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-white text-[9px] font-bold align-middle" style={{ backgroundColor: '#7B2820' }} title={`${g.blockBuyerCount} acheteurs sur ce contrat`}>
                               {g.blockBuyerCount}
@@ -503,7 +506,12 @@ export default function PlanningPage() {
                     )}
                     <td className="px-3 py-2 font-mono text-gray-600 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(4, rowSty.backgroundColor)}>
                       {g.cv?.id && g.cv?.numero_contrat
-                        ? <Link href={`/ventes/${g.cv.id}`} className="text-gray-600 hover:underline hover:text-gray-800">{g.cv.numero_contrat}</Link>
+                        ? <>
+                            <Link href={`/ventes/${g.cv.id}`} className="text-gray-600 hover:underline hover:text-gray-800">{g.cv.numero_contrat}</Link>
+                            {typeof g.cv.quantite === 'number' && (
+                              <span className="text-gray-400"> ({formatT(g.cv.quantite)})</span>
+                            )}
+                          </>
                         : g.cv?.numero_contrat ? g.cv.numero_contrat : <span className="text-gray-300">—</span>
                       }
                     </td>
