@@ -146,3 +146,85 @@ export function filtrerLignes(rows: LigneControle[], f: FiltresControle): LigneC
     return true
   })
 }
+
+/** Prix par défaut utilisé pour estimer une livraison planifiée dont le contrat
+ *  n'a pas encore de prix d'achat fixé (contrat en cours de négociation). */
+export const PRIX_PAR_DEFAUT = 30
+
+export interface LignePrevisionnelle {
+  id: string
+  moisPrevu: string | null
+  quantitePrevue: number | null
+  produit: string
+  numeroContrat: string
+  contratId: string | null
+  fournisseur: string
+  prixUnitaireEstime: number
+  prixEstimeParDefaut: boolean
+  montantEstime: number
+}
+
+/** Estimation du montant fournisseur encore à venir : livraisons planifiées
+ *  (non réalisées) d'un contrat d'achat, valorisées au prix du contrat + MBM
+ *  si applicable, ou à un prix par défaut de 30€/t si le contrat n'a pas
+ *  encore de prix fixé. Reprend le calcul de majoration de l'API dashboard. */
+export async function getPrevisionnelFournisseur(supabase: SupabaseClient): Promise<LignePrevisionnelle[]> {
+  const { data: majorationsRaw } = await supabase
+    .from('majorations_negoce')
+    .select('produit_id,date_debut,valeur')
+    .order('date_debut', { ascending: true })
+  const majorationsParProduit = new Map<string, { date_debut: string; valeur: number }[]>()
+  for (const m of (majorationsRaw ?? []) as any[]) {
+    const arr = majorationsParProduit.get(m.produit_id) ?? []
+    arr.push({ date_debut: m.date_debut, valeur: Number(m.valeur) })
+    majorationsParProduit.set(m.produit_id, arr)
+  }
+  function calcMajoration(ca: any, dateRef: string | null): number {
+    if (!ca?.mbm_autorise || ca.famille !== 'negoce' || !dateRef) return 0
+    const paliers = majorationsParProduit.get(ca.produit_id)
+    if (!paliers) return 0
+    let valeur = 0
+    for (const p of paliers) {
+      if (p.date_debut > dateRef) break
+      valeur = p.valeur
+    }
+    return valeur
+  }
+
+  const { data } = await supabase
+    .from('livraisons')
+    .select(`
+      id, mois_prevu, date_prevue, quantite_prevue, contrat_achat_id,
+      contrat_achat:contrats_achat(
+        id, numero_contrat, famille, prix_achat, mbm_autorise, produit_id,
+        produit:produits(nom),
+        fournisseur:fournisseurs(nom)
+      )
+    `)
+    .eq('type', 'planifiee')
+
+  return ((data ?? []) as any[])
+    .filter(l => l.contrat_achat_id)
+    .map(l => {
+      const ca = l.contrat_achat
+      const dateRef: string | null = l.date_prevue ?? l.mois_prevu ?? null
+      const prixEstimeParDefaut = ca?.prix_achat == null
+      const prixBase = ca?.prix_achat ?? PRIX_PAR_DEFAUT
+      const majoration = calcMajoration(ca, dateRef)
+      const prixUnitaireEstime = prixBase + majoration
+      const quantite = l.quantite_prevue ?? 0
+      return {
+        id: l.id,
+        moisPrevu: l.mois_prevu,
+        quantitePrevue: l.quantite_prevue,
+        produit: ca?.produit?.nom ?? '—',
+        numeroContrat: ca?.numero_contrat ?? '—',
+        contratId: ca?.id ?? null,
+        fournisseur: ca?.fournisseur?.nom ?? '—',
+        prixUnitaireEstime,
+        prixEstimeParDefaut,
+        montantEstime: quantite * prixUnitaireEstime,
+      }
+    })
+    .sort((a, b) => (a.moisPrevu ?? '9999-99').localeCompare(b.moisPrevu ?? '9999-99'))
+}

@@ -1,11 +1,11 @@
 'use client'
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { Loader2, CalendarRange, Download, AlertTriangle, ChevronUp, ChevronDown, X } from 'lucide-react'
+import { Loader2, CalendarRange, Download, AlertTriangle, ChevronUp, ChevronDown, X, TrendingUp } from 'lucide-react'
 import {
-  trierLignes, filtrerLignes, STATUTS,
-  type TriChamp, type Ordre, type FiltresControle, type LigneControle, type StatutFacturation,
+  trierLignes, filtrerLignes, STATUTS, PRIX_PAR_DEFAUT,
+  type TriChamp, type Ordre, type FiltresControle, type LigneControle, type StatutFacturation, type LignePrevisionnelle,
 } from '@/lib/controle-facturation'
-import { formatDate, formatTonnes } from '@/lib/annee-agricole'
+import { formatDate, formatTonnes, formatEuros } from '@/lib/annee-agricole'
 
 const ROUGE = '#dc2626'
 
@@ -33,6 +33,16 @@ export default function ControleFacturationPage() {
   const [dateFin, setDateFin] = useState(todayISO())
   const [lignes, setLignes] = useState<LigneControle[]>([])
   const [loading, setLoading] = useState(true)
+
+  const [previsionnel, setPrevisionnel] = useState<LignePrevisionnelle[]>([])
+  const [previsionnelOuvert, setPrevisionnelOuvert] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/controle-facturation/previsionnel')
+      .then(r => r.json())
+      .then(d => setPrevisionnel(Array.isArray(d) ? d : []))
+      .catch(() => {})
+  }, [])
 
   const [tri, setTri] = useState<TriChamp>('date')
   const [ordre, setOrdre] = useState<Ordre>('asc')
@@ -131,6 +141,70 @@ export default function ControleFacturationPage() {
           </a>
         </div>
       </div>
+
+      {/* Prévisionnel — livraisons planifiées pas encore réalisées, valorisées à titre indicatif */}
+      {previsionnel.length > 0 && (() => {
+        const totalTonnes = previsionnel.reduce((s, l) => s + (l.quantitePrevue ?? 0), 0)
+        const totalMontant = previsionnel.reduce((s, l) => s + l.montantEstime, 0)
+        const nbPrixParDefaut = previsionnel.filter(l => l.prixEstimeParDefaut).length
+        return (
+          <div className="card border-2" style={{ borderColor: '#bbf7d0' }}>
+            <button
+              onClick={() => setPrevisionnelOuvert(v => !v)}
+              className="w-full flex items-center justify-between gap-3 flex-wrap text-left"
+            >
+              <div className="flex items-center gap-2">
+                <TrendingUp size={18} className="text-green-600" />
+                <span className="font-bold text-gray-800">Prévisionnel — livraisons à venir</span>
+                <span className="text-xs text-gray-400">({previsionnel.length})</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-gray-500">{formatTonnes(totalTonnes)}</span>
+                <span className="text-lg font-bold text-green-700">≈ {formatEuros(totalMontant)}</span>
+                {previsionnelOuvert ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+              </div>
+            </button>
+            <p className="text-xs text-gray-400 mt-1.5">
+              Estimation à titre indicatif : prix du contrat (+ MBM si applicable){nbPrixParDefaut > 0 ? `, ou ${PRIX_PAR_DEFAUT}€/t par défaut pour ${nbPrixParDefaut} livraison${nbPrixParDefaut > 1 ? 's' : ''} dont le prix d'achat n'est pas encore fixé` : ''}.
+            </p>
+            {previsionnelOuvert && (
+              <div className="overflow-auto mt-3 -mx-1">
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b border-gray-100 bg-gray-50">
+                    <Th>Mois prévu</Th>
+                    <Th>Fournisseur</Th>
+                    <Th>Produit</Th>
+                    <Th>Contrat</Th>
+                    <Th className="text-right">Quantité</Th>
+                    <Th className="text-right">Prix estimé</Th>
+                    <Th className="text-right">Montant estimé</Th>
+                  </tr></thead>
+                  <tbody>
+                    {previsionnel.map(l => (
+                      <tr key={l.id} className="table-row">
+                        <td className="table-cell">{l.moisPrevu ? formatDate(l.moisPrevu) : '—'}</td>
+                        <td className="table-cell">{l.fournisseur}</td>
+                        <td className="table-cell font-medium">{l.produit}</td>
+                        <td className="table-cell">
+                          {l.contratId
+                            ? <a href={`/contrats/${l.contratId}`} className="text-green-700 hover:underline">{l.numeroContrat}</a>
+                            : l.numeroContrat}
+                        </td>
+                        <td className="table-cell text-right font-semibold">{formatTonnes(l.quantitePrevue ?? 0)}</td>
+                        <td className="table-cell text-right text-gray-500">
+                          {l.prixUnitaireEstime.toFixed(2)} €/t
+                          {l.prixEstimeParDefaut && <span className="ml-1 text-amber-600" title="Prix d'achat non fixé — estimation par défaut">*</span>}
+                        </td>
+                        <td className="table-cell text-right font-semibold">{formatEuros(l.montantEstime)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Compteurs par statut, cliquables pour filtrer */}
       <div className="flex items-center gap-2 flex-wrap">
