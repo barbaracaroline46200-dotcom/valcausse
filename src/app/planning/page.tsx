@@ -249,6 +249,50 @@ export default function PlanningPage() {
     return result
   }, [filtered, filtMois])
 
+  // Un contrat livré en plusieurs fois a plusieurs lignes "livraisons" (une par mois,
+  // parfois plusieurs par mois) — on les regroupe ici sur une seule ligne du tableau,
+  // avec une marque par mois concerné, au lieu d'une ligne quasi-identique par livraison.
+  const groupedRows = useMemo(() => {
+    const map = new Map<string, any>()
+    for (const row of filtered) {
+      const ca = row.contrat_achat ?? {}
+      const cv = row.contrat_vente ?? null
+      const key = `${row.contrat_achat_id ?? 'noca'}|${row.contrat_vente_id ?? cv?.id ?? 'nocv'}`
+      let g = map.get(key)
+      if (!g) {
+        g = {
+          key, ca, cv,
+          isSilo: !!cv?.destination_silo,
+          clientNom: getClientNom(row),
+          transporteurs: new Set<string>(),
+          marks: new Map<string, { nbRealisee: number; qtyRealisee: number; nbPlanifiee: number; qtyPlanifiee: number }>(),
+          total: 0,
+          realiseeCount: 0,
+          anyTransporteurContacte: false,
+        }
+        map.set(key, g)
+      }
+      g.transporteurs.add(row.transporteur?.nom ?? ca.transporteur?.nom ?? '—')
+      g.total++
+      if (row.type === 'realisee') g.realiseeCount++
+      if (row.transporteur_contacte) g.anyTransporteurContacte = true
+
+      const k = rowMoisKey(row)
+      if (k) {
+        const m = g.marks.get(k) ?? { nbRealisee: 0, qtyRealisee: 0, nbPlanifiee: 0, qtyPlanifiee: 0 }
+        if (row.type === 'realisee') {
+          m.nbRealisee++
+          m.qtyRealisee += Number(row.quantite_reelle) || 0
+        } else {
+          m.nbPlanifiee++
+          m.qtyPlanifiee += Number(row.quantite_prevue) || 0
+        }
+        g.marks.set(k, m)
+      }
+    }
+    return Array.from(map.values())
+  }, [filtered])
+
   // Au premier chargement, positionner le scroll horizontal sur le mois en cours
   useEffect(() => {
     if (loading || didAutoScroll.current || !scrollRef.current) return
@@ -313,6 +357,10 @@ export default function PlanningPage() {
           <Clock size={14} className="text-orange-500" />
           À organiser
         </span>
+        <span className="flex items-center gap-1.5">
+          <CheckCircle2 size={14} className="text-amber-600" />
+          Partiellement livrée
+        </span>
         <span className="text-gray-300">|</span>
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: '#fdf5f3', border: '2px solid #7B2820' }} />
@@ -356,77 +404,87 @@ export default function PlanningPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 && (
+              {groupedRows.length === 0 && (
                 <tr>
                   <td colSpan={7 + moisRange.length} className="px-4 py-10 text-center text-gray-400">
                     Aucune livraison planifiée correspondant aux filtres
                   </td>
                 </tr>
               )}
-              {filtered.map((row) => {
-                const ca = row.contrat_achat ?? {}
-                const cv = row.contrat_vente ?? null
-                const isSilo = !!cv?.destination_silo
-                const clientNom = getClientNom(row)
-                const moisRow = rowMoisKey(row)
-                const isRealisee = row.type === 'realisee'
-
-                const rowSty = rowStyle(ca.famille, isSilo)
+              {groupedRows.map((g) => {
+                const rowSty = rowStyle(g.ca.famille, g.isSilo)
+                const transporteurLabel = [...g.transporteurs].join(' / ')
+                const etat = g.realiseeCount === g.total
+                  ? 'livre'
+                  : g.realiseeCount === 0
+                    ? (g.anyTransporteurContacte ? 'planifie' : 'a_organiser')
+                    : 'partiel'
 
                 return (
                   <tr
-                    key={row.id}
+                    key={g.key}
                     className="border-b border-gray-100 hover:brightness-95 transition-all"
                     style={rowSty}
                   >
                     <td className="px-3 py-2 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(0, rowSty.backgroundColor, { borderLeft: rowSty.borderLeft })}>
-                      {isRealisee
-                        ? <span className="flex items-center gap-1 text-green-700 font-semibold text-[11px]">
-                            <CheckCircle2 size={14} className="text-green-600 flex-shrink-0" />
-                            Livré
-                          </span>
-                        : row.transporteur_contacte
-                          ? <span className="flex items-center gap-1 text-blue-700 font-semibold text-[11px]">
-                              <CalendarCheck size={14} className="text-blue-600 flex-shrink-0" />
-                              Planifié
-                            </span>
-                          : <span className="flex items-center gap-1 text-orange-600 font-semibold text-[11px]">
-                              <Clock size={14} className="text-orange-500 flex-shrink-0" />
-                              À organiser
-                            </span>
-                      }
+                      {etat === 'livre' && (
+                        <span className="flex items-center gap-1 text-green-700 font-semibold text-[11px]">
+                          <CheckCircle2 size={14} className="text-green-600 flex-shrink-0" />
+                          Livré
+                        </span>
+                      )}
+                      {etat === 'planifie' && (
+                        <span className="flex items-center gap-1 text-blue-700 font-semibold text-[11px]">
+                          <CalendarCheck size={14} className="text-blue-600 flex-shrink-0" />
+                          Planifié
+                        </span>
+                      )}
+                      {etat === 'a_organiser' && (
+                        <span className="flex items-center gap-1 text-orange-600 font-semibold text-[11px]">
+                          <Clock size={14} className="text-orange-500 flex-shrink-0" />
+                          À organiser
+                        </span>
+                      )}
+                      {etat === 'partiel' && (
+                        <span className="flex items-center gap-1 text-amber-700 font-semibold text-[11px]" title={`${g.realiseeCount} livraison${g.realiseeCount > 1 ? 's' : ''} réalisée${g.realiseeCount > 1 ? 's' : ''} sur ${g.total}`}>
+                          <CheckCircle2 size={14} className="text-amber-600 flex-shrink-0" />
+                          {g.realiseeCount}/{g.total} livrées
+                        </span>
+                      )}
                     </td>
-                    <td className="px-3 py-2 font-medium text-gray-800 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(1, rowSty.backgroundColor)}>{ca.produit?.nom ?? '—'}</td>
-                    <td className="px-3 py-2 font-mono text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(2, rowSty.backgroundColor)}>{ca.numero_contrat ?? '—'}</td>
-                    <td className="px-3 py-2 text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(3, rowSty.backgroundColor)}>{ca.fournisseur?.nom ?? '—'}</td>
+                    <td className="px-3 py-2 font-medium text-gray-800 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(1, rowSty.backgroundColor)}>{g.ca.produit?.nom ?? '—'}</td>
+                    <td className="px-3 py-2 font-mono text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(2, rowSty.backgroundColor)}>{g.ca.numero_contrat ?? '—'}</td>
+                    <td className="px-3 py-2 text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(3, rowSty.backgroundColor)}>{g.ca.fournisseur?.nom ?? '—'}</td>
                     <td className="px-3 py-2 font-mono text-gray-600 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(4, rowSty.backgroundColor)}>
-                      {cv?.numero_contrat ? cv.numero_contrat : <span className="text-gray-300">—</span>}
+                      {g.cv?.numero_contrat ? g.cv.numero_contrat : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(5, rowSty.backgroundColor)}>
-                      {isSilo
-                        ? <span className="font-semibold" style={{ color: '#C8941A' }}>{clientNom}</span>
-                        : <span className="text-gray-800">{clientNom}</span>
+                      {g.isSilo
+                        ? <span className="font-semibold" style={{ color: '#C8941A' }}>{g.clientNom}</span>
+                        : <span className="text-gray-800">{g.clientNom}</span>
                       }
                     </td>
-                    <td className="px-3 py-2 text-gray-600 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(6, rowSty.backgroundColor)}>{row.transporteur?.nom ?? ca.transporteur?.nom ?? '—'}</td>
-                    {moisRange.map(k => (
-                      <td key={k} className="px-2 py-2 text-center">
-                        {moisRow === k
-                          ? isRealisee
-                            ? <span
-                                className="inline-flex items-center justify-center w-6 h-6 rounded font-bold text-white text-[11px]"
-                                style={{ backgroundColor: '#15803d' }}
-                                title={`Réalisée — ${row.quantite_reelle ?? '?'} t`}
-                              >✓</span>
-                            : <span
-                                className="inline-flex items-center justify-center w-6 h-6 rounded font-bold text-white text-[11px]"
-                                style={{ backgroundColor: ca.famille === 'negoce' ? '#7B2820' : '#2a5570' }}
-                                title={`Planifiée — ${row.quantite_prevue ?? '?'} t`}
-                              >✕</span>
-                          : null
-                        }
-                      </td>
-                    ))}
+                    <td className="px-3 py-2 text-gray-600 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(6, rowSty.backgroundColor)} title={transporteurLabel}>{transporteurLabel || '—'}</td>
+                    {moisRange.map(k => {
+                      const m = g.marks.get(k)
+                      return (
+                        <td key={k} className="px-2 py-2 text-center">
+                          {m && m.nbRealisee > 0 ? (
+                            <span
+                              className="inline-flex items-center justify-center w-6 h-6 rounded font-bold text-white text-[11px]"
+                              style={{ backgroundColor: '#15803d' }}
+                              title={`Réalisée — ${formatT(m.qtyRealisee)}${m.nbRealisee > 1 ? ` (${m.nbRealisee} livraisons)` : ''}`}
+                            >✓</span>
+                          ) : m && m.nbPlanifiee > 0 ? (
+                            <span
+                              className="inline-flex items-center justify-center w-6 h-6 rounded font-bold text-white text-[11px]"
+                              style={{ backgroundColor: g.ca.famille === 'negoce' ? '#7B2820' : '#2a5570' }}
+                              title={`Planifiée — ${formatT(m.qtyPlanifiee)}${m.nbPlanifiee > 1 ? ` (${m.nbPlanifiee} livraisons)` : ''}`}
+                            >✕</span>
+                          ) : null}
+                        </td>
+                      )
+                    })}
                   </tr>
                 )
               })}
