@@ -249,19 +249,33 @@ export default function PlanningPage() {
     return result
   }, [filtered, filtMois])
 
-  // Un contrat livré en plusieurs fois a plusieurs lignes "livraisons" (une par mois,
-  // parfois plusieurs par mois) — on les regroupe ici sur une seule ligne du tableau,
-  // avec une marque par mois concerné, au lieu d'une ligne quasi-identique par livraison.
-  const groupedRows = useMemo(() => {
-    const map = new Map<string, any>()
+  // Un même contrat d'achat peut être livré à plusieurs acheteurs (agriculteurs/silos)
+  // différents, chacun avec son propre calendrier de livraisons. On regroupe d'abord par
+  // contrat (bloc), puis par acheteur à l'intérieur de ce bloc (une ligne par acheteur,
+  // une marque par mois concerné) — le bloc est ensuite affiché avec Céréale/N° Contrat/
+  // Fournisseur fusionnés sur ses lignes, pour que "ce contrat a 2 acheteurs" saute aux
+  // yeux au lieu de deux lignes identiques perdues ailleurs dans le tableau.
+  const planningRows = useMemo(() => {
+    const blocks = new Map<string, { ca: any; buyers: Map<string, any> }>()
+    const blockOrder: string[] = []
+
     for (const row of filtered) {
       const ca = row.contrat_achat ?? {}
       const cv = row.contrat_vente ?? null
-      const key = `${row.contrat_achat_id ?? 'noca'}|${row.contrat_vente_id ?? cv?.id ?? 'nocv'}`
-      let g = map.get(key)
+      const contractKey = row.contrat_achat_id ?? `nv:${row.contrat_vente_id ?? cv?.id ?? row.id}`
+      let block = blocks.get(contractKey)
+      if (!block) {
+        block = { ca, buyers: new Map() }
+        blocks.set(contractKey, block)
+        blockOrder.push(contractKey)
+      }
+
+      const buyerKey = `${row.contrat_vente_id ?? cv?.id ?? 'nocv'}`
+      let g = block.buyers.get(buyerKey)
       if (!g) {
         g = {
-          key, ca, cv,
+          key: `${contractKey}|${buyerKey}`,
+          cv,
           isSilo: !!cv?.destination_silo,
           clientNom: getClientNom(row),
           transporteurs: new Set<string>(),
@@ -270,7 +284,7 @@ export default function PlanningPage() {
           realiseeCount: 0,
           anyTransporteurContacte: false,
         }
-        map.set(key, g)
+        block.buyers.set(buyerKey, g)
       }
       g.transporteurs.add(row.transporteur?.nom ?? ca.transporteur?.nom ?? '—')
       g.total++
@@ -290,7 +304,16 @@ export default function PlanningPage() {
         g.marks.set(k, m)
       }
     }
-    return Array.from(map.values())
+
+    const flat: any[] = []
+    for (const contractKey of blockOrder) {
+      const block = blocks.get(contractKey)!
+      const buyers = Array.from(block.buyers.values())
+      buyers.forEach((g, i) => {
+        flat.push({ ...g, ca: block.ca, isFirstOfBlock: i === 0, isLastOfBlock: i === buyers.length - 1, blockBuyerCount: buyers.length })
+      })
+    }
+    return flat
   }, [filtered])
 
   // Au premier chargement, positionner le scroll horizontal sur le mois en cours
@@ -404,14 +427,14 @@ export default function PlanningPage() {
               </tr>
             </thead>
             <tbody>
-              {groupedRows.length === 0 && (
+              {planningRows.length === 0 && (
                 <tr>
                   <td colSpan={7 + moisRange.length} className="px-4 py-10 text-center text-gray-400">
                     Aucune livraison planifiée correspondant aux filtres
                   </td>
                 </tr>
               )}
-              {groupedRows.map((g) => {
+              {planningRows.map((g) => {
                 const rowSty = rowStyle(g.ca.famille, g.isSilo)
                 const transporteurLabel = [...g.transporteurs].join(' / ')
                 const etat = g.realiseeCount === g.total
@@ -423,7 +446,7 @@ export default function PlanningPage() {
                 return (
                   <tr
                     key={g.key}
-                    className="border-b border-gray-100 hover:brightness-95 transition-all"
+                    className={`hover:brightness-95 transition-all ${g.isLastOfBlock ? 'border-b border-gray-100' : 'border-b-0'}`}
                     style={rowSty}
                   >
                     <td className="px-3 py-2 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(0, rowSty.backgroundColor, { borderLeft: rowSty.borderLeft })}>
@@ -452,9 +475,20 @@ export default function PlanningPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-2 font-medium text-gray-800 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(1, rowSty.backgroundColor)}>{g.ca.produit?.nom ?? '—'}</td>
-                    <td className="px-3 py-2 font-mono text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(2, rowSty.backgroundColor)}>{g.ca.numero_contrat ?? '—'}</td>
-                    <td className="px-3 py-2 text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(3, rowSty.backgroundColor)}>{g.ca.fournisseur?.nom ?? '—'}</td>
+                    {g.isFirstOfBlock && (
+                      <>
+                        <td rowSpan={g.blockBuyerCount} className="px-3 py-2 font-medium text-gray-800 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(1, rowSty.backgroundColor, { borderBottom: '1px solid #f3f4f6' })}>{g.ca.produit?.nom ?? '—'}</td>
+                        <td rowSpan={g.blockBuyerCount} className="px-3 py-2 font-mono text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(2, rowSty.backgroundColor, { borderBottom: '1px solid #f3f4f6' })}>
+                          {g.ca.numero_contrat ?? '—'}
+                          {g.blockBuyerCount > 1 && (
+                            <span className="ml-1.5 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-white text-[9px] font-bold align-middle" style={{ backgroundColor: '#7B2820' }} title={`${g.blockBuyerCount} acheteurs sur ce contrat`}>
+                              {g.blockBuyerCount}
+                            </span>
+                          )}
+                        </td>
+                        <td rowSpan={g.blockBuyerCount} className="px-3 py-2 text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(3, rowSty.backgroundColor, { borderBottom: '1px solid #f3f4f6' })}>{g.ca.fournisseur?.nom ?? '—'}</td>
+                      </>
+                    )}
                     <td className="px-3 py-2 font-mono text-gray-600 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(4, rowSty.backgroundColor)}>
                       {g.cv?.numero_contrat ? g.cv.numero_contrat : <span className="text-gray-300">—</span>}
                     </td>
