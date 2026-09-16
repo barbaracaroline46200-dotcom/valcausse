@@ -112,7 +112,8 @@ export default function Header() {
       {/* Droite : cloche + profil */}
       <div className="flex items-center gap-3 ml-4">
 
-        {/* Cloche avec dropdown */}
+        {/* Cloche avec dropdown (admin uniquement — pointe vers des pages hors périmètre visiteur) */}
+        {role === 'admin' && (
         <div className="relative" ref={ref}>
           <button
             onClick={() => setOpen(o => !o)}
@@ -182,6 +183,7 @@ export default function Header() {
             </div>
           )}
         </div>
+        )}
 
         {/* Date & heure */}
         <div className="hidden md:flex flex-col items-end pl-3 border-l border-gray-200 pr-3 border-r">

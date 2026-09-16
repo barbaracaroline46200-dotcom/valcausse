@@ -61,11 +61,15 @@ export default function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
 
-        {/* PILOTAGE */}
-        <SectionLabel label="Pilotage" />
-        <NavItem href="/"              label="Tableau de bord"   icon={<LayoutDashboard size={18} />} active={active('/')} />
-        <NavItem href="/stats"         label="Statistiques"      icon={<BarChart2 size={18} />}       active={active('/stats')} />
-        <NavItem href="/recherche"     label="Recherche globale" icon={<Search size={18} />}          active={active('/recherche')} />
+        {/* PILOTAGE (admin uniquement) */}
+        {isAdmin && (
+          <>
+            <SectionLabel label="Pilotage" />
+            <NavItem href="/"              label="Tableau de bord"   icon={<LayoutDashboard size={18} />} active={active('/')} />
+            <NavItem href="/stats"         label="Statistiques"      icon={<BarChart2 size={18} />}       active={active('/stats')} />
+            <NavItem href="/recherche"     label="Recherche globale" icon={<Search size={18} />}          active={active('/recherche')} />
+          </>
+        )}
 
         {/* CONTRATS */}
         <SectionLabel label="Contrats" />
@@ -75,20 +79,32 @@ export default function Sidebar() {
 
         {/* LIVRAISONS */}
         <SectionLabel label="Livraisons" />
-        <NavItem href="/livraisons"    label="À organiser"       icon={<Truck size={18} />}           active={active('/livraisons')} badge={counts.livraisons > 0 ? counts.livraisons : undefined} badgeColor={BRUN} />
-        <NavItem href="/cmr"           label="CMR en attente"    icon={<FileWarning size={18} />}     active={active('/cmr')}        badge={counts.cmr > 0 ? counts.cmr : undefined}               badgeColor="#dc2626" />
+        {isAdmin && (
+          <>
+            <NavItem href="/livraisons"    label="À organiser"       icon={<Truck size={18} />}           active={active('/livraisons')} badge={counts.livraisons > 0 ? counts.livraisons : undefined} badgeColor={BRUN} />
+            <NavItem href="/cmr"           label="CMR en attente"    icon={<FileWarning size={18} />}     active={active('/cmr')}        badge={counts.cmr > 0 ? counts.cmr : undefined}               badgeColor="#dc2626" />
+          </>
+        )}
         <NavItem href="/planning"      label="Planning"          icon={<LayoutDashboard size={18} />} active={active('/planning')} />
-        <NavItem href="/rapport-transports" label="Rapport imprimable" icon={<Printer size={18} />} active={active('/rapport-transports')} />
+        {isAdmin && (
+          <NavItem href="/rapport-transports" label="Rapport imprimable" icon={<Printer size={18} />} active={active('/rapport-transports')} />
+        )}
 
-        {/* FACTURATION */}
-        <SectionLabel label="Facturation" />
-        <NavItem href="/facturation"   label="En attente"        icon={<CreditCard size={18} />}      active={active('/facturation')} badge={counts.facturation > 0 ? counts.facturation : undefined} badgeColor="#448ab5" />
-        <NavItem href="/rf"            label="RF à récupérer"    icon={<FileWarning size={18} />}     active={active('/rf')}          badge={counts.rf > 0 ? counts.rf : undefined}                   badgeColor="#dc2626" />
-        <NavItem href="/controle-facturation" label="Contrôle facturation" icon={<AlertTriangle size={18} />} active={active('/controle-facturation')} />
+        {/* FACTURATION (admin uniquement) */}
+        {isAdmin && (
+          <>
+            <SectionLabel label="Facturation" />
+            <NavItem href="/facturation"   label="En attente"        icon={<CreditCard size={18} />}      active={active('/facturation')} badge={counts.facturation > 0 ? counts.facturation : undefined} badgeColor="#448ab5" />
+            <NavItem href="/rf"            label="RF à récupérer"    icon={<FileWarning size={18} />}     active={active('/rf')}          badge={counts.rf > 0 ? counts.rf : undefined}                   badgeColor="#dc2626" />
+            <NavItem href="/controle-facturation" label="Contrôle facturation" icon={<AlertTriangle size={18} />} active={active('/controle-facturation')} />
+          </>
+        )}
 
         {/* TRANSPORT */}
         <SectionLabel label="Transport" />
-        <NavItem href="/transporteurs/factures" label="Transport & Factures" icon={<Truck size={18} />}     active={active('/transporteurs/factures')} />
+        {isAdmin && (
+          <NavItem href="/transporteurs/factures" label="Transport & Factures" icon={<Truck size={18} />}     active={active('/transporteurs/factures')} />
+        )}
         <NavItem href="/tarifs-transport"       label="Tarifs transport"     icon={<CreditCard size={18} />} active={active('/tarifs-transport')} />
 
         {/* ADMINISTRATION (admin uniquement) */}
