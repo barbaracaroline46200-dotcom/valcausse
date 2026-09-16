@@ -156,6 +156,8 @@ export default function PlanningPage() {
   const [filtClient, setFiltClient] = useState('')
   const [filtFournisseur, setFiltFournisseur] = useState('')
   const [filtMois, setFiltMois] = useState<string[]>([])
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const didAutoScroll = useRef(false)
 
   useEffect(() => {
     fetch('/api/planning')
@@ -247,6 +249,15 @@ export default function PlanningPage() {
     return result
   }, [filtered, filtMois])
 
+  // Au premier chargement, positionner le scroll horizontal sur le mois en cours
+  useEffect(() => {
+    if (loading || didAutoScroll.current || !scrollRef.current) return
+    didAutoScroll.current = true
+    const now = new Date()
+    const idx = moisRange.indexOf(moisKey(now.getFullYear(), now.getMonth()))
+    if (idx > 0) scrollRef.current.scrollLeft = idx * MOIS_COL_WIDTH
+  }, [loading, moisRange])
+
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <Loader2 className="animate-spin text-green-600" size={32} />
@@ -320,7 +331,7 @@ export default function PlanningPage() {
 
       {/* Tableau scrollable */}
       <div className="card overflow-hidden p-0">
-        <div className="overflow-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
+        <div ref={scrollRef} className="overflow-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
           <table className="w-full text-xs" style={{ tableLayout: 'fixed', minWidth: `${FROZEN_TOTAL + moisRange.length * MOIS_COL_WIDTH}px` }}>
             <colgroup>
               {FROZEN_WIDTHS.map((w, i) => <col key={i} style={{ width: w }} />)}
