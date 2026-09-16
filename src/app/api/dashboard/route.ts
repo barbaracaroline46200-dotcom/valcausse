@@ -26,7 +26,7 @@ export async function GET() {
   const moisCourant = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
   const moisSuivant = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().split('T')[0]
 
-  // "À organiser" = planifiées NON encore confirmées par le transporteur, dans la fenêtre temporelle
+  // "À organiser" = planifiées dont le PDF n'a pas encore été envoyé au transporteur (étape 2), dans la fenêtre temporelle
   const { data: livraisonsPlanifieesRaw } = await supabase
     .from('livraisons')
     .select(`
@@ -47,7 +47,7 @@ export async function GET() {
   // Filtrer en JS (les filtres PostgREST sur booléens et dates sont peu fiables sur Vercel)
   const livraisonsPlanifiees = (livraisonsPlanifieesRaw ?? []).filter(
     (l: any) =>
-      !l.transporteur_contacte &&                              // pas encore confirmé
+      !l.pdf_envoye && !l.transporteur_contacte &&              // pas encore à l'étape 2 (PDF envoyé) ni 3 (confirmé)
       l.mois_prevu && l.mois_prevu.slice(0, 10) <= moisFin && // dans la fenêtre temporelle
       !l.contrat_achat?.gere_par_silo                          // exclure les contrats gérés par le silo
   )
