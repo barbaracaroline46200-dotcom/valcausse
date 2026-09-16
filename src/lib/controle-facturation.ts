@@ -104,6 +104,10 @@ export async function getControleFacturation(
   return ((data ?? []) as any[])
     .filter(l => l.contrat_achat_id && inRange(l.date_reelle, dateDebut, dateFin))
     .map(mapRow)
+    // Livraisons de juin 2026 jamais facturées : artefacts de la mise en place initiale
+    // du logiciel (pas de vraies livraisons en attente de facture) — exclues de ce
+    // contrôle uniquement, sans toucher aux livraisons ni aux contrats eux-mêmes.
+    .filter(l => !(l.statut === 'non_facturee' && l.dateLivraison?.slice(0, 7) === '2026-06'))
     .sort((a, b) => (a.dateLivraison ?? '9999-99-99').localeCompare(b.dateLivraison ?? '9999-99-99'))
 }
 
