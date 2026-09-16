@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Fragment } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Loader2, ArrowLeft, AlertTriangle, Plus, FileDown, Edit, CheckCircle, Pencil, Trash2, Link2Off, PackageOpen } from 'lucide-react'
 import { BadgeFamille, BadgeStatut, BadgeAnnee } from '@/components/ui/Badge'
@@ -701,8 +701,11 @@ export default function ContratDetailPage() {
                     : 'Aucune facture'}
                 </td></tr>
               )}
-              {(contrat.factures_fournisseur ?? []).map((f: any) => (
-                <tr key={f.id} className="table-row">
+              {(contrat.factures_fournisseur ?? []).map((f: any) => {
+                const livraisonsLiees = (contrat.livraisons ?? []).filter((l: any) => l.facture_fournisseur_id === f.id)
+                return (
+                <Fragment key={f.id}>
+                <tr className="table-row">
                   <td className="table-cell font-medium">{f.numero_facture}</td>
                   <td className="table-cell">{f.numero_piece_logiciel ?? '—'}</td>
                   <td className="table-cell">{formatEuros(f.montant_ht)}</td>
@@ -722,7 +725,22 @@ export default function ContratDetailPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                <tr className="border-b border-gray-100">
+                  <td colSpan={7} className="px-4 pb-2 pt-0 text-xs text-gray-500">
+                    {livraisonsLiees.length === 0 ? (
+                      <span className="italic text-gray-400">↳ Aucune livraison liée</span>
+                    ) : (
+                      livraisonsLiees.map((l: any) => (
+                        <span key={l.id} className="inline-flex items-center mr-3">
+                          ↳ Livraison du {formatDate(l.date_reelle)} — {formatTonnes(l.quantite_reelle)}
+                        </span>
+                      ))
+                    )}
+                  </td>
+                </tr>
+                </Fragment>
+                )
+              })}
             </tbody>
           </table>
         </div>
