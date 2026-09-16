@@ -170,12 +170,10 @@ export default function SaisirFactureFournisseurGroupeModal({ livraisons, onClos
             </div>
           </div>
 
-          {!isAppro && (
-            <div>
-              <label className="label">Date de facturation</label>
-              <input type="date" className="input" value={form.date_facture} onChange={f('date_facture')} />
-            </div>
-          )}
+          <div>
+            <label className="label">Date de facturation</label>
+            <input type="date" className="input" value={form.date_facture} onChange={f('date_facture')} />
+          </div>
 
           <div>
             <label className="label">Montant HT (€) *</label>
