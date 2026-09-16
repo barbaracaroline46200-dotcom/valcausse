@@ -6,7 +6,7 @@ import LoginScreen from './LoginScreen'
 import { Loader2 } from 'lucide-react'
 
 // Pages accessibles au rôle visiteur — tout le reste redirige vers la première de la liste
-const VISITEUR_ALLOWED_PREFIXES = ['/contrats', '/ventes', '/archives', '/planning', '/tarifs-transport']
+const VISITEUR_ALLOWED_PREFIXES = ['/contrats', '/ventes', '/archives', '/planning', '/tarifs-transport', '/controle-facturation']
 const VISITEUR_DEFAULT_PATH = '/contrats'
 
 function LoadingScreen() {

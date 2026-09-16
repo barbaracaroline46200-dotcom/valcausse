@@ -90,15 +90,15 @@ export default function Sidebar() {
           <NavItem href="/rapport-transports" label="Rapport imprimable" icon={<Printer size={18} />} active={active('/rapport-transports')} />
         )}
 
-        {/* FACTURATION (admin uniquement) */}
+        {/* FACTURATION */}
+        <SectionLabel label="Facturation" />
         {isAdmin && (
           <>
-            <SectionLabel label="Facturation" />
             <NavItem href="/facturation"   label="En attente"        icon={<CreditCard size={18} />}      active={active('/facturation')} badge={counts.facturation > 0 ? counts.facturation : undefined} badgeColor="#448ab5" />
             <NavItem href="/rf"            label="RF à récupérer"    icon={<FileWarning size={18} />}     active={active('/rf')}          badge={counts.rf > 0 ? counts.rf : undefined}                   badgeColor="#dc2626" />
-            <NavItem href="/controle-facturation" label="Contrôle facturation" icon={<AlertTriangle size={18} />} active={active('/controle-facturation')} />
           </>
         )}
+        <NavItem href="/controle-facturation" label="Contrôle facturation" icon={<AlertTriangle size={18} />} active={active('/controle-facturation')} />
 
         {/* TRANSPORT */}
         <SectionLabel label="Transport" />
