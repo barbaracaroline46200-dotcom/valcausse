@@ -1,6 +1,6 @@
 'use client'
-import { useEffect, useState, useMemo } from 'react'
-import { Loader2, Grid3X3, CheckCircle2, CalendarCheck, Clock } from 'lucide-react'
+import { useEffect, useState, useMemo, useRef, type CSSProperties } from 'react'
+import { Loader2, Grid3X3, CheckCircle2, CalendarCheck, Clock, ChevronDown, X } from 'lucide-react'
 
 const MOIS_NOMS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
 const MOIS_LONGS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
@@ -30,6 +30,123 @@ function rowStyle(famille: string, isSilo: boolean) {
   return { backgroundColor: '#eff6fb', borderLeft: '3px solid #2a5570' }
 }
 
+// Colonnes fixes (gelées) : État, Céréale, N° Contrat, Fournisseur, N° Contrat V., Agriculteur, Transporteur
+const FROZEN_WIDTHS = [80, 144, 128, 128, 128, 176, 128]
+const FROZEN_LEFTS = FROZEN_WIDTHS.reduce<number[]>((acc, w, i) => {
+  acc.push(i === 0 ? 0 : acc[i - 1] + FROZEN_WIDTHS[i - 1])
+  return acc
+}, [])
+const FROZEN_TOTAL = FROZEN_WIDTHS.reduce((s, w) => s + w, 0)
+const MOIS_COL_WIDTH = 90
+
+function frozenThStyle(i: number): CSSProperties {
+  return {
+    position: 'sticky',
+    top: 0,
+    left: FROZEN_LEFTS[i],
+    zIndex: 20,
+    width: FROZEN_WIDTHS[i],
+    backgroundColor: '#fdf5f3',
+    ...(i === FROZEN_WIDTHS.length - 1 ? { borderRight: '2px solid #e4b5ad' } : {}),
+  }
+}
+
+function frozenTdStyle(i: number, bg: string, extra?: CSSProperties): CSSProperties {
+  return {
+    position: 'sticky',
+    left: FROZEN_LEFTS[i],
+    zIndex: 1,
+    width: FROZEN_WIDTHS[i],
+    backgroundColor: bg,
+    ...(i === FROZEN_WIDTHS.length - 1 ? { borderRight: '2px solid #e4b5ad' } : {}),
+    ...extra,
+  }
+}
+
+// ── Dropdown multi-sélection (mois) ───────────────────────────────────────────
+function MultiSelect({
+  label,
+  options,
+  selected,
+  onChange,
+  renderLabel,
+}: {
+  label: string
+  options: string[]
+  selected: string[]
+  onChange: (v: string[]) => void
+  renderLabel?: (v: string) => string
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  function toggle(val: string) {
+    onChange(selected.includes(val) ? selected.filter(v => v !== val) : [...selected, val])
+  }
+
+  const label2 = selected.length === 0
+    ? label
+    : selected.length === 1
+      ? (renderLabel ? renderLabel(selected[0]) : selected[0])
+      : `${selected.length} sélectionnés`
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className={`input text-sm py-1.5 flex items-center gap-1 min-w-[11rem] justify-between ${selected.length > 0 ? 'border-orange-400 bg-orange-50' : ''}`}
+      >
+        <span className="truncate text-left flex-1" style={{ color: selected.length > 0 ? '#c2410c' : undefined }}>
+          {label2}
+        </span>
+        {selected.length > 0
+          ? <X size={13} className="flex-shrink-0 text-orange-400" onClick={e => { e.stopPropagation(); onChange([]) }} />
+          : <ChevronDown size={13} className="flex-shrink-0 text-gray-400" />
+        }
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg min-w-[14rem] py-1 max-h-64 overflow-y-auto">
+          {options.length === 0 && (
+            <p className="px-3 py-2 text-xs text-gray-400">Aucune option</p>
+          )}
+          {options.map(opt => (
+            <label key={opt} className="flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm">
+              <input
+                type="checkbox"
+                checked={selected.includes(opt)}
+                onChange={() => toggle(opt)}
+                className="rounded border-gray-300 accent-orange-500"
+              />
+              <span className="leading-tight">{renderLabel ? renderLabel(opt) : opt}</span>
+            </label>
+          ))}
+          {selected.length > 0 && (
+            <div className="border-t border-gray-100 mt-1 pt-1">
+              <button
+                type="button"
+                onClick={() => { onChange([]); setOpen(false) }}
+                className="w-full text-left px-3 py-1.5 text-xs text-gray-400 hover:text-gray-600"
+              >
+                Effacer la sélection
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function PlanningPage() {
   const [rows, setRows] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -38,6 +155,7 @@ export default function PlanningPage() {
   const [filtStatut, setFiltStatut] = useState('en_cours')
   const [filtClient, setFiltClient] = useState('')
   const [filtFournisseur, setFiltFournisseur] = useState('')
+  const [filtMois, setFiltMois] = useState<string[]>([])
 
   useEffect(() => {
     fetch('/api/planning')
@@ -74,7 +192,14 @@ export default function PlanningPage() {
     return n % 1 === 0 ? `${n} t` : `${n.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} t`
   }
 
-  const filtered = useMemo(() => rows.filter(r => {
+  function rowMoisKey(row: any): string | null {
+    if (row.type === 'realisee' && row.date_reelle) return row.date_reelle.slice(0, 7)
+    if (row.mois_prevu) return row.mois_prevu.slice(0, 7)
+    return null
+  }
+
+  // Filtres hors mois — sert aussi de base à la liste des mois disponibles
+  const filteredBase = useMemo(() => rows.filter(r => {
     if (filtFamille && r.contrat_achat?.famille !== filtFamille) return false
     if (filtProduit && r.contrat_achat?.produit?.nom !== filtProduit) return false
     if (filtStatut && r.contrat_achat?.statut !== filtStatut) return false
@@ -83,14 +208,23 @@ export default function PlanningPage() {
     return true
   }), [rows, filtFamille, filtProduit, filtStatut, filtClient, filtFournisseur])
 
-  function rowMoisKey(row: any): string | null {
-    if (row.type === 'realisee' && row.date_reelle) return row.date_reelle.slice(0, 7)
-    if (row.mois_prevu) return row.mois_prevu.slice(0, 7)
-    return null
-  }
+  const moisOptions = useMemo(() => {
+    const s = new Set<string>()
+    filteredBase.forEach(r => { const k = rowMoisKey(r); if (k) s.add(k) })
+    return [...s].sort()
+  }, [filteredBase])
 
-  // Plage de mois couverte par les livraisons filtrées
+  const filtered = useMemo(() => {
+    if (filtMois.length === 0) return filteredBase
+    return filteredBase.filter(r => {
+      const k = rowMoisKey(r)
+      return !!k && filtMois.includes(k)
+    })
+  }, [filteredBase, filtMois])
+
+  // Mois affichés en colonnes : la sélection si elle existe, sinon la plage couverte par les livraisons filtrées
   const moisRange = useMemo(() => {
+    if (filtMois.length > 0) return [...filtMois].sort()
     if (filtered.length === 0) {
       const now = new Date()
       return Array.from({ length: 12 }, (_, i) => {
@@ -111,7 +245,7 @@ export default function PlanningPage() {
       m++; if (m > 11) { m = 0; y++ }
     }
     return result
-  }, [filtered])
+  }, [filtered, filtMois])
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -150,6 +284,7 @@ export default function PlanningPage() {
             <option value="">Tous agriculteurs</option>
             {clients.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
+          <MultiSelect label="Tous les mois" options={moisOptions} selected={filtMois} onChange={setFiltMois} renderLabel={moisLabel} />
         </div>
       </div>
 
@@ -186,20 +321,24 @@ export default function PlanningPage() {
       {/* Tableau scrollable */}
       <div className="card overflow-hidden p-0">
         <div className="overflow-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
-          <table className="w-full text-xs" style={{ minWidth: `${700 + moisRange.length * 90}px` }}>
+          <table className="w-full text-xs" style={{ tableLayout: 'fixed', minWidth: `${FROZEN_TOTAL + moisRange.length * MOIS_COL_WIDTH}px` }}>
+            <colgroup>
+              {FROZEN_WIDTHS.map((w, i) => <col key={i} style={{ width: w }} />)}
+              {moisRange.map(k => <col key={k} style={{ width: MOIS_COL_WIDTH }} />)}
+            </colgroup>
             <thead className="sticky top-0 z-10">
               <tr className="border-b-2" style={{ borderColor: '#e4b5ad', backgroundColor: '#fdf5f3' }}>
-                {/* Colonnes fixes */}
-                <th className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap w-20">État</th>
-                <th className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap w-36">Céréale</th>
-                <th className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap w-32">N° Contrat</th>
-                <th className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap w-32">Fournisseur</th>
-                <th className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap w-32">N° Contrat V.</th>
-                <th className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap w-44">Agriculteur</th>
-                <th className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap w-32">Transporteur</th>
-                {/* Colonnes mois */}
+                {/* Colonnes fixes (gelées à gauche) */}
+                <th className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenThStyle(0)}>État</th>
+                <th className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenThStyle(1)}>Céréale</th>
+                <th className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenThStyle(2)}>N° Contrat</th>
+                <th className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenThStyle(3)}>Fournisseur</th>
+                <th className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenThStyle(4)}>N° Contrat V.</th>
+                <th className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenThStyle(5)}>Agriculteur</th>
+                <th className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenThStyle(6)}>Transporteur</th>
+                {/* Colonnes mois (défilantes) */}
                 {moisRange.map(k => (
-                  <th key={k} className="px-2 py-2.5 text-center font-semibold text-gray-600 whitespace-nowrap w-20" style={{ minWidth: 80 }}>
+                  <th key={k} className="px-2 py-2.5 text-center font-semibold text-gray-600 whitespace-nowrap">
                     {moisShort(k)}
                   </th>
                 ))}
@@ -221,13 +360,15 @@ export default function PlanningPage() {
                 const moisRow = rowMoisKey(row)
                 const isRealisee = row.type === 'realisee'
 
+                const rowSty = rowStyle(ca.famille, isSilo)
+
                 return (
                   <tr
                     key={row.id}
                     className="border-b border-gray-100 hover:brightness-95 transition-all"
-                    style={rowStyle(ca.famille, isSilo)}
+                    style={rowSty}
                   >
-                    <td className="px-3 py-2 whitespace-nowrap">
+                    <td className="px-3 py-2 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(0, rowSty.backgroundColor, { borderLeft: rowSty.borderLeft })}>
                       {isRealisee
                         ? <span className="flex items-center gap-1 text-green-700 font-semibold text-[11px]">
                             <CheckCircle2 size={14} className="text-green-600 flex-shrink-0" />
@@ -244,19 +385,19 @@ export default function PlanningPage() {
                             </span>
                       }
                     </td>
-                    <td className="px-3 py-2 font-medium text-gray-800 whitespace-nowrap">{ca.produit?.nom ?? '—'}</td>
-                    <td className="px-3 py-2 font-mono text-gray-700 whitespace-nowrap">{ca.numero_contrat ?? '—'}</td>
-                    <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{ca.fournisseur?.nom ?? '—'}</td>
-                    <td className="px-3 py-2 font-mono text-gray-600 whitespace-nowrap">
+                    <td className="px-3 py-2 font-medium text-gray-800 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(1, rowSty.backgroundColor)}>{ca.produit?.nom ?? '—'}</td>
+                    <td className="px-3 py-2 font-mono text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(2, rowSty.backgroundColor)}>{ca.numero_contrat ?? '—'}</td>
+                    <td className="px-3 py-2 text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(3, rowSty.backgroundColor)}>{ca.fournisseur?.nom ?? '—'}</td>
+                    <td className="px-3 py-2 font-mono text-gray-600 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(4, rowSty.backgroundColor)}>
                       {cv?.numero_contrat ? cv.numero_contrat : <span className="text-gray-300">—</span>}
                     </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
+                    <td className="px-3 py-2 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(5, rowSty.backgroundColor)}>
                       {isSilo
                         ? <span className="font-semibold" style={{ color: '#C8941A' }}>{clientNom}</span>
                         : <span className="text-gray-800">{clientNom}</span>
                       }
                     </td>
-                    <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{row.transporteur?.nom ?? ca.transporteur?.nom ?? '—'}</td>
+                    <td className="px-3 py-2 text-gray-600 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(6, rowSty.backgroundColor)}>{row.transporteur?.nom ?? ca.transporteur?.nom ?? '—'}</td>
                     {moisRange.map(k => (
                       <td key={k} className="px-2 py-2 text-center">
                         {moisRow === k
@@ -281,7 +422,11 @@ export default function PlanningPage() {
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-gray-200" style={{ backgroundColor: '#f3f0ee' }}>
-                <td colSpan={7} className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">
+                <td
+                  colSpan={7}
+                  className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap"
+                  style={{ position: 'sticky', left: 0, zIndex: 1, backgroundColor: '#f3f0ee', borderRight: '2px solid #e4b5ad' }}
+                >
                   Total / mois
                 </td>
                 {moisRange.map(k => {

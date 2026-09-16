@@ -28,9 +28,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <AuthGate>
             <div className="flex min-h-screen">
               <Sidebar />
-              <div className="flex-1 ml-64 flex flex-col min-h-screen">
+              <div className="flex-1 ml-64 flex flex-col min-h-screen min-w-0">
                 <Header />
-                <main className="flex-1 p-6 pt-20 max-w-full overflow-x-hidden">
+                <main className="flex-1 p-6 pt-20 max-w-full overflow-x-hidden min-w-0">
                   {children}
                 </main>
               </div>
