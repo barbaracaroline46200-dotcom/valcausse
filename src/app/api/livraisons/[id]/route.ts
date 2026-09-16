@@ -60,6 +60,15 @@ async function recalculerStatutContratVente(supabase: any, contratVenteId: strin
   }
 }
 
+// Nettoie une ville/lieu saisie à la main : espaces superflus, code département final
+// ("Montoir-de-Bretagne 44" / "MONTOIR-DE-BRETAGNE" / "Montoir de Bretagne" doivent tous
+// retomber sur la même valeur pour ne pas créer un nouveau tarif à chaque légère variante).
+function normaliserLieu(s?: string | null): string | undefined {
+  if (!s) return undefined
+  const n = s.trim().replace(/\s*\(?\d{2,3}\)?\s*$/, '').replace(/\s+/g, ' ').trim()
+  return n || undefined
+}
+
 // Quand une facture transport est saisie sur une livraison, met à jour (ou crée) automatiquement
 // le tarif correspondant (transporteur + trajet) dans la grille "Tarifs transport" avec le prix réel constaté.
 async function autoMajTarifTransport(supabase: any, livraison: any) {
@@ -68,8 +77,8 @@ async function autoMajTarifTransport(supabase: any, livraison: any) {
   if (!livraison.transport_facture || !prixParTonne) return
 
   let transporteurId = livraison.transporteur_id
-  let lieuChargement = livraison.ville_chargement?.trim()
-  let lieuDestination = livraison.ville_destination?.trim()
+  let lieuChargement = normaliserLieu(livraison.ville_chargement)
+  let lieuDestination = normaliserLieu(livraison.ville_destination)
 
   if ((!transporteurId || !lieuChargement) && livraison.contrat_achat_id) {
     const { data: ca } = await supabase
@@ -78,7 +87,7 @@ async function autoMajTarifTransport(supabase: any, livraison: any) {
       .eq('id', livraison.contrat_achat_id)
       .single()
     transporteurId = transporteurId ?? ca?.transporteur_id
-    lieuChargement = lieuChargement ?? ca?.ville_chargement?.trim()
+    lieuChargement = lieuChargement ?? normaliserLieu(ca?.ville_chargement)
   }
   // Pas de ville de destination saisie → repli sur le nom du silo ou la ville de l'agriculteur du contrat de vente lié
   if (!lieuDestination && livraison.contrat_vente_id) {
@@ -87,7 +96,7 @@ async function autoMajTarifTransport(supabase: any, livraison: any) {
       .select('silo_nom,agriculteur:agriculteurs(ville_livraison)')
       .eq('id', livraison.contrat_vente_id)
       .single()
-    lieuDestination = cv?.silo_nom?.trim() || (cv?.agriculteur as any)?.ville_livraison?.trim()
+    lieuDestination = normaliserLieu(cv?.silo_nom) ?? normaliserLieu((cv?.agriculteur as any)?.ville_livraison)
   }
   if (!transporteurId || !lieuChargement || !lieuDestination) return
 

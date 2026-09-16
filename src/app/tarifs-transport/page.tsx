@@ -1,18 +1,26 @@
 'use client'
 import { useEffect, useState, useMemo } from 'react'
-import { Loader2, Plus, Trash2, Search, Trophy, Edit2, Check, X, Truck } from 'lucide-react'
+import { Loader2, Plus, Trash2, Search, Trophy, Edit2, Check, X, Truck, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { formatEurosParTonne } from '@/lib/annee-agricole'
 import { useAdmin } from '@/components/ui/AdminProvider'
+
+type SortKey = 'transporteur' | 'lieu_chargement' | 'lieu_destination' | 'prix_par_tonne'
 
 export default function TarifsTransportPage() {
   const { isAdmin } = useAdmin()
   const [tarifs, setTarifs] = useState<any[]>([])
   const [transporteurs, setTransporteurs] = useState<any[]>([])
+  const [agriculteurs, setAgriculteurs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   // Comparateur
   const [compA, setCompA] = useState('')
   const [compB, setCompB] = useState('')
+  const [compAgriculteurId, setCompAgriculteurId] = useState('')
+
+  // Tri de la grille complète
+  const [sortKey, setSortKey] = useState<SortKey>('transporteur')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   // Formulaire ajout
   const [showForm, setShowForm] = useState(false)
@@ -27,11 +35,23 @@ export default function TarifsTransportPage() {
     Promise.all([
       fetch(`/api/tarifs-transport?t=${Date.now()}`).then(r => r.json()),
       fetch('/api/referentiels/transporteurs').then(r => r.json()),
-    ]).then(([t, tr]) => {
+      fetch('/api/referentiels/agriculteurs').then(r => r.json()),
+    ]).then(([t, tr, ag]) => {
       setTarifs(t ?? [])
       setTransporteurs(tr ?? [])
+      setAgriculteurs(ag ?? [])
       setLoading(false)
     })
+  }
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortKey(key); setSortDir('asc') }
+  }
+
+  function SortIcon({ colKey }: { colKey: SortKey }) {
+    if (sortKey !== colKey) return <ArrowUpDown size={12} className="text-gray-300" />
+    return sortDir === 'asc' ? <ArrowUp size={12} className="text-gray-600" /> : <ArrowDown size={12} className="text-gray-600" />
   }
 
   useEffect(() => { charger() }, [])
@@ -52,6 +72,16 @@ export default function TarifsTransportPage() {
       )
       .sort((x, y) => x.prix_par_tonne - y.prix_par_tonne)
   }, [tarifs, compA, compB])
+
+  // Grille complète, triée selon la colonne choisie
+  const tarifsTries = useMemo(() => {
+    const dir = sortDir === 'asc' ? 1 : -1
+    return [...tarifs].sort((x, y) => {
+      if (sortKey === 'prix_par_tonne') return (x.prix_par_tonne - y.prix_par_tonne) * dir
+      if (sortKey === 'transporteur') return (x.transporteur?.nom ?? '').localeCompare(y.transporteur?.nom ?? '') * dir
+      return (x[sortKey] ?? '').localeCompare(y[sortKey] ?? '') * dir
+    })
+  }, [tarifs, sortKey, sortDir])
 
   async function ajouterTarif(e: React.FormEvent) {
     e.preventDefault()
@@ -209,19 +239,34 @@ export default function TarifsTransportPage() {
           <span className="text-gray-400 text-lg pb-1">→</span>
           <div>
             <label className="label text-xs">Lieu de livraison</label>
+            <select
+              className="input w-48"
+              value={compAgriculteurId}
+              onChange={e => {
+                const id = e.target.value
+                setCompAgriculteurId(id)
+                const ag = agriculteurs.find((a: any) => a.id === id)
+                setCompB(ag?.ville_livraison ?? '')
+              }}
+            >
+              <option value="">Choisir un agriculteur…</option>
+              {agriculteurs.filter((a: any) => a.ville_livraison).map((a: any) => (
+                <option key={a.id} value={a.id}>{a.nom}</option>
+              ))}
+            </select>
             <input
               list="comp-destination"
-              className="input w-48"
-              placeholder="ex. Bordeaux"
+              className="input w-48 mt-1"
+              placeholder="…ou tapez un lieu (silo, etc.)"
               value={compB}
-              onChange={e => setCompB(e.target.value)}
+              onChange={e => { setCompB(e.target.value); setCompAgriculteurId('') }}
             />
             <datalist id="comp-destination">
               {lieuxDestination.map(l => <option key={l} value={l} />)}
             </datalist>
           </div>
           {(compA || compB) && (
-            <button onClick={() => { setCompA(''); setCompB('') }} className="btn-secondary pb-2 self-end">
+            <button onClick={() => { setCompA(''); setCompB(''); setCompAgriculteurId('') }} className="btn-secondary pb-2 self-end">
               <X size={14} /> Effacer
             </button>
           )}
@@ -288,13 +333,24 @@ export default function TarifsTransportPage() {
             <table className="w-full">
               <thead className="bg-gray-50/50">
                 <tr>
-                  {['Transporteur', 'Enlèvement', 'Livraison', 'Prix €/t', 'Notes', ...(isAdmin ? [''] : [])].map(h => (
-                    <th key={h} className="table-header">{h}</th>
+                  {([
+                    ['Transporteur', 'transporteur'],
+                    ['Enlèvement', 'lieu_chargement'],
+                    ['Livraison', 'lieu_destination'],
+                    ['Prix €/t', 'prix_par_tonne'],
+                  ] as [string, SortKey][]).map(([label, key]) => (
+                    <th key={key} className="table-header">
+                      <button type="button" onClick={() => toggleSort(key)} className="flex items-center gap-1 hover:text-gray-800">
+                        {label} <SortIcon colKey={key} />
+                      </button>
+                    </th>
                   ))}
+                  <th className="table-header">Notes</th>
+                  {isAdmin && <th className="table-header"></th>}
                 </tr>
               </thead>
               <tbody>
-                {tarifs.map(t => (
+                {tarifsTries.map(t => (
                   <tr key={t.id} className="table-row">
                     <td className="table-cell font-semibold">{t.transporteur?.nom ?? '—'}</td>
                     <td className="table-cell">{t.lieu_chargement}</td>
