@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useMemo, useRef, type CSSProperties } from 'react'
+import Link from 'next/link'
 import { Loader2, Grid3X3, CheckCircle2, CalendarCheck, Clock, ChevronDown, X } from 'lucide-react'
 
 const MOIS_NOMS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
@@ -24,10 +25,20 @@ function moisShort(key: string) {
   return `${MOIS_NOMS[m]} ${String(y).slice(2)}`
 }
 
-function rowStyle(famille: string, isSilo: boolean) {
-  if (isSilo) return { backgroundColor: '#fffbeb', borderLeft: '3px solid #C8941A' }
-  if (famille === 'negoce') return { backgroundColor: '#fdf5f3', borderLeft: '3px solid #7B2820' }
-  return { backgroundColor: '#eff6fb', borderLeft: '3px solid #2a5570' }
+// Fond : alterne sur 2 teintes neutres, une par contrat (bloc), pour distinguer les
+// contrats qui se suivent visuellement. Négoce/Appro se distingue par la couleur du
+// texte (voir familleColor), pas par le fond — le silo n'a pas de traitement à part.
+const STRIPE_COLORS = ['#ffffff', '#f7f5f1']
+
+function rowStyle(famille: string, stripe: number) {
+  return {
+    backgroundColor: STRIPE_COLORS[stripe % 2],
+    borderLeft: `3px solid ${familleColor(famille)}`,
+  }
+}
+
+function familleColor(famille: string) {
+  return famille === 'negoce' ? '#7B2820' : '#2a5570'
 }
 
 // Colonnes fixes (gelées) : État, Céréale, N° Contrat, Fournisseur, N° Contrat V., Agriculteur, Transporteur
@@ -282,14 +293,16 @@ export default function PlanningPage() {
           marks: new Map<string, { nbRealisee: number; qtyRealisee: number; nbPlanifiee: number; qtyPlanifiee: number }>(),
           total: 0,
           realiseeCount: 0,
-          anyTransporteurContacte: false,
+          anyEnCours: false,
         }
         block.buyers.set(buyerKey, g)
       }
       g.transporteurs.add(row.transporteur?.nom ?? ca.transporteur?.nom ?? '—')
       g.total++
       if (row.type === 'realisee') g.realiseeCount++
-      if (row.transporteur_contacte) g.anyTransporteurContacte = true
+      // Étape 2 (PDF envoyé au transporteur) suffit à sortir du statut "à organiser" —
+      // on n'attend pas forcément la confirmation du transporteur (étape 3).
+      if (row.transporteur_contacte || row.pdf_envoye) g.anyEnCours = true
 
       const k = rowMoisKey(row)
       if (k) {
@@ -306,14 +319,13 @@ export default function PlanningPage() {
     }
 
     const flat: any[] = []
-    for (const contractKey of blockOrder) {
+    blockOrder.forEach((contractKey, blockIndex) => {
       const block = blocks.get(contractKey)!
       const buyers = Array.from(block.buyers.values())
-      const blockIsSilo = buyers[0]?.isSilo ?? false
       buyers.forEach((g, i) => {
-        flat.push({ ...g, ca: block.ca, isFirstOfBlock: i === 0, isLastOfBlock: i === buyers.length - 1, blockBuyerCount: buyers.length, blockIsSilo })
+        flat.push({ ...g, ca: block.ca, isFirstOfBlock: i === 0, isLastOfBlock: i === buyers.length - 1, blockBuyerCount: buyers.length, stripe: blockIndex })
       })
-    }
+    })
     return flat
   }, [filtered])
 
@@ -387,16 +399,12 @@ export default function PlanningPage() {
         </span>
         <span className="text-gray-300">|</span>
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: '#fdf5f3', border: '2px solid #7B2820' }} />
+          <span className="font-mono font-bold" style={{ color: '#7B2820' }}>N° Contrat</span>
           Négoce
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: '#eff6fb', border: '2px solid #2a5570' }} />
+          <span className="font-mono font-bold" style={{ color: '#2a5570' }}>N° Contrat</span>
           Appro
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: '#fffbeb', border: '2px solid #C8941A' }} />
-          Silo
         </span>
         <span className="ml-4 text-gray-400">{filtered.length} livraison{filtered.length > 1 ? 's' : ''}</span>
       </div>
@@ -436,12 +444,12 @@ export default function PlanningPage() {
                 </tr>
               )}
               {planningRows.map((g) => {
-                const rowSty = rowStyle(g.ca.famille, g.blockIsSilo)
+                const rowSty = rowStyle(g.ca.famille, g.stripe)
                 const transporteurLabel = [...g.transporteurs].join(' / ')
                 const etat = g.realiseeCount === g.total
                   ? 'livre'
                   : g.realiseeCount === 0
-                    ? (g.anyTransporteurContacte ? 'planifie' : 'a_organiser')
+                    ? (g.anyEnCours ? 'planifie' : 'a_organiser')
                     : 'partiel'
 
                 return (
@@ -480,7 +488,10 @@ export default function PlanningPage() {
                       <>
                         <td rowSpan={g.blockBuyerCount} className="px-3 py-2 font-medium text-gray-800 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(1, rowSty.backgroundColor, { borderBottom: '1px solid #f3f4f6' })}>{g.ca.produit?.nom ?? '—'}</td>
                         <td rowSpan={g.blockBuyerCount} className="px-3 py-2 font-mono text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(2, rowSty.backgroundColor, { borderBottom: '1px solid #f3f4f6' })}>
-                          {g.ca.numero_contrat ?? '—'}
+                          {g.ca.id && g.ca.numero_contrat
+                            ? <Link href={`/contrats/${g.ca.id}`} className="font-semibold hover:underline" style={{ color: familleColor(g.ca.famille) }}>{g.ca.numero_contrat}</Link>
+                            : (g.ca.numero_contrat ?? '—')
+                          }
                           {g.blockBuyerCount > 1 && (
                             <span className="ml-1.5 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-white text-[9px] font-bold align-middle" style={{ backgroundColor: '#7B2820' }} title={`${g.blockBuyerCount} acheteurs sur ce contrat`}>
                               {g.blockBuyerCount}
@@ -491,7 +502,10 @@ export default function PlanningPage() {
                       </>
                     )}
                     <td className="px-3 py-2 font-mono text-gray-600 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(4, rowSty.backgroundColor)}>
-                      {g.cv?.numero_contrat ? g.cv.numero_contrat : <span className="text-gray-300">—</span>}
+                      {g.cv?.id && g.cv?.numero_contrat
+                        ? <Link href={`/ventes/${g.cv.id}`} className="text-gray-600 hover:underline hover:text-gray-800">{g.cv.numero_contrat}</Link>
+                        : g.cv?.numero_contrat ? g.cv.numero_contrat : <span className="text-gray-300">—</span>
+                      }
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(5, rowSty.backgroundColor)}>
                       {g.isSilo

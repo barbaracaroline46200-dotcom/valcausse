@@ -17,8 +17,10 @@ export async function GET() {
       contrat_achat_id,
       contrat_vente_id,
       transporteur_contacte,
+      pdf_envoye,
       transporteur:transporteurs(nom),
       contrat_achat:contrats_achat(
+        id,
         numero_contrat,
         statut,
         famille,
@@ -27,6 +29,7 @@ export async function GET() {
         transporteur:transporteurs(nom)
       ),
       contrat_vente:contrats_vente(
+        id,
         numero_contrat,
         destination_silo,
         silo_nom,
