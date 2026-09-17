@@ -197,7 +197,7 @@ export async function getPrevisionnelFournisseur(supabase: SupabaseClient, dateF
   const { data } = await supabase
     .from('livraisons')
     .select(`
-      id, mois_prevu, date_prevue, quantite_prevue, contrat_achat_id,
+      id, mois_prevu, date_prevue, quantite_prevue, contrat_achat_id, facture_fournisseur_id,
       contrat_achat:contrats_achat(
         id, numero_contrat, famille, prix_achat, mbm_autorise, produit_id,
         produit:produits(nom),
@@ -213,7 +213,11 @@ export async function getPrevisionnelFournisseur(supabase: SupabaseClient, dateF
   const debutMoisCourant = `${maintenant.getFullYear()}-${String(maintenant.getMonth() + 1).padStart(2, '0')}-01`
 
   return ((data ?? []) as any[])
-    .filter(l => l.contrat_achat_id)
+    // facture_fournisseur_id : en pratique toujours vide tant que type='planifiee'
+    // (la saisie de facture ne cible que les livraisons réalisées), mais rien ne
+    // l'impose en base — exclusion défensive pour ne jamais compter deux fois un
+    // montant déjà facturé.
+    .filter(l => l.contrat_achat_id && !l.facture_fournisseur_id)
     .map(l => {
       const ca = l.contrat_achat
       const dateRef: string = l.date_prevue ?? l.mois_prevu
