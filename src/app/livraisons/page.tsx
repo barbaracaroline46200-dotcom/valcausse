@@ -87,6 +87,19 @@ function MultiSelect({
   )
 }
 
+// Les 3 étapes d'organisation d'une livraison (même logique que dans
+// LivraisonAOrganiser.tsx — 1: appel agri, 2: PDF transporteur, 3: confirmation
+// transporteur). On y accède ici pour pouvoir filtrer la liste par étape en cours.
+const ETAPES_LABELS = ['Agri à contacter', 'PDF à envoyer', 'Transporteur à confirmer']
+
+function getEtapeLabel(l: any): string {
+  const step1ok = !!l.agriculteur_contacte || !!l.date_souhaitee || !!l.semaine_souhaitee
+  const step2ok = step1ok && !!l.pdf_envoye
+  if (step2ok) return 'Transporteur à confirmer'
+  if (step1ok) return 'PDF à envoyer'
+  return 'Agri à contacter'
+}
+
 // ── Page principale ───────────────────────────────────────────────────────────
 export default function LivraisonsPage() {
   const { isAdmin } = useAdmin()
@@ -95,6 +108,7 @@ export default function LivraisonsPage() {
   const [loading, setLoading] = useState(true)
 
   // Filtres multi-sélection
+  const [filtStatuts, setFiltStatuts] = useState<string[]>([])
   const [filtFournisseurs, setFiltFournisseurs] = useState<string[]>([])
   const [filtProduits, setFiltProduits] = useState<string[]>([])
   const [filtAgriculteurs, setFiltAgriculteurs] = useState<string[]>([])
@@ -162,18 +176,19 @@ export default function LivraisonsPage() {
   const optTransporteurs = useMemo(() => [...new Set(planifiees.map((l: any) => l.transporteur?.nom ?? l.contrat_achat?.transporteur?.nom).filter(Boolean))].sort() as string[], [planifiees])
 
   const filtrees = useMemo(() => planifiees.filter((l: any) => {
+    if (filtStatuts.length > 0 && !filtStatuts.includes(getEtapeLabel(l))) return false
     if (filtFournisseurs.length > 0 && !filtFournisseurs.includes(l.contrat_achat?.fournisseur?.nom)) return false
     if (filtProduits.length > 0 && !filtProduits.includes(l.contrat_achat?.produit?.nom)) return false
     if (filtAgriculteurs.length > 0 && !filtAgriculteurs.includes(getAgriNom(l))) return false
     if (filtTransporteurs.length > 0 && !filtTransporteurs.includes(l.transporteur?.nom ?? l.contrat_achat?.transporteur?.nom)) return false
     return true
-  }), [planifiees, filtFournisseurs, filtProduits, filtAgriculteurs, filtTransporteurs])
+  }), [planifiees, filtStatuts, filtFournisseurs, filtProduits, filtAgriculteurs, filtTransporteurs])
 
   const selectionnees = useMemo(() => planifiees.filter((l: any) => selectedIds.includes(l.id)), [planifiees, selectedIds])
   const totalSelection = selectionnees.reduce((sum: number, l: any) => sum + (Number(l.quantite_prevue) || 0), 0)
 
-  const hasFiltres = filtFournisseurs.length > 0 || filtProduits.length > 0 || filtAgriculteurs.length > 0 || filtTransporteurs.length > 0
-  const nbActifs = filtFournisseurs.length + filtProduits.length + filtAgriculteurs.length + filtTransporteurs.length
+  const hasFiltres = filtStatuts.length > 0 || filtFournisseurs.length > 0 || filtProduits.length > 0 || filtAgriculteurs.length > 0 || filtTransporteurs.length > 0
+  const nbActifs = filtStatuts.length + filtFournisseurs.length + filtProduits.length + filtAgriculteurs.length + filtTransporteurs.length
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -199,13 +214,14 @@ export default function LivraisonsPage() {
 
         {planifiees.length > 0 && (
           <div className="flex gap-2 flex-wrap items-center">
+            <MultiSelect label="Statut" options={ETAPES_LABELS} selected={filtStatuts} onChange={setFiltStatuts} />
             <MultiSelect label="Fournisseurs" options={optFournisseurs} selected={filtFournisseurs} onChange={setFiltFournisseurs} />
             <MultiSelect label="Transporteurs" options={optTransporteurs} selected={filtTransporteurs} onChange={setFiltTransporteurs} />
             <MultiSelect label="Produits" options={optProduits} selected={filtProduits} onChange={setFiltProduits} />
             <MultiSelect label="Agriculteurs" options={optAgriculteurs} selected={filtAgriculteurs} onChange={setFiltAgriculteurs} />
             {hasFiltres && (
               <button
-                onClick={() => { setFiltFournisseurs([]); setFiltProduits([]); setFiltAgriculteurs([]); setFiltTransporteurs([]) }}
+                onClick={() => { setFiltStatuts([]); setFiltFournisseurs([]); setFiltProduits([]); setFiltAgriculteurs([]); setFiltTransporteurs([]) }}
                 className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1"
               >
                 <X size={12} /> Tout effacer {nbActifs > 0 && <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600 font-bold">{nbActifs}</span>}
