@@ -1,11 +1,17 @@
 export const dynamic = 'force-dynamic'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { getPrevisionnelFournisseur } from '@/lib/controle-facturation'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url)
+  const dateFin = searchParams.get('date_fin')
+  if (!dateFin) {
+    return NextResponse.json({ error: 'date_fin est requis' }, { status: 400 })
+  }
+
   const supabase = getServiceClient()
-  const lignes = await getPrevisionnelFournisseur(supabase)
+  const lignes = await getPrevisionnelFournisseur(supabase, dateFin)
 
   return NextResponse.json(lignes, {
     headers: {

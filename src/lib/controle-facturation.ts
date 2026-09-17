@@ -153,7 +153,7 @@ export const PRIX_PAR_DEFAUT = 30
 
 export interface LignePrevisionnelle {
   id: string
-  moisPrevu: string | null
+  dateRef: string
   quantitePrevue: number | null
   produit: string
   numeroContrat: string
@@ -162,13 +162,16 @@ export interface LignePrevisionnelle {
   prixUnitaireEstime: number
   prixEstimeParDefaut: boolean
   montantEstime: number
+  enRetard: boolean
 }
 
 /** Estimation du montant fournisseur encore à venir : livraisons planifiées
- *  (non réalisées) d'un contrat d'achat, valorisées au prix du contrat + MBM
- *  si applicable, ou à un prix par défaut de 30€/t si le contrat n'a pas
- *  encore de prix fixé. Reprend le calcul de majoration de l'API dashboard. */
-export async function getPrevisionnelFournisseur(supabase: SupabaseClient): Promise<LignePrevisionnelle[]> {
+ *  (non réalisées) d'un contrat d'achat, du retard (date prévue déjà passée,
+ *  quel que soit son ancienneté) jusqu'à `dateFin` incluse, valorisées au prix
+ *  du contrat + MBM si applicable, ou à un prix par défaut de 30€/t si le
+ *  contrat n'a pas encore de prix fixé. Reprend le calcul de majoration de
+ *  l'API dashboard. */
+export async function getPrevisionnelFournisseur(supabase: SupabaseClient, dateFin: string): Promise<LignePrevisionnelle[]> {
   const { data: majorationsRaw } = await supabase
     .from('majorations_negoce')
     .select('produit_id,date_debut,valeur')
@@ -203,19 +206,29 @@ export async function getPrevisionnelFournisseur(supabase: SupabaseClient): Prom
     `)
     .eq('type', 'planifiee')
 
+  const maintenant = new Date()
+  const aujourdhui = maintenant.toISOString().slice(0, 10)
+  // Construit en local (jamais via new Date(y,m,1).toISOString(), qui recule
+  // d'un jour aux fuseaux en avance sur UTC comme la France).
+  const debutMoisCourant = `${maintenant.getFullYear()}-${String(maintenant.getMonth() + 1).padStart(2, '0')}-01`
+
   return ((data ?? []) as any[])
     .filter(l => l.contrat_achat_id)
     .map(l => {
       const ca = l.contrat_achat
-      const dateRef: string | null = l.date_prevue ?? l.mois_prevu ?? null
+      const dateRef: string = l.date_prevue ?? l.mois_prevu
       const prixEstimeParDefaut = ca?.prix_achat == null
       const prixBase = ca?.prix_achat ?? PRIX_PAR_DEFAUT
       const majoration = calcMajoration(ca, dateRef)
       const prixUnitaireEstime = prixBase + majoration
       const quantite = l.quantite_prevue ?? 0
+      // Retard : jour précis dépassé si connu (date_prevue), sinon mois entier déjà
+      // écoulé — mois_prevu est toujours stocké au 1er du mois, donc le comparer
+      // au jour près signalerait à tort tout le mois en cours comme "en retard".
+      const enRetard = l.date_prevue ? l.date_prevue < aujourdhui : l.mois_prevu < debutMoisCourant
       return {
         id: l.id,
-        moisPrevu: l.mois_prevu,
+        dateRef,
         quantitePrevue: l.quantite_prevue,
         produit: ca?.produit?.nom ?? '—',
         numeroContrat: ca?.numero_contrat ?? '—',
@@ -224,7 +237,11 @@ export async function getPrevisionnelFournisseur(supabase: SupabaseClient): Prom
         prixUnitaireEstime,
         prixEstimeParDefaut,
         montantEstime: quantite * prixUnitaireEstime,
+        enRetard,
       }
     })
-    .sort((a, b) => (a.moisPrevu ?? '9999-99').localeCompare(b.moisPrevu ?? '9999-99'))
+    // Pas de borne basse : le retard (mois précédents jamais livrés) doit
+    // remonter quelle que soit son ancienneté, tant qu'il reste avant dateFin.
+    .filter(l => l.dateRef <= dateFin)
+    .sort((a, b) => a.dateRef.localeCompare(b.dateRef))
 }
