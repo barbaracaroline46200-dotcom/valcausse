@@ -151,10 +151,16 @@ export function filtrerLignes(rows: LigneControle[], f: FiltresControle): LigneC
  *  n'a pas encore de prix d'achat fixé (contrat en cours de négociation). */
 export const PRIX_PAR_DEFAUT = 30
 
-export interface LignePrevisionnelle {
+/** 'retard' : planifiée, date dépassée (peut se réaliser à tout moment — ex. pénurie).
+ *  'a_venir' : planifiée, pas encore due.
+ *  'livre_non_facture' : déjà réalisée, mais la facture fournisseur n'est pas encore arrivée. */
+export type StatutPrevisionnel = 'retard' | 'a_venir' | 'livre_non_facture'
+
+interface LivraisonValorisee {
   id: string
+  type: 'planifiee' | 'realisee'
   dateRef: string
-  quantitePrevue: number | null
+  quantite: number
   produit: string
   numeroContrat: string
   contratId: string | null
@@ -162,16 +168,16 @@ export interface LignePrevisionnelle {
   prixUnitaireEstime: number
   prixEstimeParDefaut: boolean
   montantEstime: number
-  enRetard: boolean
+  facture: boolean
+  statutPlanifiee: 'retard' | 'a_venir' | null
 }
 
-/** Estimation du montant fournisseur encore à venir : livraisons planifiées
- *  (non réalisées) d'un contrat d'achat, du retard (date prévue déjà passée,
- *  quel que soit son ancienneté) jusqu'à `dateFin` incluse, valorisées au prix
- *  du contrat + MBM si applicable, ou à un prix par défaut de 30€/t si le
- *  contrat n'a pas encore de prix fixé. Reprend le calcul de majoration de
+/** Charge et valorise toutes les livraisons ayant un contrat d'achat (planifiées
+ *  ET réalisées), au prix du contrat + MBM si applicable, ou à un prix par
+ *  défaut de 30€/t si le contrat n'a pas encore de prix fixé. Base commune au
+ *  prévisionnel et à la vue par période — reprend le calcul de majoration de
  *  l'API dashboard. */
-export async function getPrevisionnelFournisseur(supabase: SupabaseClient, dateFin: string): Promise<LignePrevisionnelle[]> {
+async function chargerLivraisonsValorisees(supabase: SupabaseClient): Promise<LivraisonValorisee[]> {
   const { data: majorationsRaw } = await supabase
     .from('majorations_negoce')
     .select('produit_id,date_debut,valeur')
@@ -197,14 +203,15 @@ export async function getPrevisionnelFournisseur(supabase: SupabaseClient, dateF
   const { data } = await supabase
     .from('livraisons')
     .select(`
-      id, mois_prevu, date_prevue, quantite_prevue, contrat_achat_id, facture_fournisseur_id,
+      id, type, mois_prevu, date_prevue, date_reelle, quantite_prevue, quantite_reelle,
+      contrat_achat_id, facture_fournisseur_id,
       contrat_achat:contrats_achat(
         id, numero_contrat, famille, prix_achat, mbm_autorise, produit_id,
         produit:produits(nom),
         fournisseur:fournisseurs(nom)
       )
     `)
-    .eq('type', 'planifiee')
+    // Pas de filtre type ici : planifiées ET réalisées, triées ensuite en JS.
 
   const maintenant = new Date()
   const aujourdhui = maintenant.toISOString().slice(0, 10)
@@ -213,27 +220,28 @@ export async function getPrevisionnelFournisseur(supabase: SupabaseClient, dateF
   const debutMoisCourant = `${maintenant.getFullYear()}-${String(maintenant.getMonth() + 1).padStart(2, '0')}-01`
 
   return ((data ?? []) as any[])
-    // facture_fournisseur_id : en pratique toujours vide tant que type='planifiee'
-    // (la saisie de facture ne cible que les livraisons réalisées), mais rien ne
-    // l'impose en base — exclusion défensive pour ne jamais compter deux fois un
-    // montant déjà facturé.
-    .filter(l => l.contrat_achat_id && !l.facture_fournisseur_id)
+    .filter(l => l.contrat_achat_id)
     .map(l => {
       const ca = l.contrat_achat
-      const dateRef: string = l.date_prevue ?? l.mois_prevu
+      const estRealisee = l.type === 'realisee'
+      const dateRef: string = estRealisee ? l.date_reelle : (l.date_prevue ?? l.mois_prevu)
+      const quantite = (estRealisee ? l.quantite_reelle : l.quantite_prevue) ?? 0
       const prixEstimeParDefaut = ca?.prix_achat == null
       const prixBase = ca?.prix_achat ?? PRIX_PAR_DEFAUT
       const majoration = calcMajoration(ca, dateRef)
       const prixUnitaireEstime = prixBase + majoration
-      const quantite = l.quantite_prevue ?? 0
-      // Retard : jour précis dépassé si connu (date_prevue), sinon mois entier déjà
-      // écoulé — mois_prevu est toujours stocké au 1er du mois, donc le comparer
-      // au jour près signalerait à tort tout le mois en cours comme "en retard".
-      const enRetard = l.date_prevue ? l.date_prevue < aujourdhui : l.mois_prevu < debutMoisCourant
+      // Retard (planifiée uniquement) : jour précis dépassé si connu (date_prevue),
+      // sinon mois entier déjà écoulé — mois_prevu est toujours stocké au 1er du
+      // mois, donc le comparer au jour près signalerait à tort tout le mois en
+      // cours comme "en retard".
+      const statutPlanifiee: 'retard' | 'a_venir' | null = estRealisee
+        ? null
+        : (l.date_prevue ? l.date_prevue < aujourdhui : l.mois_prevu < debutMoisCourant) ? 'retard' : 'a_venir'
       return {
         id: l.id,
+        type: l.type,
         dateRef,
-        quantitePrevue: l.quantite_prevue,
+        quantite,
         produit: ca?.produit?.nom ?? '—',
         numeroContrat: ca?.numero_contrat ?? '—',
         contratId: ca?.id ?? null,
@@ -241,11 +249,73 @@ export async function getPrevisionnelFournisseur(supabase: SupabaseClient, dateF
         prixUnitaireEstime,
         prixEstimeParDefaut,
         montantEstime: quantite * prixUnitaireEstime,
-        enRetard,
+        facture: !!l.facture_fournisseur_id,
+        statutPlanifiee,
       }
     })
-    // Pas de borne basse : le retard (mois précédents jamais livrés) doit
-    // remonter quelle que soit son ancienneté, tant qu'il reste avant dateFin.
+}
+
+export interface LignePrevisionnelle {
+  id: string
+  dateRef: string
+  quantite: number
+  produit: string
+  numeroContrat: string
+  contratId: string | null
+  fournisseur: string
+  prixUnitaireEstime: number
+  prixEstimeParDefaut: boolean
+  montantEstime: number
+  statut: StatutPrevisionnel
+}
+
+/** Estimation du montant fournisseur encore à venir : tout ce qui n'est pas
+ *  encore facturé — livraisons planifiées (retard compris, quelle que soit son
+ *  ancienneté : une livraison en retard peut se réaliser à tout moment) jusqu'à
+ *  `dateFin` incluse, ainsi que les livraisons déjà réalisées mais pas encore
+ *  facturées (celles-ci sortent du prévisionnel uniquement quand la facture est
+ *  traitée, pas quand la livraison a lieu). */
+export async function getPrevisionnelFournisseur(supabase: SupabaseClient, dateFin: string): Promise<LignePrevisionnelle[]> {
+  const rows = await chargerLivraisonsValorisees(supabase)
+  return rows
+    // Seule une facture déjà traitée fait sortir une livraison du prévisionnel —
+    // qu'elle soit encore planifiée ou déjà réalisée n'entre pas en ligne de compte.
+    .filter(l => !l.facture)
+    .map(({ statutPlanifiee, facture, type, ...l }) => ({
+      ...l,
+      statut: (statutPlanifiee ?? 'livre_non_facture') as StatutPrevisionnel,
+    }))
+    // Pas de borne basse : le retard et le réalisé-non-facturé doivent remonter
+    // quelle que soit leur ancienneté, tant qu'ils restent avant dateFin (déjà
+    // acquis pour le réalisé, puisque date_reelle est toujours dans le passé).
     .filter(l => l.dateRef <= dateFin)
+    .sort((a, b) => a.dateRef.localeCompare(b.dateRef))
+}
+
+export interface LignePeriode {
+  id: string
+  type: 'planifiee' | 'realisee'
+  dateRef: string
+  quantite: number
+  produit: string
+  numeroContrat: string
+  contratId: string | null
+  fournisseur: string
+  prixUnitaireEstime: number
+  prixEstimeParDefaut: boolean
+  montantEstime: number
+  facture: boolean
+}
+
+/** Toutes les livraisons (planifiées et réalisées, facturées ou non) dont la
+ *  date de référence tombe dans [dateDebut, dateFin] — une photo de ce qui est
+ *  prévu/arrivé sur une tranche précise (ex. "tout octobre"), sans notion de
+ *  retard ni de borne basse ouverte : contrairement au prévisionnel, une
+ *  livraison en retard de juillet n'apparaît pas ici si on choisit octobre. */
+export async function getLivraisonsParPeriode(supabase: SupabaseClient, dateDebut: string, dateFin: string): Promise<LignePeriode[]> {
+  const rows = await chargerLivraisonsValorisees(supabase)
+  return rows
+    .filter(l => l.dateRef >= dateDebut && l.dateRef <= dateFin)
+    .map(({ statutPlanifiee, ...l }) => l)
     .sort((a, b) => a.dateRef.localeCompare(b.dateRef))
 }

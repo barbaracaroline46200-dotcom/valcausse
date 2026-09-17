@@ -1,13 +1,17 @@
 'use client'
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { Loader2, CalendarRange, Download, AlertTriangle, ChevronUp, ChevronDown, X, TrendingUp } from 'lucide-react'
+import { Loader2, CalendarRange, Download, AlertTriangle, ChevronUp, ChevronDown, X, TrendingUp, CheckCircle2, CalendarDays } from 'lucide-react'
 import {
   trierLignes, filtrerLignes, STATUTS, PRIX_PAR_DEFAUT,
-  type TriChamp, type Ordre, type FiltresControle, type LigneControle, type StatutFacturation, type LignePrevisionnelle,
+  type TriChamp, type Ordre, type FiltresControle, type LigneControle, type StatutFacturation,
+  type LignePrevisionnelle, type LignePeriode,
 } from '@/lib/controle-facturation'
 import { formatDate, formatTonnes, formatEuros } from '@/lib/annee-agricole'
 
 const ROUGE = '#dc2626'
+const AMBRE = '#d97706'
+const GRIS = '#9ca3af'
+const VERT = '#16a34a'
 
 function statutInfo(key: StatutFacturation) {
   return STATUTS.find(s => s.key === key) ?? STATUTS[0]
@@ -28,6 +32,17 @@ function dernierJourMoisCourant() {
   // en avance sur UTC comme la France une fois passé par un new Date(y,m,0)).
   const dernierJour = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(dernierJour).padStart(2, '0')}`
+}
+function premierJourMoisProchain() {
+  const d = new Date()
+  const anchor = new Date(d.getFullYear(), d.getMonth() + 1, 1)
+  return `${anchor.getFullYear()}-${String(anchor.getMonth() + 1).padStart(2, '0')}-01`
+}
+function dernierJourMoisProchain() {
+  const d = new Date()
+  const anchor = new Date(d.getFullYear(), d.getMonth() + 1, 1)
+  const dernierJour = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0).getDate()
+  return `${anchor.getFullYear()}-${String(anchor.getMonth() + 1).padStart(2, '0')}-${String(dernierJour).padStart(2, '0')}`
 }
 function ecartLabel(l: LigneControle) {
   if (l.ecartMois == null) return '—'
@@ -51,6 +66,27 @@ export default function ControleFacturationPage() {
       .then(d => setPrevisionnel(Array.isArray(d) ? d : []))
       .catch(() => {})
   }, [previsionnelFin])
+
+  const [periode, setPeriode] = useState<LignePeriode[]>([])
+  const [periodeOuvert, setPeriodeOuvert] = useState(false)
+  const [perDebut, setPerDebut] = useState(premierJourMoisProchain())
+  const [perFin, setPerFin] = useState(dernierJourMoisProchain())
+
+  useEffect(() => {
+    fetch(`/api/controle-facturation/periode?date_debut=${perDebut}&date_fin=${perFin}`)
+      .then(r => r.json())
+      .then(d => setPeriode(Array.isArray(d) ? d : []))
+      .catch(() => {})
+  }, [perDebut, perFin])
+
+  function onChangePerDebut(v: string) {
+    setPerDebut(v)
+    if (perFin < v) setPerFin(v)
+  }
+  function onChangePerFin(v: string) {
+    if (v < perDebut) return
+    setPerFin(v)
+  }
 
   const [tri, setTri] = useState<TriChamp>('date')
   const [ordre, setOrdre] = useState<Ordre>('asc')
@@ -150,12 +186,13 @@ export default function ControleFacturationPage() {
         </div>
       </div>
 
-      {/* Prévisionnel — livraisons planifiées pas encore réalisées, valorisées à titre indicatif */}
+      {/* Prévisionnel — tout ce qui n'est pas encore facturé, valorisé à titre indicatif */}
       {(() => {
-        const totalTonnes = previsionnel.reduce((s, l) => s + (l.quantitePrevue ?? 0), 0)
+        const totalTonnes = previsionnel.reduce((s, l) => s + l.quantite, 0)
         const totalMontant = previsionnel.reduce((s, l) => s + l.montantEstime, 0)
         const nbPrixParDefaut = previsionnel.filter(l => l.prixEstimeParDefaut).length
-        const nbEnRetard = previsionnel.filter(l => l.enRetard).length
+        const nbEnRetard = previsionnel.filter(l => l.statut === 'retard').length
+        const nbNonFacture = previsionnel.filter(l => l.statut === 'livre_non_facture').length
         return (
           <div className="card border-2" style={{ borderColor: '#bbf7d0' }}>
             <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -184,21 +221,26 @@ export default function ControleFacturationPage() {
                     <AlertTriangle size={12} /> {nbEnRetard} en retard
                   </span>
                 )}
+                {nbNonFacture > 0 && (
+                  <span className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: AMBRE + '15', color: AMBRE }}>
+                    <CheckCircle2 size={12} /> {nbNonFacture} livrée{nbNonFacture > 1 ? 's' : ''}, non facturée{nbNonFacture > 1 ? 's' : ''}
+                  </span>
+                )}
                 <span className="text-sm text-gray-500">{formatTonnes(totalTonnes)}</span>
                 <span className="text-lg font-bold text-green-700">≈ {formatEuros(totalMontant)}</span>
               </div>
             </div>
             <p className="text-xs text-gray-400 mt-1.5">
-              Estimation à titre indicatif jusqu'au {formatDate(previsionnelFin)}, retard des mois précédents inclus : prix du contrat (+ MBM si applicable){nbPrixParDefaut > 0 ? `, ou ${PRIX_PAR_DEFAUT}€/t par défaut pour ${nbPrixParDefaut} livraison${nbPrixParDefaut > 1 ? 's' : ''} dont le prix d'achat n'est pas encore fixé` : ''}.
+              Tout ce qui n'est pas encore facturé jusqu'au {formatDate(previsionnelFin)} : retard compris (quelle que soit son ancienneté) et livraisons déjà réalisées en attente de facture. Estimation au prix du contrat (+ MBM si applicable){nbPrixParDefaut > 0 ? `, ou ${PRIX_PAR_DEFAUT}€/t par défaut pour ${nbPrixParDefaut} livraison${nbPrixParDefaut > 1 ? 's' : ''} dont le prix d'achat n'est pas encore fixé` : ''}.
             </p>
             {previsionnelOuvert && (
               previsionnel.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-6">Aucune livraison planifiée avant cette date.</p>
+                <p className="text-sm text-gray-400 text-center py-6">Rien en attente de facture avant cette date.</p>
               ) : (
                 <div className="overflow-auto mt-3 -mx-1">
                   <table className="w-full text-sm">
                     <thead><tr className="border-b border-gray-100 bg-gray-50">
-                      <Th>Date prévue</Th>
+                      <Th>Date</Th>
                       <Th>Fournisseur</Th>
                       <Th>Produit</Th>
                       <Th>Contrat</Th>
@@ -207,27 +249,112 @@ export default function ControleFacturationPage() {
                       <Th className="text-right">Montant estimé</Th>
                     </tr></thead>
                     <tbody>
-                      {previsionnel.map(l => (
-                        <tr key={l.id} className="table-row" style={l.enRetard ? { borderLeft: `4px solid ${ROUGE}` } : undefined}>
-                          <td className="table-cell font-semibold" style={l.enRetard ? { color: ROUGE } : undefined}>
-                            {formatDate(l.dateRef)}
-                            {l.enRetard && <AlertTriangle size={12} className="inline-block ml-1 mb-0.5" />}
-                          </td>
-                          <td className="table-cell">{l.fournisseur}</td>
-                          <td className="table-cell font-medium">{l.produit}</td>
-                          <td className="table-cell">
-                            {l.contratId
-                              ? <a href={`/contrats/${l.contratId}`} className="text-green-700 hover:underline">{l.numeroContrat}</a>
-                              : l.numeroContrat}
-                          </td>
-                          <td className="table-cell text-right font-semibold">{formatTonnes(l.quantitePrevue ?? 0)}</td>
-                          <td className="table-cell text-right text-gray-500">
-                            {l.prixUnitaireEstime.toFixed(2)} €/t
-                            {l.prixEstimeParDefaut && <span className="ml-1 text-amber-600" title="Prix d'achat non fixé — estimation par défaut">*</span>}
-                          </td>
-                          <td className="table-cell text-right font-semibold">{formatEuros(l.montantEstime)}</td>
-                        </tr>
-                      ))}
+                      {previsionnel.map(l => {
+                        const couleur = l.statut === 'retard' ? ROUGE : l.statut === 'livre_non_facture' ? AMBRE : undefined
+                        return (
+                          <tr key={l.id} className="table-row" style={couleur ? { borderLeft: `4px solid ${couleur}` } : undefined}>
+                            <td className="table-cell font-semibold" style={couleur ? { color: couleur } : undefined}>
+                              {formatDate(l.dateRef)}
+                              {l.statut === 'retard' && <AlertTriangle size={12} className="inline-block ml-1 mb-0.5" />}
+                              {l.statut === 'livre_non_facture' && <CheckCircle2 size={12} className="inline-block ml-1 mb-0.5" />}
+                            </td>
+                            <td className="table-cell">{l.fournisseur}</td>
+                            <td className="table-cell font-medium">{l.produit}</td>
+                            <td className="table-cell">
+                              {l.contratId
+                                ? <a href={`/contrats/${l.contratId}`} className="text-green-700 hover:underline">{l.numeroContrat}</a>
+                                : l.numeroContrat}
+                            </td>
+                            <td className="table-cell text-right font-semibold">{formatTonnes(l.quantite)}</td>
+                            <td className="table-cell text-right text-gray-500">
+                              {l.prixUnitaireEstime.toFixed(2)} €/t
+                              {l.prixEstimeParDefaut && <span className="ml-1 text-amber-600" title="Prix d'achat non fixé — estimation par défaut">*</span>}
+                            </td>
+                            <td className="table-cell text-right font-semibold">{formatEuros(l.montantEstime)}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            )}
+          </div>
+        )
+      })()}
+
+      {/* Livraisons sur une période choisie — photo (planifiées + réalisées, facturées ou non) sur une tranche précise */}
+      {(() => {
+        const totalTonnes = periode.reduce((s, l) => s + l.quantite, 0)
+        const totalMontant = periode.reduce((s, l) => s + l.montantEstime, 0)
+        const nbPlanifiees = periode.filter(l => l.type === 'planifiee').length
+        const nbFacturees = periode.filter(l => l.facture).length
+        return (
+          <div className="card border-2" style={{ borderColor: '#e5e7eb' }}>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <button
+                onClick={() => setPeriodeOuvert(v => !v)}
+                className="flex items-center gap-2 text-left"
+              >
+                <CalendarDays size={18} className="text-gray-500" />
+                <span className="font-bold text-gray-800">Livraisons sur une période</span>
+                <span className="text-xs text-gray-400">({periode.length})</span>
+                {periodeOuvert ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+              </button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                  <CalendarRange size={14} />
+                  Du
+                </div>
+                <input type="date" className="input text-sm py-1 w-36" value={perDebut} onChange={e => onChangePerDebut(e.target.value)} />
+                <span className="text-xs text-gray-500">au</span>
+                <input type="date" className="input text-sm py-1 w-36" value={perFin} onChange={e => onChangePerFin(e.target.value)} />
+                <span className="text-sm text-gray-500 ml-1">{formatTonnes(totalTonnes)}</span>
+                <span className="text-lg font-bold text-gray-700">≈ {formatEuros(totalMontant)}</span>
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 mt-1.5">
+              Tout ce qui est prévu ou arrivé entre le {formatDate(perDebut)} et le {formatDate(perFin)}, planifié ({nbPlanifiees}) ou déjà réalisé ({periode.length - nbPlanifiees}, dont {nbFacturees} déjà facturée{nbFacturees > 1 ? 's' : ''}) — sans notion de retard ici, juste une photo de la période choisie.
+            </p>
+            {periodeOuvert && (
+              periode.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-6">Aucune livraison sur cette période.</p>
+              ) : (
+                <div className="overflow-auto mt-3 -mx-1">
+                  <table className="w-full text-sm">
+                    <thead><tr className="border-b border-gray-100 bg-gray-50">
+                      <Th>Date</Th>
+                      <Th>Fournisseur</Th>
+                      <Th>Produit</Th>
+                      <Th>Contrat</Th>
+                      <Th className="text-right">Quantité</Th>
+                      <Th>Statut</Th>
+                      <Th className="text-right">Montant estimé</Th>
+                    </tr></thead>
+                    <tbody>
+                      {periode.map(l => {
+                        const statutLabel = l.type === 'planifiee' ? 'Planifiée' : l.facture ? 'Facturée' : 'Livrée, non facturée'
+                        const statutHex = l.type === 'planifiee' ? GRIS : l.facture ? VERT : AMBRE
+                        return (
+                          <tr key={l.id} className="table-row">
+                            <td className="table-cell">{formatDate(l.dateRef)}</td>
+                            <td className="table-cell">{l.fournisseur}</td>
+                            <td className="table-cell font-medium">{l.produit}</td>
+                            <td className="table-cell">
+                              {l.contratId
+                                ? <a href={`/contrats/${l.contratId}`} className="text-green-700 hover:underline">{l.numeroContrat}</a>
+                                : l.numeroContrat}
+                            </td>
+                            <td className="table-cell text-right font-semibold">{formatTonnes(l.quantite)}</td>
+                            <td className="table-cell">
+                              <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={{ backgroundColor: statutHex + '18', color: statutHex }}>
+                                {statutLabel}
+                              </span>
+                            </td>
+                            <td className="table-cell text-right font-semibold">{formatEuros(l.montantEstime)}</td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>
