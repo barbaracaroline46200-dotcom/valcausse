@@ -13,10 +13,14 @@ const PAGE_H = 842
 const MARGIN_BOTTOM = 60
 
 function fmtEuros(n: number) {
-  return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
+  // Helvetica (WinAnsi) ne sait pas encoder l'espace fine insecable (U+202F)
+  // que toLocaleString('fr-FR') utilise comme separateur de milliers.
+  const s = n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return s.replace(/\u202f/g, '\u0020') + ' €'
 }
 function fmtTonnes(n: number) {
-  return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' t'
+  const s = n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return s.replace(/\u202f/g, '\u0020') + ' t'
 }
 function fmtDate(d: string | null) {
   return d ? new Date(d).toLocaleDateString('fr-FR') : '—'
@@ -53,7 +57,7 @@ export async function GET(req: NextRequest) {
   const livraisonsDetail = livraisonsRealisees
     .map((l: any) => {
       const cv = (contrat.contrats_vente ?? []).find((v: any) => v.id === l.contrat_vente_id)
-      const destination = cv?.agriculteur ? [cv.agriculteur.civilite, cv.agriculteur.nom].filter(Boolean).join(' ') : (l.destination_silo || 'Silo / non affecté')
+      const destination = cv?.agriculteur ? [cv.agriculteur.civilite, cv.agriculteur.nom].filter(Boolean).join(' ') : (l.destination_silo ? 'Silo' : 'Non affecté')
       return {
         date: l.date_reelle as string | null,
         destination,
