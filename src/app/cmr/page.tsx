@@ -42,22 +42,30 @@ export default function CmrPage() {
 
   const [onglet, setOnglet] = useState<'normal' | 'negoce_silo' | 'appro_gare'>('normal')
 
-  function getAgri(l: any) {
-    return l.contrat_achat?.contrats_vente?.find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur
-      ?? l.contrat_achat?.contrats_vente?.[0]?.agriculteur
-      ?? l.contrat_vente?.agriculteur // vente départ silo, pas de contrat d'achat
+  // Vente pertinente pour une livraison : lien direct (contrat_vente_id) si présent,
+  // sinon la vente "vente départ silo" sans contrat d'achat, sinon — pour une livraison
+  // cochée "silo" à la volée, sans vente liée — la vente "Affecter au silo" du même
+  // contrat d'achat si elle existe. Jamais une vente au hasard (ex. un vrai agriculteur).
+  function getCv(l: any) {
+    const exact = l.contrat_achat?.contrats_vente?.find((cv: any) => cv.id === l.contrat_vente_id)
+    if (exact) return exact
+    if (l.contrat_vente) return l.contrat_vente
+    if (l.destination_silo) return l.contrat_achat?.contrats_vente?.find((cv: any) => cv.destination_silo)
+    return undefined
   }
 
-  function getCv(l: any) {
-    return l.contrat_achat?.contrats_vente?.find((cv: any) => cv.id === l.contrat_vente_id)
-      ?? l.contrat_achat?.contrats_vente?.[0]
-      ?? l.contrat_vente
+  function getAgri(l: any) {
+    return getCv(l)?.agriculteur
   }
 
   function categorise(l: any): 'normal' | 'negoce_silo' | 'appro_gare' {
     const cv = getCv(l)
-    if (!cv?.destination_silo) return 'normal'
-    return (cv.silo_nom ?? '').toLowerCase().includes('gare') ? 'appro_gare' : 'negoce_silo'
+    const estSilo = l.destination_silo || cv?.destination_silo
+    if (!estSilo) return 'normal'
+    // Pas de vente liée pour préciser le silo : par convention, appro = silo gare
+    // (CMR requis), négoce = silo simple (BA seulement) — cf. RealiserLivraisonModal.
+    const gare = cv?.silo_nom ? cv.silo_nom.toLowerCase().includes('gare') : l.contrat_achat?.famille === 'appro'
+    return gare ? 'appro_gare' : 'negoce_silo'
   }
 
   const cmrNormal     = useMemo(() => cmr.filter(l => categorise(l) === 'normal'),      [cmr])

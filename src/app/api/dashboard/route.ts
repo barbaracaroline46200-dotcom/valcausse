@@ -78,12 +78,27 @@ export async function GET() {
     .select(cmrSelect)
     .order('date_reelle', { ascending: true })
 
+  // Trouve le contrat de vente pertinent pour une livraison :
+  // - lien direct (contrat_vente_id) si présent
+  // - sinon, pour une livraison cochée "silo" à la volée (pas de vente liée),
+  //   la vente "Affecter au silo" du même contrat d'achat, s'il y en a une —
+  //   jamais une vente au hasard (ex. un vrai agriculteur) comme avant.
+  function getCvSilo(l: any) {
+    const exact = (l.contrat_achat?.contrats_vente ?? []).find((cv: any) => cv.id === l.contrat_vente_id)
+    if (exact) return exact
+    if (!l.destination_silo) return undefined
+    return (l.contrat_achat?.contrats_vente ?? []).find((cv: any) => cv.destination_silo)
+  }
+
   // Silo (pas silo gare) : pas de CMR/LC requis, seulement poids + BA (piece_fournisseur_numero)
   function estSiloSansGare(l: any) {
-    const cv = (l.contrat_achat?.contrats_vente ?? []).find((cv: any) => cv.id === l.contrat_vente_id)
-      ?? l.contrat_achat?.contrats_vente?.[0]
-    if (!cv?.destination_silo) return false
-    return !(cv.silo_nom ?? '').toLowerCase().includes('gare')
+    const cv = getCvSilo(l)
+    const estSilo = l.destination_silo || cv?.destination_silo
+    if (!estSilo) return false
+    // Pas de vente liée pour préciser le silo (cas "silo" coché sans "Affecter au silo") :
+    // par convention, appro = silo gare (CMR requis), négoce = silo simple (BA seulement).
+    const gare = cv?.silo_nom ? cv.silo_nom.toLowerCase().includes('gare') : l.contrat_achat?.famille === 'appro'
+    return !gare
   }
 
   const cmrRealisees = (toutesLivraisons ?? []).filter((l: any) => {
