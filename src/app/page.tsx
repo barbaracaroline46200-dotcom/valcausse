@@ -3,7 +3,7 @@
 import { getDashboardData } from './actions'
 import { useEffect, useState, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
-import { Phone, AlertTriangle, TrendingUp, Loader2, Plus, Trash2, CheckSquare, Square, CalendarDays, CheckCircle2, Circle, ClipboardList, CheckCircle, Wheat, Sprout, PackageOpen, PackageCheck, ChevronDown } from 'lucide-react'
+import { Phone, AlertTriangle, TrendingUp, Loader2, Plus, Trash2, CheckSquare, Square, CalendarDays, CheckCircle2, Circle, ClipboardList, CheckCircle, Wheat, Sprout, PackageOpen, PackageCheck, ChevronDown, Package } from 'lucide-react'
 import { formatDate, formatTonnes, getAnneeAgricoleLabel, getAnneeAgricole } from '@/lib/annee-agricole'
 import { quantiteLivree, reliquat } from '@/lib/utils'
 import CalendrierLivraisons from '@/components/ui/CalendrierLivraisons'
@@ -199,6 +199,16 @@ export default function DashboardPage() {
   const contratsClos = contrats.filter((c: any) => c.statut === 'clos').length
 
   const alertes = (data?.contratsAlerte ?? []).filter((c: any) => !c.gere_par_silo && reliquat(c.quantite_totale, c.livraisons ?? []) > 0)
+
+  // Tonnage acheté mais pas encore affecté à une vente (contrat_vente)
+  const contratsDisponibles = contrats
+    .filter((c: any) => c.statut === 'en_cours')
+    .map((c: any) => {
+      const reserve = (c.contrats_vente ?? []).reduce((s: number, cv: any) => s + (cv.quantite ?? 0), 0)
+      return { ...c, disponible: (c.quantite_totale ?? 0) - reserve }
+    })
+    .filter((c: any) => c.disponible > 0.01)
+    .sort((a: any, b: any) => b.disponible - a.disponible)
   const approSansMad = (data?.livraisonsPlanifiees ?? []).filter((l: any) =>
     l.contrat_achat?.famille === 'appro' && !l.numero_mise_a_disposition
   )
@@ -563,6 +573,42 @@ export default function DashboardPage() {
                   </tr>
                 )
               })}
+            </tbody>
+          </table>
+        </Section>
+      )}
+
+      {/* Tonnage disponible (non réservé) */}
+      {contratsDisponibles.length > 0 && (
+        <Section
+          icon={<Package size={20} />}
+          title="Tonnage disponible"
+          count={contratsDisponibles.length}
+          color="blue"
+          subtitle="Contrats en cours dont une partie du tonnage n'est pas encore affectée à une vente"
+        >
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-100">
+                {['Contrat', 'Produit', 'Fournisseur', 'Quantité totale', 'Disponible'].map(h => (
+                  <th key={h} className="table-header">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {contratsDisponibles.map((c: any) => (
+                <tr key={c.id} className="table-row">
+                  <td className="table-cell">
+                    <a href={`/contrats/${c.id}`} className="font-medium text-green-700 hover:underline">{c.numero_contrat}</a>
+                  </td>
+                  <td className="table-cell">{c.produit?.nom ?? '—'}</td>
+                  <td className="table-cell text-sm">{c.fournisseur?.nom ?? '—'}</td>
+                  <td className="table-cell text-sm text-gray-500">{formatTonnes(c.quantite_totale)}</td>
+                  <td className="table-cell">
+                    <span className="font-bold text-base" style={{ color: '#2a5570' }}>{formatTonnes(c.disponible)}</span>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </Section>
