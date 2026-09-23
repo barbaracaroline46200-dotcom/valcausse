@@ -551,16 +551,28 @@ export default function ContratDetailPage() {
                   {livraisonsRealisees.map((l: any) => {
                     const ecart = ecartTransport(l.montant_transport_reel, contrat.prix_transport_prevu)
                     const prevu = contrat.prix_transport_prevu ?? null
+                    // Vente liée : seul un lien direct (contrat_vente_id) fait foi pour le nom
+                    // du silo — piocher une vente "silo" quelconque du même contrat a déjà
+                    // produit un faux positif (CA.0401326 : livraison négoce cochée "silo" à
+                    // la volée, mais seule vente silo du contrat nommée par erreur "Silo gare").
+                    const cv = (contrat.contrats_vente ?? []).find((v: any) => v.id === l.contrat_vente_id)
+                    const estSilo = l.destination_silo || cv?.destination_silo
+                    // Silo gare (appro, ou vente liée dont le nom contient "gare") : CMR requis
+                    // comme pour une livraison normale. Silo simple (négoce) : pas de CMR, seul
+                    // le BA (piece_fournisseur_numero) fait foi — cf. commit 4d3ded7.
+                    const gare = cv?.silo_nom ? cv.silo_nom.toLowerCase().includes('gare') : contrat.famille === 'appro'
+                    const cmrRequis = !estSilo || gare
                     return (
                       <tr key={l.id} className="table-row bg-green-50/40 hover:bg-green-50/80">
                         <td className="table-cell font-medium">{formatDate(l.date_reelle)}{l.note_alerte && <span className="ml-1"><AlerteNote note={l.note_alerte} size={13} /></span>}</td>
                         <td className="table-cell text-xs">
-                          {(() => {
-                            const cv = (contrat.contrats_vente ?? []).find((v: any) => v.id === l.contrat_vente_id)
-                            if (!cv) return <span className="text-gray-400">—</span>
-                            if (cv.destination_silo) return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-medium">🏚 {cv.silo_nom}</span>
-                            return <span className="text-green-700 font-medium">{cv.agriculteur?.nom ?? '—'}</span>
-                          })()}
+                          {cv?.destination_silo
+                            ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-medium">🏚 {cv.silo_nom}</span>
+                            : l.destination_silo
+                              ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-medium">🏚 Silo</span>
+                              : cv
+                                ? <span className="text-green-700 font-medium">{cv.agriculteur?.nom ?? '—'}</span>
+                                : <span className="text-gray-400">—</span>}
                         </td>
                         <td className="table-cell font-semibold">{formatTonnes(l.quantite_reelle)}</td>
                         <td className="table-cell text-gray-500">{l.ville_chargement ?? '—'}</td>
@@ -568,7 +580,9 @@ export default function ContratDetailPage() {
                         <td className="table-cell">
                           {l.numero_lettre_voiture
                             ? <span className="badge-clos text-xs">{l.numero_lettre_voiture}</span>
-                            : <span className="badge-alerte text-xs">Manquant</span>}
+                            : !cmrRequis
+                              ? <span className="text-gray-400">—</span>
+                              : <span className="badge-alerte text-xs">Manquant</span>}
                         </td>
                         <td className="table-cell text-xs">
                           {l.piece_fournisseur_prefixe && l.piece_fournisseur_numero

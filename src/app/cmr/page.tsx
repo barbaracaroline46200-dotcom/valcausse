@@ -43,14 +43,13 @@ export default function CmrPage() {
   const [onglet, setOnglet] = useState<'normal' | 'negoce_silo' | 'appro_gare'>('normal')
 
   // Vente pertinente pour une livraison : lien direct (contrat_vente_id) si présent,
-  // sinon la vente "vente départ silo" sans contrat d'achat, sinon — pour une livraison
-  // cochée "silo" à la volée, sans vente liée — la vente "Affecter au silo" du même
-  // contrat d'achat si elle existe. Jamais une vente au hasard (ex. un vrai agriculteur).
+  // sinon la vente "vente départ silo" sans contrat d'achat. Jamais une vente au hasard
+  // du même contrat d'achat (ex. un vrai agriculteur, ou une vente "silo" mal nommée) —
+  // a déjà produit un faux positif (CA.0401326, cf. commit sur ce fichier).
   function getCv(l: any) {
     const exact = l.contrat_achat?.contrats_vente?.find((cv: any) => cv.id === l.contrat_vente_id)
     if (exact) return exact
     if (l.contrat_vente) return l.contrat_vente
-    if (l.destination_silo) return l.contrat_achat?.contrats_vente?.find((cv: any) => cv.destination_silo)
     return undefined
   }
 

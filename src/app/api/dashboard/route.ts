@@ -78,16 +78,13 @@ export async function GET() {
     .select(cmrSelect)
     .order('date_reelle', { ascending: true })
 
-  // Trouve le contrat de vente pertinent pour une livraison :
-  // - lien direct (contrat_vente_id) si présent
-  // - sinon, pour une livraison cochée "silo" à la volée (pas de vente liée),
-  //   la vente "Affecter au silo" du même contrat d'achat, s'il y en a une —
-  //   jamais une vente au hasard (ex. un vrai agriculteur) comme avant.
+  // Vente liée à une livraison : seul un lien direct (contrat_vente_id) fait foi.
+  // Piocher une vente "silo" quelconque du même contrat d'achat a déjà produit un
+  // faux positif (CA.0401326 : livraison négoce cochée "silo" à la volée, mais
+  // l'unique vente silo du contrat était nommée par erreur "Silo gare") — sans
+  // lien exact, on retombe directement sur la convention par famille ci-dessous.
   function getCvSilo(l: any) {
-    const exact = (l.contrat_achat?.contrats_vente ?? []).find((cv: any) => cv.id === l.contrat_vente_id)
-    if (exact) return exact
-    if (!l.destination_silo) return undefined
-    return (l.contrat_achat?.contrats_vente ?? []).find((cv: any) => cv.destination_silo)
+    return (l.contrat_achat?.contrats_vente ?? []).find((cv: any) => cv.id === l.contrat_vente_id)
   }
 
   // Silo (pas silo gare) : pas de CMR/LC requis, seulement poids + BA (piece_fournisseur_numero)
