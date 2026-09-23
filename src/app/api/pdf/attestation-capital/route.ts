@@ -4,9 +4,29 @@ import { PDFDocument, PDFPage, PDFFont, rgb, StandardFonts } from 'pdf-lib'
 import { montantEnLettres } from '@/lib/nombre-lettres'
 
 const black = rgb(0, 0, 0)
-const PAGE_W = 595
-const PAGE_H = 842
+const PAGE_W = 595.32
+const PAGE_H = 841.92
 const PRIX_PART = 1.52
+
+// Positions calibrées sur le modèle papier original (coordonnées relevées via
+// `pdftotext -bbox`) pour que le bloc destinataire tombe dans la fenêtre de
+// l'enveloppe : x fixe (pas d'alignement dynamique à droite) et y fixe depuis
+// le haut de la page, indépendant du nombre de lignes d'adresse saisies.
+const HEADER_X = 319
+const HEADER_Y_START = 700
+const LINE_H = 17.1
+const BODY_X = 71
+const BODY_INDENT_X = 99
+const SIGNATURE_X = 354
+const TITLE_Y1 = 620
+const TITLE_Y2 = 590.6
+const BOX_Y = 543.3
+const BODY_Y1 = 457.4
+const BODY_Y2 = 440.3
+const GAP_BODY_TO_MIDBLOCK = 34.2
+const GAP_MIDBLOCK_TO_DETIENT = 34.2
+const GAP_SOIT_TO_SIGNATURE = 68.3
+const GAP_BLANC_SIGNATURE = 34.2
 
 function fmtMontant(n: number) {
   // Helvetica (WinAnsi) ne sait pas encoder l'espace fine insecable (U+202F)
@@ -31,7 +51,7 @@ export async function GET(req: NextRequest) {
   }
 
   const nbParts = Math.round(montant / PRIX_PART)
-  const adresseLignes = adresse.split('\n').map(l => l.trim()).filter(Boolean)
+  const adresseLignes = [nom.toUpperCase(), ...adresse.split('\n').map(l => l.trim()).filter(Boolean).map(l => l.toUpperCase())]
 
   const pdfDoc = await PDFDocument.create()
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
@@ -43,7 +63,7 @@ export async function GET(req: NextRequest) {
     page.drawText(text, { x: (PAGE_W - width) / 2, y, font: f, size, color: black })
   }
 
-  function mixedLine(x: number, y: number, segments: { text: string; bold?: boolean }[], size = 10.5) {
+  function mixedLine(x: number, y: number, segments: { text: string; bold?: boolean }[], size = 11) {
     let cx = x
     for (const seg of segments) {
       const f = seg.bold ? fontBold : font
@@ -52,69 +72,58 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  function adresseBlockLignes(): string[] {
-    return [nom.toUpperCase(), ...adresseLignes.map(l => l.toUpperCase())]
-  }
-
-  // ── En-tête : nom / adresse du détenteur, aligné à droite ──
-  let y = PAGE_H - 70
-  for (const ligne of adresseBlockLignes()) {
-    const width = fontBold.widthOfTextAtSize(ligne, 11)
-    page.drawText(ligne, { x: PAGE_W - 60 - width, y, font: fontBold, size: 11, color: black })
-    y -= 16
+  // ── En-tête : bloc destinataire, position fixe (fenêtre enveloppe) ──
+  let y = HEADER_Y_START
+  for (const ligne of adresseLignes) {
+    page.drawText(ligne, { x: HEADER_X, y, font: fontBold, size: 11, color: black })
+    y -= LINE_H
   }
 
   // ── Titre ──
-  y -= 40
-  centeredText('ATTESTATION', y, fontBold, 20)
-  y -= 26
-  centeredText('CAPITAL SOCIAL', y, fontBold, 20)
+  centeredText('ATTESTATION', TITLE_Y1, fontBold, 20)
+  centeredText('CAPITAL SOCIAL', TITLE_Y2, fontBold, 20)
 
   // ── Montant encadré ──
-  y -= 50
   const montantLabel = `${fmtMontant(montant)} €`
   const montantSize = 16
   const montantWidth = fontBold.widthOfTextAtSize(montantLabel, montantSize)
   const boxPad = 12
   const boxX = (PAGE_W - montantWidth) / 2 - boxPad
   const boxW = montantWidth + boxPad * 2
-  page.drawRectangle({ x: boxX, y: y - 8, width: boxW, height: montantSize + 16, borderColor: black, borderWidth: 1 })
-  page.drawText(montantLabel, { x: (PAGE_W - montantWidth) / 2, y, font: fontBold, size: montantSize, color: black })
+  page.drawRectangle({ x: boxX, y: BOX_Y - 8, width: boxW, height: montantSize + 16, borderColor: black, borderWidth: 1 })
+  page.drawText(montantLabel, { x: (PAGE_W - montantWidth) / 2, y: BOX_Y, font: fontBold, size: montantSize, color: black })
 
   // ── Corps ──
-  y -= 70
-  page.drawText('Je soussigné, Thierry CHASSAING, Président de la Coopérative Agricole', { x: 60, y, font, size: 10.5, color: black })
-  y -= 15
-  page.drawText('VALCAUSSE, certifie que :', { x: 60, y, font, size: 10.5, color: black })
+  page.drawText('Je soussigné, Thierry CHASSAING, Président de la Coopérative Agricole', { x: BODY_INDENT_X, y: BODY_Y1, font, size: 11, color: black })
+  page.drawText('VALCAUSSE, certifie que :', { x: BODY_X, y: BODY_Y2, font, size: 11, color: black })
 
-  y -= 40
-  for (const ligne of adresseBlockLignes()) {
-    centeredText(ligne, y, fontBold, 10.5)
-    y -= 16
+  y = BODY_Y2 - GAP_BODY_TO_MIDBLOCK
+  for (const ligne of adresseLignes) {
+    centeredText(ligne, y, fontBold, 11)
+    y -= LINE_H
   }
 
-  y -= 20
-  mixedLine(60, y, [
+  y -= (GAP_MIDBLOCK_TO_DETIENT - LINE_H)
+  mixedLine(BODY_X, y, [
     { text: 'détient ' },
     { text: `${nbParts} parts sociales de ${fmtMontant(PRIX_PART)}€`, bold: true },
     { text: ' au sein de la Coopérative VALCAUSSE,' },
   ])
-  y -= 18
-  mixedLine(60, y, [
+  const soitY = y - LINE_H
+  mixedLine(BODY_X, soitY, [
     { text: `soit un Capital Social de ${fmtMontant(montant)}€`, bold: true },
     { text: ` (${montantEnLettres(montant)}).` },
   ])
 
   // ── Signature ──
-  y -= 90
-  const sigX = PAGE_W - 200
-  page.drawText('Souillac,', { x: sigX, y, font, size: 10.5, color: black })
-  y -= 15
-  page.drawText(`le ${fmtDateLettres(new Date())}`, { x: sigX, y, font, size: 10.5, color: black })
-  y -= 45
-  page.drawText('Thierry CHASSAING', { x: sigX, y, font, size: 10.5, color: black })
-  y -= 15
-  page.drawText('Président', { x: sigX, y, font, size: 10.5, color: black })
+  y = soitY - GAP_SOIT_TO_SIGNATURE
+  page.drawText('Souillac,', { x: SIGNATURE_X, y, font, size: 11, color: black })
+  y -= LINE_H
+  page.drawText(`le ${fmtDateLettres(new Date())}`, { x: SIGNATURE_X, y, font, size: 11, color: black })
+  y -= GAP_BLANC_SIGNATURE
+  page.drawText('Thierry CHASSAING', { x: SIGNATURE_X, y, font, size: 11, color: black })
+  y -= LINE_H
+  page.drawText('Président', { x: SIGNATURE_X, y, font, size: 11, color: black })
 
   const pdfBytes = await pdfDoc.save()
   return new NextResponse(pdfBytes, {
