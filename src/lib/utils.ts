@@ -24,7 +24,8 @@ export function ecartTransport(montantReel?: number | null, prixPrev?: number | 
   return montantReel - prixPrev
 }
 
-export function joursDepuis(dateStr: string): number {
+export function joursDepuis(dateStr: string | null | undefined): number | null {
+  if (!dateStr) return null
   const d = new Date(dateStr)
   const now = new Date()
   return Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24))

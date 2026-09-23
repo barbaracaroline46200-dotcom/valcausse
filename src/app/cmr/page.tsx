@@ -187,7 +187,9 @@ export default function CmrPage() {
             <tbody>
               {cmrFiltres.map((l: any) => {
                 const isRealisee = l.type === 'realisee'
-                const dateRef = isRealisee ? l.date_reelle : l.date_prevue
+                // Une planifiée peut n'avoir qu'un mois connu (mois_prevu), sans date précise —
+                // sans repli, joursDepuis(null) plantait sur l'epoch Unix (~20700j de "retard").
+                const dateRef = isRealisee ? l.date_reelle : (l.date_prevue || l.date_souhaitee || l.mois_prevu)
                 const jours = joursDepuis(dateRef)
                 const dateAffichee = isRealisee
                   ? formatDate(l.date_reelle)
@@ -223,7 +225,7 @@ export default function CmrPage() {
                       )}
                     </td>
                     <td className="table-cell">
-                      <span className="badge-alerte">{jours}j</span>
+                      {jours != null ? <span className="badge-alerte">{jours}j</span> : <span className="text-gray-400">—</span>}
                     </td>
                     <td className="table-cell">
                       {isRealisee
