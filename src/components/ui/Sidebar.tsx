@@ -113,6 +113,7 @@ export default function Sidebar() {
             <SectionLabel label="Administration" icon={<ShieldCheck size={12} style={{ color: '#C8941A' }} />} />
             <NavItem href="/agenda"       label="Agenda"        icon={<CalendarDays size={18} />} active={active('/agenda')} />
             <NavItem href="/referentiels" label="Référentiels"  icon={<BookOpen size={18} />}    active={active('/referentiels')} />
+            <NavItem href="/attestations/capital-social" label="Attestation capital" icon={<Receipt size={18} />} active={active('/attestations/capital-social')} />
           </>
         )}
       </nav>
