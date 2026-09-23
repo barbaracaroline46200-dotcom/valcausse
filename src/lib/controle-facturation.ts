@@ -275,6 +275,11 @@ export interface LignePrevisionnelle {
  *  `dateFin` incluse, ainsi que les livraisons déjà réalisées mais pas encore
  *  facturées (celles-ci sortent du prévisionnel uniquement quand la facture est
  *  traitée, pas quand la livraison a lieu). */
+/** Livraisons créées avant la mise en place du prévisionnel, saisies avec une
+ *  date antérieure à cette limite : elles restent en base mais ne doivent plus
+ *  remonter dans cette liste. */
+const DATE_MIN_PREVISIONNEL = '2026-07-01'
+
 export async function getPrevisionnelFournisseur(supabase: SupabaseClient, dateFin: string): Promise<LignePrevisionnelle[]> {
   const rows = await chargerLivraisonsValorisees(supabase)
   return rows
@@ -285,10 +290,11 @@ export async function getPrevisionnelFournisseur(supabase: SupabaseClient, dateF
       ...l,
       statut: (statutPlanifiee ?? 'livre_non_facture') as StatutPrevisionnel,
     }))
-    // Pas de borne basse : le retard et le réalisé-non-facturé doivent remonter
-    // quelle que soit leur ancienneté, tant qu'ils restent avant dateFin (déjà
-    // acquis pour le réalisé, puisque date_reelle est toujours dans le passé).
-    .filter(l => l.dateRef <= dateFin)
+    // Pas de borne basse pour le retard/réalisé-non-facturé au-delà de
+    // DATE_MIN_PREVISIONNEL : ils doivent remonter quelle que soit leur
+    // ancienneté, tant qu'ils restent avant dateFin (déjà acquis pour le
+    // réalisé, puisque date_reelle est toujours dans le passé).
+    .filter(l => l.dateRef >= DATE_MIN_PREVISIONNEL && l.dateRef <= dateFin)
     .sort((a, b) => a.dateRef.localeCompare(b.dateRef))
 }
 
