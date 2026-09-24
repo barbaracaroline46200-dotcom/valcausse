@@ -13,6 +13,7 @@ import AjouterLivraisonSiloModal from '@/components/livraisons/AjouterLivraisonS
 import RealiserLivraisonModal from '@/components/livraisons/RealiserLivraisonModal'
 import ModifierLivraisonModal from '@/components/livraisons/ModifierLivraisonModal'
 import AvancementLivraison from '@/components/livraisons/AvancementLivraison'
+import ProgressBar from '@/components/ui/ProgressBar'
 
 export default function VenteDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -122,6 +123,21 @@ export default function VenteDetailPage() {
         )}
       </div>
 
+      {/* Avancement */}
+      <div className="card space-y-4">
+        <h2 className="font-bold text-sm" style={{ color: '#7B2820' }}>Avancement</h2>
+        <div className="text-center">
+          <div className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Contrat total</div>
+          <div className="text-3xl font-extrabold text-gray-900">{formatTonnes(vente.quantite)}</div>
+          <div className="mt-2 text-sm text-gray-500">dont <span className="font-semibold text-gray-700">{formatTonnes(qteLivree)}</span> livrées</div>
+        </div>
+        <ProgressBar value={qteLivree} total={vente.quantite ?? 0} />
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-center">
+          <div className="text-2xl font-bold text-orange-600">{formatTonnes(reliquat)}</div>
+          <div className="text-xs text-orange-700 font-medium">Reliquat à livrer</div>
+        </div>
+      </div>
+
       {/* Contrat d'achat lié */}
       <div className="card">
         <h2 className="font-bold text-sm mb-3" style={{ color: '#7B2820' }}>Contrat d'achat lié</h2>
@@ -163,10 +179,6 @@ export default function VenteDetailPage() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-sm" style={{ color: '#7B2820' }}>Livraisons</h2>
           <div className="flex items-center gap-4">
-            <div className="text-sm text-gray-500">
-              <span className="font-semibold text-green-700">{formatTonnes(qteLivree)}</span> livrées
-              {reliquat > 0 && <span className="ml-2 text-orange-600 font-semibold">· {formatTonnes(reliquat)} restantes</span>}
-            </div>
             {isAdmin && !vente.contrat_achat_id && (
               <button onClick={() => setShowAjoutLiv(true)} className="btn-primary text-xs">
                 <Plus size={14} /> Ajouter livraison
