@@ -118,7 +118,7 @@ export default function ContratDetailPage() {
   const qteTotale: number = contrat.quantite_totale ?? 0
   const rel = reliquat(qteTotale, contrat.livraisons ?? [])
   const prefixes = getPrefixes(contrat.famille)
-  const totalVentes = (contrat.contrats_vente ?? []).reduce((s: number, cv: any) => s + (cv.quantite ?? 0), 0)
+  const totalVentes = (contrat.contrats_vente ?? []).reduce((s: number, cv: any) => s + (cv.quantite_liee ?? cv.quantite ?? 0), 0)
   const depassementVente = totalVentes > qteTotale
 
   const livraisonsPlanifiees = (contrat.livraisons ?? []).filter((l: any) => l.type === 'planifiee')
@@ -357,7 +357,12 @@ export default function ContratDetailPage() {
                   </td>
                   <td className="table-cell">{cv.agriculteur?.nom ?? '—'}</td>
                   <td className="table-cell">{cv.produit?.nom ?? '—'}</td>
-                  <td className="table-cell font-semibold">{formatTonnes(cv.quantite)}</td>
+                  <td className="table-cell font-semibold">
+                    {formatTonnes(cv.quantite_liee ?? cv.quantite)}
+                    {cv.quantite_totale_vente != null && cv.quantite_liee !== cv.quantite_totale_vente && (
+                      <span className="block text-xs font-normal text-gray-400">sur {formatTonnes(cv.quantite_totale_vente)} au total</span>
+                    )}
+                  </td>
                   <td className="table-cell">{formatEurosParTonne(cv.prix_vente)}</td>
                   <td className="table-cell text-sm">{cv.date_debut ? formatDate(cv.date_debut) : <span className="text-gray-300">—</span>}</td>
                   <td className="table-cell text-sm">{cv.date_fin ? formatDate(cv.date_fin) : <span className="text-gray-300">—</span>}</td>
@@ -400,12 +405,8 @@ export default function ContratDetailPage() {
                         </button>
                         <button
                           onClick={async () => {
-                            if (!confirm(`Délier "${cv.numero_contrat}" de ce contrat d'achat ?\nLe contrat de vente sera conservé mais sans contrat d'achat associé.`)) return
-                            await fetch(`/api/ventes/${cv.id}`, {
-                              method: 'PATCH',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ contrat_achat_id: null }),
-                            })
+                            if (!confirm(`Délier "${cv.numero_contrat}" de ce contrat d'achat ?\nLe contrat de vente sera conservé, avec ses éventuels autres liens.`)) return
+                            await fetch(`/api/ventes/${cv.id}/liens?contrat_achat_id=${id}`, { method: 'DELETE' })
                             window.location.reload()
                           }}
                           className="btn-secondary text-xs py-1 px-2 text-orange-600 hover:bg-orange-50"

@@ -8,7 +8,7 @@ import { getServiceClient } from '@/lib/supabase'
 async function recalculerStatutContrat(supabase: any, contratAchatId: string) {
   const { data: ca } = await supabase
     .from('contrats_achat')
-    .select('id,statut,quantite_totale,contrats_vente(id,statut,quantite),livraisons(id,type,quantite_reelle,contrat_vente_id)')
+    .select('id,statut,quantite_totale,livraisons(id,type,quantite_reelle,contrat_vente_id)')
     .eq('id', contratAchatId)
     .single()
   if (!ca) return
@@ -24,9 +24,17 @@ async function recalculerStatutContrat(supabase: any, contratAchatId: string) {
     await supabase.from('contrats_achat').update({ statut: 'en_cours' }).eq('id', ca.id)
   }
 
-  for (const cv of (ca.contrats_vente ?? [])) {
-    const livreeCV = (ca.livraisons ?? [])
-      .filter((l: any) => l.type === 'realisee' && l.quantite_reelle != null && l.contrat_vente_id === cv.id)
+  // Contrats de vente liés à cet achat (une vente peut être scindée sur plusieurs
+  // achats : on prend TOUTES ses livraisons, pas seulement celles de cet achat).
+  const { data: liens } = await supabase
+    .from('contrats_vente_liens')
+    .select('contrat_vente:contrats_vente(id,statut,quantite,livraisons(id,type,quantite_reelle))')
+    .eq('contrat_achat_id', contratAchatId)
+
+  for (const { contrat_vente: cv } of (liens ?? [])) {
+    if (!cv) continue
+    const livreeCV = (cv.livraisons ?? [])
+      .filter((l: any) => l.type === 'realisee' && l.quantite_reelle != null)
       .reduce((s: number, l: any) => s + l.quantite_reelle, 0)
     const reliquatCV = Math.max(0, (cv.quantite ?? 0) - livreeCV)
 

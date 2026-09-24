@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     // Même logique de clôture automatique que dans PATCH
     const { data: ca } = await supabase
       .from('contrats_achat')
-      .select('id,statut,quantite_totale,contrats_vente(id,statut,quantite),livraisons(id,type,quantite_reelle,contrat_vente_id)')
+      .select('id,statut,quantite_totale,livraisons(id,type,quantite_reelle,contrat_vente_id)')
       .eq('id', data.contrat_achat_id)
       .single()
     if (ca) {
@@ -79,10 +79,18 @@ export async function POST(req: NextRequest) {
       if (Math.max(0, ca.quantite_totale - livreesCA) < 10 && ca.statut !== 'clos') {
         await supabase.from('contrats_achat').update({ statut: 'clos' }).eq('id', ca.id)
       }
-      for (const cv of (ca.contrats_vente ?? [])) {
-        if (cv.statut === 'clos') continue
-        const livreeCV = (ca.livraisons ?? [])
-          .filter((l: any) => l.type === 'realisee' && l.quantite_reelle != null && l.contrat_vente_id === cv.id)
+
+      // Une vente peut être scindée sur plusieurs achats : on prend TOUTES ses
+      // livraisons, pas seulement celles de ce contrat d'achat.
+      const { data: liens } = await supabase
+        .from('contrats_vente_liens')
+        .select('contrat_vente:contrats_vente(id,statut,quantite,livraisons(id,type,quantite_reelle))')
+        .eq('contrat_achat_id', data.contrat_achat_id)
+      for (const lien of ((liens ?? []) as any[])) {
+        const cv = lien.contrat_vente
+        if (!cv || cv.statut === 'clos') continue
+        const livreeCV = (cv.livraisons ?? [])
+          .filter((l: any) => l.type === 'realisee' && l.quantite_reelle != null)
           .reduce((s: number, l: any) => s + l.quantite_reelle, 0)
         if (Math.max(0, cv.quantite - livreeCV) < 10) {
           await supabase.from('contrats_vente').update({ statut: 'clos' }).eq('id', cv.id)

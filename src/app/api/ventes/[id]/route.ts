@@ -16,6 +16,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         fournisseur:fournisseurs(nom),
         transporteur:transporteurs(nom)
       ),
+      liens:contrats_vente_liens(
+        id, quantite,
+        contrat_achat:contrats_achat(id, numero_contrat, famille, fournisseur:fournisseurs(nom), produit:produits(nom))
+      ),
       livraisons(
         id, type, mois_prevu, date_prevue, date_reelle, semaine_prevue,
         quantite_prevue, quantite_reelle, ville_chargement, ville_destination,
@@ -40,6 +44,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const { data, error } = await supabase
     .from('contrats_vente').update(body).eq('id', params.id).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+  // Si la vente n'est répartie que sur un seul contrat d'achat (cas non scindé, l'immense
+  // majorité), on garde sa tranche alignée sur la nouvelle quantité totale.
+  if (body.quantite !== undefined) {
+    const { data: liens } = await supabase.from('contrats_vente_liens').select('id').eq('contrat_vente_id', params.id)
+    if (liens && liens.length === 1) {
+      await supabase.from('contrats_vente_liens').update({ quantite: body.quantite }).eq('id', liens[0].id)
+    }
+  }
+
   return NextResponse.json(data)
 }
 

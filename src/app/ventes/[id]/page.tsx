@@ -44,6 +44,9 @@ export default function VenteDetailPage() {
   const livraisons = vente.livraisons ?? []
   const qteLivree = livraisons.filter((l: any) => l.type === 'realisee').reduce((s: number, l: any) => s + (l.quantite_reelle ?? 0), 0)
   const reliquat = (vente.quantite ?? 0) - qteLivree
+  const liens = vente.liens ?? []
+  const totalLie = liens.reduce((s: number, l: any) => s + (l.quantite ?? 0), 0)
+  const nonAffecte = (vente.quantite ?? 0) - totalLie
 
   return (
     <div className="space-y-6 pb-10">
@@ -67,9 +70,6 @@ export default function VenteDetailPage() {
           </div>
           {isAdmin && (
             <div className="flex gap-2 flex-wrap">
-              <button onClick={() => setShowRelierContrat(true)} className="btn-secondary flex items-center gap-1.5 text-sm">
-                <Link2 size={15} /> Relier à un autre contrat
-              </button>
               {vente.statut === 'en_cours' ? (
                 <button
                   onClick={async () => {
@@ -138,32 +138,49 @@ export default function VenteDetailPage() {
         </div>
       </div>
 
-      {/* Contrat d'achat lié */}
+      {/* Contrats d'achat liés */}
       <div className="card">
-        <h2 className="font-bold text-sm mb-3" style={{ color: '#7B2820' }}>Contrat d'achat lié</h2>
-        {vente.contrat_achat ? (
-          <div className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3">
-            <div>
-              <Link href={`/contrats/${vente.contrat_achat.id}`} className="font-semibold text-green-700 hover:underline">
-                {vente.contrat_achat.numero_contrat}
-              </Link>
-              <span className="ml-2 text-sm text-gray-500">
-                {vente.contrat_achat.fournisseur?.nom} · {vente.contrat_achat.produit?.nom} · {vente.contrat_achat.famille}
-              </span>
-            </div>
-            {isAdmin && (
-              <button onClick={() => setShowRelierContrat(true)} className="text-xs text-blue-600 hover:underline flex items-center gap-1">
-                <Link2 size={13} /> Changer
-              </button>
-            )}
-          </div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-bold text-sm" style={{ color: '#7B2820' }}>Contrat(s) d'achat lié(s)</h2>
+          {isAdmin && (
+            <button onClick={() => setShowRelierContrat(true)} className="btn-secondary text-xs">
+              <Link2 size={13} /> Lier un contrat d'achat
+            </button>
+          )}
+        </div>
+        {liens.length === 0 ? (
+          <span className="text-sm text-gray-400 italic">Aucun contrat d'achat lié (départ silo)</span>
         ) : (
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-400 italic">Aucun contrat d'achat lié (départ silo)</span>
-            {isAdmin && (
-              <button onClick={() => setShowRelierContrat(true)} className="btn-secondary text-xs">
-                <Link2 size={13} /> Lier un contrat
-              </button>
+          <div className="space-y-2">
+            {liens.map((l: any) => (
+              <div key={l.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3">
+                <div>
+                  <Link href={`/contrats/${l.contrat_achat.id}`} className="font-semibold text-green-700 hover:underline">
+                    {l.contrat_achat.numero_contrat}
+                  </Link>
+                  <span className="ml-2 text-sm text-gray-500">
+                    {l.contrat_achat.fournisseur?.nom} · {l.contrat_achat.produit?.nom} · {l.contrat_achat.famille}
+                  </span>
+                  <span className="ml-2 text-sm font-semibold text-gray-700">{formatTonnes(l.quantite)}</span>
+                </div>
+                {isAdmin && (
+                  <button
+                    onClick={async () => {
+                      if (!confirm(`Délier ce contrat de vente du contrat d'achat "${l.contrat_achat.numero_contrat}" ?`)) return
+                      await fetch(`/api/ventes/${id}/liens?contrat_achat_id=${l.contrat_achat.id}`, { method: 'DELETE' })
+                      reload()
+                    }}
+                    className="text-xs text-orange-600 hover:underline"
+                  >
+                    Délier
+                  </button>
+                )}
+              </div>
+            ))}
+            {nonAffecte > 0.001 && (
+              <p className="text-xs text-gray-400">
+                Reliquat non affecté à un contrat d'achat : <span className="font-semibold text-gray-600">{formatTonnes(nonAffecte)}</span>
+              </p>
             )}
           </div>
         )}
@@ -179,14 +196,14 @@ export default function VenteDetailPage() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-sm" style={{ color: '#7B2820' }}>Livraisons</h2>
           <div className="flex items-center gap-4">
-            {isAdmin && !vente.contrat_achat_id && (
+            {isAdmin && liens.length === 0 && (
               <button onClick={() => setShowAjoutLiv(true)} className="btn-primary text-xs">
                 <Plus size={14} /> Ajouter livraison
               </button>
             )}
           </div>
         </div>
-        {!vente.contrat_achat_id && (
+        {liens.length === 0 && (
           <p className="text-xs text-gray-400 mb-3">
             Vente directe départ silo — les livraisons se gèrent ici (pas de contrat d'achat lié).
           </p>
@@ -197,7 +214,7 @@ export default function VenteDetailPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
-                {['Statut', 'Mois prévu', 'Date / Semaine', 'Enlèvement', 'Destination', 'Transporteur', 'Tonnes', 'CMR', ...(vente.contrat_achat_id ? [] : ['Actions'])].map(h => (
+                {['Statut', 'Mois prévu', 'Date / Semaine', 'Enlèvement', 'Destination', 'Transporteur', 'Tonnes', 'CMR', ...(liens.length > 0 ? [] : ['Actions'])].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
@@ -227,7 +244,7 @@ export default function VenteDetailPage() {
                         : <span className="badge-alerte text-xs">Manquant</span>
                       : <span className="text-gray-400 text-xs">—</span>}
                   </td>
-                  {!vente.contrat_achat_id && (
+                  {liens.length === 0 && (
                     <td className="table-cell">
                       {isAdmin && (
                         <div className="flex gap-1 flex-wrap">
@@ -383,7 +400,10 @@ function EditVenteModal({ vente, onClose, onSaved }: { vente: any; onClose: () =
 // Modal relier à un autre contrat d'achat
 function RelierContratModal({ vente, onClose, onSaved }: { vente: any; onClose: () => void; onSaved: () => void }) {
   const [contrats, setContrats] = useState<any[]>([])
-  const [contratId, setContratId] = useState(vente.contrat_achat_id ?? '')
+  const [contratId, setContratId] = useState('')
+  const liensExistants = vente.liens ?? []
+  const totalLie = liensExistants.reduce((s: number, l: any) => s + (l.quantite ?? 0), 0)
+  const [quantite, setQuantite] = useState(String(Math.max(0, (vente.quantite ?? 0) - totalLie)))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -391,42 +411,53 @@ function RelierContratModal({ vente, onClose, onSaved }: { vente: any; onClose: 
     fetch('/api/contrats').then(r => r.json()).then(setContrats)
   }, [])
 
+  const idsDejaLies = new Set(liensExistants.map((l: any) => l.contrat_achat.id))
+  const contratsDisponibles = contrats.filter((c: any) => !idsDejaLies.has(c.id))
+
   async function submit(e: React.FormEvent) {
     e.preventDefault()
+    if (!contratId) return
+    const qte = parseFloat(quantite)
+    if (!qte || qte <= 0) { setError('Saisir une quantité valide.'); return }
     setSaving(true)
-    const res = await fetch(`/api/ventes/${vente.id}`, {
-      method: 'PATCH',
+    const res = await fetch(`/api/ventes/${vente.id}/liens`, {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contrat_achat_id: contratId || null }),
+      body: JSON.stringify({ contrat_achat_id: contratId, quantite: qte }),
     })
     if (res.ok) { onSaved() } else { const d = await res.json(); setError(d.error ?? 'Erreur') }
     setSaving(false)
   }
 
   return (
-    <Modal title="Relier à un contrat d'achat" onClose={onClose} size="md">
+    <Modal title="Lier un contrat d'achat" onClose={onClose} size="md">
       <form onSubmit={submit} className="space-y-4">
         <div className="bg-blue-50 border border-blue-100 rounded-lg px-4 py-2 text-sm text-blue-700 mb-2">
           Contrat de vente : <strong>{vente.numero_contrat}</strong> · {[vente.agriculteur?.civilite, vente.agriculteur?.nom].filter(Boolean).join(' ') || '—'}
+          {' · '}reliquat non affecté : <strong>{Math.max(0, (vente.quantite ?? 0) - totalLie).toLocaleString('fr-FR')} t</strong>
         </div>
         <div>
           <label className="label">Contrat d'achat à lier</label>
-          <select className="input" value={contratId} onChange={e => setContratId(e.target.value)}>
-            <option value="">— Aucun (départ silo) —</option>
-            {contrats.map((c: any) => (
+          <select className="input" value={contratId} onChange={e => setContratId(e.target.value)} required>
+            <option value="">Choisir...</option>
+            {contratsDisponibles.map((c: any) => (
               <option key={c.id} value={c.id}>
                 {c.numero_contrat} · {c.produit?.nom} · {c.fournisseur?.nom} ({c.famille})
               </option>
             ))}
           </select>
-          {contratId && contratId !== vente.contrat_achat_id && (
-            <p className="text-xs text-orange-600 mt-1">⚠️ Ce changement modifiera le lien de toutes les livraisons associées à ce contrat de vente.</p>
+          {contratsDisponibles.length === 0 && (
+            <p className="text-sm text-gray-500 mt-1">Aucun autre contrat d'achat disponible.</p>
           )}
+        </div>
+        <div>
+          <label className="label">Quantité à lier (t)</label>
+          <input type="number" step="0.001" className="input" value={quantite} onChange={e => setQuantite(e.target.value)} required />
         </div>
         {error && <p className="text-red-600 text-sm">{error}</p>}
         <div className="flex justify-end gap-3">
           <button type="button" onClick={onClose} className="btn-secondary">Annuler</button>
-          <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Enregistrement...' : 'Enregistrer le lien'}</button>
+          <button type="submit" disabled={saving || !contratId} className="btn-primary">{saving ? 'Enregistrement...' : 'Lier'}</button>
         </div>
       </form>
     </Modal>

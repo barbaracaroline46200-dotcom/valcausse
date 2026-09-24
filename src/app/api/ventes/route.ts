@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
       produit:produits(*),
       agriculteur:agriculteurs(*),
       contrat_achat:contrats_achat(id,numero_contrat,famille,date_fin,fournisseur:fournisseurs(id,nom),transporteur:transporteurs(id,nom)),
+      liens:contrats_vente_liens(id,quantite,contrat_achat_id),
       factures_client(*),
       livraisons(type,quantite_reelle)
     `)
@@ -41,5 +42,16 @@ export async function POST(req: NextRequest) {
   const supabase = getServiceClient()
   const { data, error } = await supabase.from('contrats_vente').insert(body).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+  // La vente est créée directement liée à un contrat d'achat : sa tranche initiale
+  // couvre toute la quantité (comportement historique, avant la répartition multi-achats).
+  if (body.contrat_achat_id) {
+    await supabase.from('contrats_vente_liens').insert({
+      contrat_vente_id: data.id,
+      contrat_achat_id: body.contrat_achat_id,
+      quantite: body.quantite ?? 0,
+    })
+  }
+
   return NextResponse.json(data, { status: 201 })
 }
