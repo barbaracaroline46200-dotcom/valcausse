@@ -125,7 +125,10 @@ export async function GET(req: NextRequest) {
       ? new Date(l.date_souhaitee).toLocaleDateString('fr-FR')
       : l.semaine_souhaitee || '—'
     const agriculteur = agriculteurDe(l)
-    const dest = agriculteur ? [agriculteur.civilite, agriculteur.nom].filter(Boolean).join(' ') : (l.ville_destination ?? '—')
+    const nomAgri = agriculteur ? [agriculteur.civilite, agriculteur.nom].filter(Boolean).join(' ') : ''
+    const dest = agriculteur
+      ? [nomAgri, agriculteur.telephone].filter(Boolean).join(' - ')
+      : (l.ville_destination ?? '—')
     page.drawText(periode, { x: colX.periode, y, font, size: 9.5, color: black })
     page.drawText(`${l.quantite_prevue ?? '—'} t`, { x: colX.qte, y, font, size: 9.5, color: black })
     page.drawText(dest || '—', { x: colX.dest, y, font, size: 9.5, color: black })
