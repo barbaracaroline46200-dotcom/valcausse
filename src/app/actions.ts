@@ -69,7 +69,7 @@ export async function getDashboardData() {
   // départ silo, gérée sans contrat d'achat par conception, pas une source qui a disparu.
   const { data: ventesSourceRaw } = await supabase
     .from('contrats_vente')
-    .select('id,numero_contrat,quantite,destination_silo,agriculteur:agriculteurs(nom),produit:produits(nom),livraisons(type,quantite_reelle),liens:contrats_vente_liens(contrat_achat:contrats_achat(id,numero_contrat,statut))')
+    .select('id,numero_contrat,quantite,destination_silo,date_debut,date_fin,agriculteur:agriculteurs(nom),produit:produits(nom),livraisons(type,quantite_reelle),liens:contrats_vente_liens(contrat_achat:contrats_achat(id,numero_contrat,statut))')
     .eq('statut', 'en_cours')
     .eq('destination_silo', false)
 

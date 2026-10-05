@@ -675,7 +675,7 @@ export default function DashboardPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
-                {['Contrat', 'Produit', 'Agriculteur', 'Contrat(s) d\'achat lié(s)', 'Reliquat'].map(h => (
+                {['Contrat', 'Produit', 'Agriculteur', 'Contrat(s) d\'achat lié(s)', 'Date début', 'Date fin', 'Reliquat'].map(h => (
                   <th key={h} className="table-header">{h}</th>
                 ))}
               </tr>
@@ -693,6 +693,8 @@ export default function DashboardPage() {
                       ? v.liens.map((l: any) => l.contrat_achat?.numero_contrat).filter(Boolean).join(', ') + ' (clos)'
                       : <span className="text-gray-300 italic">Aucun</span>}
                   </td>
+                  <td className="table-cell text-sm">{v.date_debut ? formatDate(v.date_debut) : <span className="text-gray-300">—</span>}</td>
+                  <td className="table-cell text-sm">{v.date_fin ? formatDate(v.date_fin) : <span className="text-gray-300">—</span>}</td>
                   <td className="table-cell">
                     <span className="text-red-600 font-bold text-base">{formatTonnes(v.reliquat)}</span>
                   </td>
