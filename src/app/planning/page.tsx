@@ -178,7 +178,7 @@ export default function PlanningPage() {
 
   const produits = useMemo(() => {
     const s = new Set<string>()
-    rows.forEach(r => { const n = r.contrat_achat?.produit?.nom; if (n) s.add(n) })
+    rows.forEach(r => { const n = r.contrat_achat?.produit?.nom ?? r.contrat_vente?.produit?.nom; if (n) s.add(n) })
     return [...s].sort()
   }, [rows])
 
@@ -211,11 +211,21 @@ export default function PlanningPage() {
     return null
   }
 
+  // Statut effectif d'une ligne : si le contrat d'achat source est clos mais que la vente
+  // a encore du reliquat (contrat d'achat épuisé avant d'avoir tout livré), la ligne reste
+  // "en cours" côté vente — on ne la masque pas sous prétexte que l'achat est soldé.
+  function rowStatut(row: any): string {
+    const caStatut = row.contrat_achat?.statut
+    const cvStatut = row.contrat_vente?.statut
+    if (caStatut === 'en_cours' || cvStatut === 'en_cours') return 'en_cours'
+    return caStatut ?? cvStatut ?? 'en_cours'
+  }
+
   // Filtres hors mois — sert aussi de base à la liste des mois disponibles
   const filteredBase = useMemo(() => rows.filter(r => {
     if (filtFamille && r.contrat_achat?.famille !== filtFamille) return false
-    if (filtProduit && r.contrat_achat?.produit?.nom !== filtProduit) return false
-    if (filtStatut && r.contrat_achat?.statut !== filtStatut) return false
+    if (filtProduit && (r.contrat_achat?.produit?.nom ?? r.contrat_vente?.produit?.nom) !== filtProduit) return false
+    if (filtStatut && rowStatut(r) !== filtStatut) return false
     if (filtClient && getClientNom(r) !== filtClient) return false
     if (filtFournisseur && r.contrat_achat?.fournisseur?.nom !== filtFournisseur) return false
     return true
@@ -486,7 +496,7 @@ export default function PlanningPage() {
                     </td>
                     {g.isFirstOfBlock && (
                       <>
-                        <td rowSpan={g.blockBuyerCount} className="px-3 py-2 font-medium text-gray-800 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(1, rowSty.backgroundColor, { borderBottom: '1px solid #f3f4f6' })}>{g.ca.produit?.nom ?? '—'}</td>
+                        <td rowSpan={g.blockBuyerCount} className="px-3 py-2 font-medium text-gray-800 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(1, rowSty.backgroundColor, { borderBottom: '1px solid #f3f4f6' })}>{g.ca.produit?.nom ?? g.cv?.produit?.nom ?? '—'}</td>
                         <td rowSpan={g.blockBuyerCount} className="px-3 py-2 font-mono text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis" style={frozenTdStyle(2, rowSty.backgroundColor, { borderBottom: '1px solid #f3f4f6' })}>
                           {g.ca.id && g.ca.numero_contrat
                             ? <Link href={`/contrats/${g.ca.id}`} className="font-semibold hover:underline" style={{ color: familleColor(g.ca.famille) }}>{g.ca.numero_contrat}</Link>

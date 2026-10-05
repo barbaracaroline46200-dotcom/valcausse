@@ -2,6 +2,7 @@
 
 import { getServiceClient } from '@/lib/supabase'
 import { getAnneeAgricoleISO } from '@/lib/annee-agricole'
+import { reliquat } from '@/lib/utils'
 
 export async function getDashboardData() {
   const supabase = getServiceClient()
@@ -61,6 +62,26 @@ export async function getDashboardData() {
     .eq('statut', 'en_cours')
     .lte('date_fin', dans30j)
 
+  // Ventes avec reliquat non livré dont le(s) contrat(s) d'achat lié(s) sont tous clos :
+  // la source d'approvisionnement qui devait couvrir le reste à livrer s'est tarie avant
+  // d'avoir tout fourni — à repérer pour trouver la marchandise ailleurs. Une vente sans
+  // aucun lien n'est volontairement pas concernée : c'est le cas normal d'une vente directe
+  // départ silo, gérée sans contrat d'achat par conception, pas une source qui a disparu.
+  const { data: ventesSourceRaw } = await supabase
+    .from('contrats_vente')
+    .select('id,numero_contrat,quantite,destination_silo,agriculteur:agriculteurs(nom),produit:produits(nom),livraisons(type,quantite_reelle),liens:contrats_vente_liens(contrat_achat:contrats_achat(id,numero_contrat,statut))')
+    .eq('statut', 'en_cours')
+    .eq('destination_silo', false)
+
+  const ventesSansSource = (ventesSourceRaw ?? [])
+    .filter((v: any) => {
+      if (reliquat(v.quantite ?? 0, v.livraisons ?? []) <= 0.01) return false
+      const liens = v.liens ?? []
+      if (liens.length === 0) return false
+      return liens.every((l: any) => l.contrat_achat?.statut === 'clos')
+    })
+    .map((v: any) => ({ ...v, reliquat: reliquat(v.quantite ?? 0, v.livraisons ?? []) }))
+
   const { data: transporteurs } = await supabase.from('transporteurs').select('*').order('nom')
 
   // Contrats sans prix d'achat défini — à fixer avant leur date de début
@@ -81,6 +102,7 @@ export async function getDashboardData() {
     livraisonsAFacturerClient,
     contratsAlerte: contratsAlerte ?? [],
     contratsSansPrix,
+    ventesSansSource,
     annee: { debut, fin },
     moisCourant,
     moisSuivant,

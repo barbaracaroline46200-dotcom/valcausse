@@ -34,8 +34,11 @@ export default function LivraisonAOrganiser({ livraison: l, moisCourant, moisSui
     ?? cv?.agriculteur
   const produitNom = ca?.produit?.nom ?? cv?.produit?.nom
   const origineLabel = ca?.fournisseur?.nom ?? (cv ? 'Vente directe (départ silo)' : undefined)
-  const lienContrat = ca ? `/contrats/${ca.id}` : cv ? `/ventes/${cv.id}` : '#'
-  const numeroContratAffiche = ca?.numero_contrat ?? cv?.numero_contrat
+  // Contrat d'achat clos : plus rien à y organiser, l'action se passe sur la vente
+  // (reliquat resté sans source — cf. "Ventes à resourcer" sur le tableau de bord)
+  const achatActionnable = ca && ca.statut !== 'clos'
+  const lienContrat = achatActionnable ? `/contrats/${ca.id}` : cv ? `/ventes/${cv.id}` : ca ? `/contrats/${ca.id}` : '#'
+  const numeroContratAffiche = achatActionnable ? ca.numero_contrat : (cv?.numero_contrat ?? ca?.numero_contrat)
   // Le transporteur de la livraison peut avoir été réaffecté, différent du transporteur par défaut du contrat
   const transporteurEffectif = l.transporteur ?? ca?.transporteur
   const moisLiv = l.mois_prevu?.slice(0, 7) ?? ''
@@ -124,6 +127,11 @@ export default function LivraisonAOrganiser({ livraison: l, moisCourant, moisSui
           <span className="text-sm text-gray-500">{transporteurEffectif?.nom ?? '—'}</span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {ca && !achatActionnable && (
+            <span className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700" title={`Le contrat d'achat ${ca.numero_contrat} qui devait fournir ce reliquat est clos`}>
+              <AlertTriangle size={11} /> Source clôturée — à resourcer
+            </span>
+          )}
           {ca?.famille === 'appro' && !l.numero_mise_a_disposition && (
             <span className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700" title="N° de mise à disposition manquant — requis pour le transporteur">
               <AlertTriangle size={11} /> N° MAD manquant

@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
+import { creerPlaceholderReliquatSiNecessaire } from '@/lib/reliquat-placeholder'
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const supabase = getServiceClient()
@@ -48,6 +49,22 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     .select()
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+  // Clôturer un contrat d'achat manuellement (bouton "Clore") n'enregistre aucune
+  // livraison — contrairement à la clôture automatique côté /api/livraisons/[id] — donc
+  // ne déclenche normalement aucune vérification des ventes qu'il alimentait. Si l'une
+  // d'elles garde un reliquat non couvert, sa source d'approvisionnement vient de
+  // disparaître : on lui recrée une livraison "à organiser" pour qu'elle ne soit pas oubliée.
+  if (body.statut === 'clos') {
+    const { data: liens } = await supabase
+      .from('contrats_vente_liens')
+      .select('contrat_vente:contrats_vente(id,quantite,livraisons(type,quantite_reelle))')
+      .eq('contrat_achat_id', params.id)
+    for (const { contrat_vente: cv } of (liens ?? [])) {
+      if (cv) await creerPlaceholderReliquatSiNecessaire(supabase, cv)
+    }
+  }
+
   return NextResponse.json(data)
 }
 

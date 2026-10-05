@@ -199,6 +199,7 @@ export default function DashboardPage() {
   const contratsClos = contrats.filter((c: any) => c.statut === 'clos').length
 
   const alertes = (data?.contratsAlerte ?? []).filter((c: any) => !c.gere_par_silo && reliquat(c.quantite_totale, c.livraisons ?? []) > 0)
+  const ventesSansSource = data?.ventesSansSource ?? []
 
   // Tonnage acheté mais pas encore affecté à une vente (contrat_vente)
   const contratsDisponibles = contrats
@@ -658,6 +659,45 @@ export default function DashboardPage() {
                   </tr>
                 )
               })}
+            </tbody>
+          </table>
+        </Section>
+      )}
+      {/* Ventes sans source d'approvisionnement */}
+      {ventesSansSource.length > 0 && (
+        <Section
+          icon={<AlertTriangle size={20} />}
+          title="Ventes à resourcer"
+          count={ventesSansSource.length}
+          color="red"
+          subtitle="Reliquat à livrer sans contrat d'achat actif pour le couvrir"
+        >
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-100">
+                {['Contrat', 'Produit', 'Agriculteur', 'Contrat(s) d\'achat lié(s)', 'Reliquat'].map(h => (
+                  <th key={h} className="table-header">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {ventesSansSource.map((v: any) => (
+                <tr key={v.id} className="table-row">
+                  <td className="table-cell">
+                    <a href={`/ventes/${v.id}`} className="font-medium text-green-700 hover:underline">{v.numero_contrat}</a>
+                  </td>
+                  <td className="table-cell">{v.produit?.nom ?? '—'}</td>
+                  <td className="table-cell">{v.agriculteur?.nom ?? '—'}</td>
+                  <td className="table-cell text-sm text-gray-600">
+                    {(v.liens ?? []).length > 0
+                      ? v.liens.map((l: any) => l.contrat_achat?.numero_contrat).filter(Boolean).join(', ') + ' (clos)'
+                      : <span className="text-gray-300 italic">Aucun</span>}
+                  </td>
+                  <td className="table-cell">
+                    <span className="text-red-600 font-bold text-base">{formatTonnes(v.reliquat)}</span>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </Section>

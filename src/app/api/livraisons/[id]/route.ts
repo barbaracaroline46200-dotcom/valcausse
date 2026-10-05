@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
+import { creerPlaceholderReliquatSiNecessaire } from '@/lib/reliquat-placeholder'
 
 // Recalcule le statut du contrat achat et de ses contrats vente
 // après toute modification de livraison (création, modification, suppression).
@@ -43,6 +44,9 @@ async function recalculerStatutContrat(supabase: any, contratAchatId: string) {
     } else if (reliquatCV >= 10 && cv.statut === 'clos') {
       await supabase.from('contrats_vente').update({ statut: 'en_cours' }).eq('id', cv.id)
     }
+    if (reliquatCV >= 10) {
+      await creerPlaceholderReliquatSiNecessaire(supabase, cv)
+    }
   }
 }
 
@@ -65,6 +69,9 @@ async function recalculerStatutContratVente(supabase: any, contratVenteId: strin
     await supabase.from('contrats_vente').update({ statut: 'clos' }).eq('id', cv.id)
   } else if (reliquat >= 10 && cv.statut === 'clos') {
     await supabase.from('contrats_vente').update({ statut: 'en_cours' }).eq('id', cv.id)
+  }
+  if (reliquat >= 10) {
+    await creerPlaceholderReliquatSiNecessaire(supabase, cv)
   }
 }
 

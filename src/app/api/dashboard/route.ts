@@ -34,7 +34,7 @@ export async function GET() {
       transporteur:transporteurs(id,nom,telephone),
       contrat_vente:contrats_vente(id,numero_contrat,produit:produits(nom,famille),agriculteur:agriculteurs(civilite,nom,ville_livraison,telephone)),
       contrat_achat:contrats_achat(
-        id,numero_contrat,famille,gere_par_silo,
+        id,numero_contrat,statut,famille,gere_par_silo,
         produit:produits(nom),
         fournisseur:fournisseurs(nom),
         transporteur:transporteurs(id,nom,telephone),
