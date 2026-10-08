@@ -164,12 +164,11 @@ export default function LivraisonsPage() {
   const moisCourant = data?.moisCourant ?? ''
   const moisSuivant = data?.moisSuivant ?? ''
 
+  // Seul le lien direct (contrat_vente_id, → l.contrat_vente) fait foi. Pas de repli sur
+  // contrat_achat.contrats_vente[0] — une livraison "Silo" sans vente précise se retrouvait
+  // sinon attribuée à l'agriculteur de la première vente du contrat.
   function getAgriNom(l: any) {
-    // Seul le lien direct (contrat_vente_id, → l.contrat_vente) fait foi : une vente
-    // répartie sur plusieurs achats n'est pas forcément dans contrat_achat.contrats_vente.
-    const ca = l.contrat_achat
-    const cv = l.contrat_vente ?? (ca?.contrats_vente ?? []).find((cv: any) => cv.id === l.contrat_vente_id) ?? ca?.contrats_vente?.[0]
-    return cv?.agriculteur?.nom ?? null
+    return l.contrat_vente?.agriculteur?.nom ?? null
   }
 
   const optFournisseurs = useMemo(() => [...new Set(planifiees.map((l: any) => l.contrat_achat?.fournisseur?.nom).filter(Boolean))].sort() as string[], [planifiees])

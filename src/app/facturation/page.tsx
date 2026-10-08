@@ -84,18 +84,18 @@ export default function FacturationPage() {
   const [filtDateDebut, setFiltDateDebut] = useState('')
   const [filtDateFin, setFiltDateFin] = useState('')
 
-  // Seul le lien direct (contrat_vente_id, → l.contrat_vente) fait foi : une vente répartie
-  // sur plusieurs achats n'est pas forcément dans contrat_achat.contrats_vente (relation directe).
+  // Seul le lien direct (contrat_vente_id, → l.contrat_vente) fait foi. Piocher une vente
+  // quelconque du contrat d'achat quand il n'y a pas de lien direct (livraison "Silo" sans
+  // vente précise, ou vente non encore affectée) a déjà produit un faux positif : une
+  // livraison destinée au silo attribuée à l'agriculteur de la première vente du contrat.
   function getAgriFactu(l: any) {
-    const ca = l.contrat_achat
     return l.contrat_vente?.agriculteur
-      ?? ca?.contrats_vente?.find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur
-      ?? ca?.contrats_vente?.[0]?.agriculteur
   }
 
-  // Contrat de vente concerné par une livraison (avec repli départ silo)
+  // Contrat de vente concerné par une livraison — pas de repli : sans lien direct, la
+  // livraison n'est rattachée à aucune vente précise (cf. getAgriFactu ci-dessus).
   function getVenteFactu(l: any) {
-    return l.contrat_vente ?? l.contrat_achat?.contrats_vente?.find((v: any) => v.id === l.contrat_vente_id)
+    return l.contrat_vente
   }
 
   // Le transporteur réel d'une livraison peut avoir été réaffecté (livraisons.transporteur_id),

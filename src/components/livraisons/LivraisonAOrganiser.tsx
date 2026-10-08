@@ -29,12 +29,10 @@ export default function LivraisonAOrganiser({ livraison: l, moisCourant, moisSui
   const ca = l.contrat_achat
   // Vente départ silo : pas de contrat d'achat, les infos viennent directement du contrat de vente lié
   const cv = l.contrat_vente
-  // Vente liée à une livraison : seul le lien direct (contrat_vente_id, → cv) fait foi —
-  // une vente répartie sur plusieurs achats (contrats_vente_liens) n'apparaît pas forcément
-  // dans ca.contrats_vente (relation directe vente→achat), d'où la priorité à cv ici.
+  // Vente liée à une livraison : seul le lien direct (contrat_vente_id, → cv) fait foi. Pas
+  // de repli sur ca.contrats_vente[0] — une livraison "Silo" sans vente précise se
+  // retrouvait sinon attribuée à l'agriculteur de la première vente du contrat.
   const agriDest = cv?.agriculteur
-    ?? (ca?.contrats_vente ?? []).find((v: any) => v.id === l.contrat_vente_id)?.agriculteur
-    ?? ca?.contrats_vente?.[0]?.agriculteur
   const produitNom = ca?.produit?.nom ?? cv?.produit?.nom
   const origineLabel = ca?.fournisseur?.nom ?? (cv ? 'Vente directe (départ silo)' : undefined)
   // Contrat d'achat clos : plus rien à y organiser, l'action se passe sur la vente
