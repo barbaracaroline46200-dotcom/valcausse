@@ -227,6 +227,7 @@ export default function ContratDetailPage() {
               ['Prix transport prévu', formatEurosParTonne(contrat.prix_transport_prevu)],
               ['Point de chargement', contrat.point_chargement],
               ['Ville chargement', contrat.ville_chargement],
+              ['Date de conclusion', formatDate(contrat.date_conclusion)],
               ['Date début', formatDate(contrat.date_debut)],
               ['Date fin', formatDate(contrat.date_fin)],
               ...(contrat.courtier ? [['Courtier', `${contrat.courtier.nom}${contrat.courtier.numero_courtier ? ` (n° ${contrat.courtier.numero_courtier})` : ''}`]] : []),
