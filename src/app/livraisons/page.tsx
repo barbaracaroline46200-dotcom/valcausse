@@ -165,8 +165,10 @@ export default function LivraisonsPage() {
   const moisSuivant = data?.moisSuivant ?? ''
 
   function getAgriNom(l: any) {
+    // Seul le lien direct (contrat_vente_id, → l.contrat_vente) fait foi : une vente
+    // répartie sur plusieurs achats n'est pas forcément dans contrat_achat.contrats_vente.
     const ca = l.contrat_achat
-    const cv = (ca?.contrats_vente ?? []).find((cv: any) => cv.id === l.contrat_vente_id) ?? ca?.contrats_vente?.[0]
+    const cv = l.contrat_vente ?? (ca?.contrats_vente ?? []).find((cv: any) => cv.id === l.contrat_vente_id) ?? ca?.contrats_vente?.[0]
     return cv?.agriculteur?.nom ?? null
   }
 

@@ -84,16 +84,18 @@ export default function FacturationPage() {
   const [filtDateDebut, setFiltDateDebut] = useState('')
   const [filtDateFin, setFiltDateFin] = useState('')
 
+  // Seul le lien direct (contrat_vente_id, → l.contrat_vente) fait foi : une vente répartie
+  // sur plusieurs achats n'est pas forcément dans contrat_achat.contrats_vente (relation directe).
   function getAgriFactu(l: any) {
     const ca = l.contrat_achat
-    return ca?.contrats_vente?.find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur
+    return l.contrat_vente?.agriculteur
+      ?? ca?.contrats_vente?.find((cv: any) => cv.id === l.contrat_vente_id)?.agriculteur
       ?? ca?.contrats_vente?.[0]?.agriculteur
-      ?? l.contrat_vente?.agriculteur // vente départ silo, pas de contrat d'achat
   }
 
   // Contrat de vente concerné par une livraison (avec repli départ silo)
   function getVenteFactu(l: any) {
-    return l.contrat_achat?.contrats_vente?.find((v: any) => v.id === l.contrat_vente_id) ?? l.contrat_vente
+    return l.contrat_vente ?? l.contrat_achat?.contrats_vente?.find((v: any) => v.id === l.contrat_vente_id)
   }
 
   // Le transporteur réel d'une livraison peut avoir été réaffecté (livraisons.transporteur_id),
