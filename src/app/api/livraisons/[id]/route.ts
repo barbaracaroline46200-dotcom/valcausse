@@ -29,7 +29,7 @@ async function recalculerStatutContrat(supabase: any, contratAchatId: string) {
   // achats : on prend TOUTES ses livraisons, pas seulement celles de cet achat).
   const { data: liens } = await supabase
     .from('contrats_vente_liens')
-    .select('contrat_vente:contrats_vente(id,statut,quantite,livraisons(id,type,quantite_reelle))')
+    .select('contrat_vente:contrats_vente(id,statut,quantite,destination_silo,livraisons(id,type,quantite_reelle))')
     .eq('contrat_achat_id', contratAchatId)
 
   for (const { contrat_vente: cv } of (liens ?? [])) {
@@ -44,7 +44,13 @@ async function recalculerStatutContrat(supabase: any, contratAchatId: string) {
     } else if (reliquatCV >= 10 && cv.statut === 'clos') {
       await supabase.from('contrats_vente').update({ statut: 'en_cours' }).eq('id', cv.id)
     }
-    if (reliquatCV >= 10) {
+    // Une vente "départ silo" n'a pas forcément ses livraisons attribuées une à une :
+    // cocher "Livraison vers notre silo" sur la livraison vide son contrat_vente_id (cf.
+    // RealiserLivraisonModal), donc cv.livraisons reste vide même une fois tout livré. Le
+    // reliquat calculé ici via les seuls liens directs est alors systématiquement faux
+    // ("rien livré"), ce qui recréait sans fin le placeholder "à organiser" à chaque
+    // suppression (cf. CF.0400534).
+    if (reliquatCV >= 10 && !cv.destination_silo) {
       await creerPlaceholderReliquatSiNecessaire(supabase, cv)
     }
   }

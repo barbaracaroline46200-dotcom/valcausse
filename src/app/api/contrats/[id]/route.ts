@@ -58,10 +58,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (body.statut === 'clos') {
     const { data: liens } = await supabase
       .from('contrats_vente_liens')
-      .select('contrat_vente:contrats_vente(id,quantite,livraisons(type,quantite_reelle))')
+      .select('contrat_vente:contrats_vente(id,quantite,destination_silo,livraisons(type,quantite_reelle))')
       .eq('contrat_achat_id', params.id)
     for (const { contrat_vente: cv } of (liens ?? [])) {
-      if (cv) await creerPlaceholderReliquatSiNecessaire(supabase, cv)
+      // Une vente "départ silo" n'a pas forcément ses livraisons attribuées une à une (cf.
+      // recalculerStatutContrat dans /api/livraisons/[id]) : pas de placeholder pour elle.
+      if (cv && !cv.destination_silo) await creerPlaceholderReliquatSiNecessaire(supabase, cv)
     }
   }
 
