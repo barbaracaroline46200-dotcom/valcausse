@@ -2,7 +2,7 @@
 import { useState, useCallback } from 'react'
 import { Search, Loader2, FileText, ShoppingCart, Truck, Package, Users, Wheat, Scale } from 'lucide-react'
 import { formatTonnes, formatDate } from '@/lib/annee-agricole'
-import { BadgeFamille } from '@/components/ui/Badge'
+import { BadgeFamille, BadgeStatut } from '@/components/ui/Badge'
 import Link from 'next/link'
 
 export default function RecherchePage() {
@@ -106,6 +106,7 @@ export default function RecherchePage() {
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-green-700">{c.numero_contrat}</span>
                     <BadgeFamille famille={c.famille} />
+                    <BadgeStatut statut={c.statut} />
                   </div>
                   <span className="text-gray-500 text-sm">
                     {[c.produit?.nom, c.fournisseur?.nom].filter(Boolean).join(' · ')}
@@ -125,6 +126,7 @@ export default function RecherchePage() {
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-green-700">{v.numero_contrat}</span>
                     {v.contrat_achat && <BadgeFamille famille={v.contrat_achat.famille} />}
+                    <BadgeStatut statut={v.statut} />
                   </div>
                   <span className="text-gray-500 text-sm">
                     {[v.produit?.nom, v.agriculteur?.nom, v.contrat_achat?.numero_contrat].filter(Boolean).join(' · ')}

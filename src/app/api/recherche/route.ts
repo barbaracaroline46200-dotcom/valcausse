@@ -42,13 +42,13 @@ export async function GET(req: NextRequest) {
   const [contrats, ventes, livraisons, fournisseurs, agriculteurs, transporteurs, livraisonsParPoids, facturesFourn, facturesClient] = await Promise.all([
     supabase
       .from('contrats_achat')
-      .select('id,numero_contrat,famille,reference_fournisseur,produit:produits(nom),fournisseur:fournisseurs(nom)')
+      .select('id,numero_contrat,famille,statut,reference_fournisseur,produit:produits(nom),fournisseur:fournisseurs(nom)')
       .or(`numero_contrat.ilike.${like},reference_fournisseur.ilike.${like},ville_chargement.ilike.${like},notes.ilike.${like}`)
       .limit(10),
 
     supabase
       .from('contrats_vente')
-      .select('id,numero_contrat,produit:produits(nom),agriculteur:agriculteurs(civilite,nom),contrat_achat:contrats_achat(id,numero_contrat,famille,fournisseur:fournisseurs(nom))')
+      .select('id,numero_contrat,statut,produit:produits(nom),agriculteur:agriculteurs(civilite,nom),contrat_achat:contrats_achat(id,numero_contrat,famille,fournisseur:fournisseurs(nom))')
       .or(`numero_contrat.ilike.${like},notes.ilike.${like}`)
       .limit(10),
 
