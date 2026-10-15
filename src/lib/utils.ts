@@ -42,6 +42,36 @@ export function nomEntite(a: { nom?: string | null; civilite?: string | null } |
 /** Alias pour rétrocompatibilité */
 export const nomAgri = nomEntite
 
+/** Nettoie un segment pour en faire un nom de fichier sûr (accents enlevés, séparateurs normalisés). */
+function slugPart(value: string | null | undefined, fallback = 'ndef'): string {
+  const base = (value ?? '').trim()
+  if (!base) return fallback
+  return base
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || fallback
+}
+
+/** Construit le nom de fichier d'un ordre de transport : céréale_numéro de contrat_agriculteur_date demandée */
+export function nomFichierOrdreTransport(params: {
+  produit?: string | null
+  numeroContrat?: string | null
+  agriculteur?: string | null
+  dateSouhaitee?: string | null
+  semaineSouhaitee?: string | null
+}): string {
+  const date = params.dateSouhaitee
+    ? new Date(params.dateSouhaitee).toLocaleDateString('fr-FR').replace(/\//g, '-')
+    : (params.semaineSouhaitee || null)
+  const parts = [
+    slugPart(params.produit, 'produit'),
+    slugPart(params.numeroContrat, 'contrat'),
+    slugPart(params.agriculteur, 'agriculteur'),
+    slugPart(date, 'date'),
+  ]
+  return `${parts.join('_')}.pdf`
+}
+
 /** Construit un pseudo-contrat d'achat à partir d'un contrat de vente départ silo
  *  (sans contrat d'achat lié), pour réutiliser les modales de livraison existantes
  *  qui attendent une prop `contrat`. */

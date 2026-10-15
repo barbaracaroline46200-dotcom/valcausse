@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
+import { nomFichierOrdreTransport } from '@/lib/utils'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -182,10 +183,19 @@ export async function GET(req: NextRequest) {
 
   const pdfBytes = await pdfDoc.save()
 
+  const premierAgriculteur = agriculteurDe(first)
+  const filename = nomFichierOrdreTransport({
+    produit: ca?.produit?.nom,
+    numeroContrat: ca?.numero_contrat,
+    agriculteur: premierAgriculteur ? [premierAgriculteur.civilite, premierAgriculteur.nom].filter(Boolean).join(' ') : null,
+    dateSouhaitee: first.date_souhaitee,
+    semaineSouhaitee: first.semaine_souhaitee,
+  })
+
   return new NextResponse(pdfBytes, {
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="ordre-transport-groupe-${ca?.numero_contrat ?? 'multi'}.pdf"`,
+      'Content-Disposition': `attachment; filename="${filename}"`,
     },
   })
 }
