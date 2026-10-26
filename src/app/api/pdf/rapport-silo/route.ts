@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import {
-  getRapportSilo, filtrerLignesSilo, trierLignesSilo, totauxParProduit, TYPES_SILO,
+  getRapportSilo, filtrerLignesSilo, grouperParMois, totauxParProduit, TYPES_SILO,
   type LigneRapportSilo, type FiltresRapportSilo, type TypeSilo,
 } from '@/lib/rapport-silo'
 import { PDFDocument, PDFPage, PDFFont, rgb, StandardFonts } from 'pdf-lib'
@@ -49,7 +49,8 @@ export async function GET(req: NextRequest) {
 
   const supabase = getServiceClient()
   const brut = await getRapportSilo(supabase, dateDebut, dateFin)
-  const lignes = trierLignesSilo(filtrerLignesSilo(brut, filtres))
+  const lignes = filtrerLignesSilo(brut, filtres)
+  const groupesMois = grouperParMois(lignes)
   const totaux = totauxParProduit(lignes)
   const totalGeneral = totaux.reduce((s, t) => s + t.total, 0)
 
@@ -228,13 +229,20 @@ export async function GET(req: NextRequest) {
     y -= rowHeight
   }
 
-  sectionTitle(`DÉTAIL DES LIVRAISONS (${lignes.length})`)
-  if (lignes.length === 0) {
+  sectionTitle(`DÉTAIL DES LIVRAISONS PAR MOIS (${lignes.length})`)
+  if (groupesMois.length === 0) {
     page.drawText('Aucune livraison sur cette période.', { x: 50, y, font, size: 9, color: gray })
     y -= 16
   } else {
-    tableHeader()
-    for (const l of lignes) tableRow(l)
+    for (const g of groupesMois) {
+      ensureSpace(40)
+      page.drawText(g.label.toUpperCase(), { x: 50, y, font: fontBold, size: 9.5, color: black })
+      page.drawText(`Total ${g.label.toLowerCase()} : ${fmtTonnes(g.total)}`, { x: PAGE_W - 220, y, font: fontBold, size: 9.5, color: brun })
+      y -= 16
+      tableHeader()
+      for (const l of g.lignes) tableRow(l)
+      y -= 10
+    }
   }
 
   const pages = pdfDoc.getPages()

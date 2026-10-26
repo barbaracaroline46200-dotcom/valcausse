@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { Loader2, CalendarRange, Download, Warehouse, X, ChevronDown } from 'lucide-react'
 import {
-  filtrerLignesSilo, trierLignesSilo, totauxParProduit, TYPES_SILO,
+  filtrerLignesSilo, grouperParMois, totauxParProduit, TYPES_SILO,
   type FiltresRapportSilo, type LigneRapportSilo, type TypeSilo,
 } from '@/lib/rapport-silo'
 
@@ -156,7 +156,8 @@ export default function RapportSiloPage() {
     setFiltreProduits([]); setFiltreFournisseurs([]); setFiltreTypesSilo([])
   }
 
-  const lignesAffichees = lignes ? trierLignesSilo(filtrerLignesSilo(lignes, filtres)) : []
+  const lignesAffichees = lignes ? filtrerLignesSilo(lignes, filtres) : []
+  const groupesMois = grouperParMois(lignesAffichees)
   const totaux = totauxParProduit(lignesAffichees)
   const totalGeneral = totaux.reduce((s, t) => s + t.total, 0)
 
@@ -234,43 +235,55 @@ export default function RapportSiloPage() {
             )}
           </div>
 
-          <div className="card overflow-hidden p-0">
-            <div className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-2">
-              <h2 className="font-semibold text-gray-800">Détail des livraisons</h2>
-              <span className="text-xs text-gray-400">({lignesAffichees.length})</span>
-            </div>
-            {lignesAffichees.length === 0 ? (
-              <p className="px-5 py-6 text-center text-gray-400 text-sm">Aucun arrivage sur cette période (ou filtré par les critères actifs).</p>
+          <div>
+            <h2 className="font-semibold text-gray-800 px-1 mb-2">Détail des livraisons par mois</h2>
+            {groupesMois.length === 0 ? (
+              <div className="card p-6 text-center text-gray-400 text-sm">
+                Aucun arrivage sur cette période (ou filtré par les critères actifs).
+              </div>
             ) : (
-              <div className="overflow-auto">
-                <table className="w-full text-xs table-fixed">
-                  <thead style={{ backgroundColor: '#fdf5f3' }}>
-                    <tr>
-                      <th className="px-3 py-2 text-left font-semibold text-gray-600 w-24">Date</th>
-                      <th className="px-3 py-2 text-left font-semibold text-gray-600 w-32">Produit</th>
-                      <th className="px-3 py-2 text-left font-semibold text-gray-600 w-32">N° Contrat</th>
-                      <th className="px-3 py-2 text-left font-semibold text-gray-600 w-32">Fournisseur</th>
-                      <th className="px-3 py-2 text-left font-semibold text-gray-600 w-28">Transporteur</th>
-                      <th className="px-3 py-2 text-left font-semibold text-gray-600 w-24">Silo</th>
-                      <th className="px-3 py-2 text-right font-semibold text-gray-600 w-20">Quantité</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lignesAffichees.map(l => (
-                      <tr key={l.id} className="border-t border-gray-100">
-                        <td className={`px-3 py-2 ${l.dateApproximative ? 'text-orange-600 italic' : ''}`}>
-                          {l.dateApproximative && '~ '}{fmtLigneDate(l)}
-                        </td>
-                        <td className="px-3 py-2 font-medium text-gray-800">{l.produit}</td>
-                        <td className="px-3 py-2 font-mono text-gray-600">{l.numeroContrat}</td>
-                        <td className="px-3 py-2">{l.fournisseur}</td>
-                        <td className="px-3 py-2">{l.transporteur}</td>
-                        <td className="px-3 py-2">{l.silo}</td>
-                        <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">{fmtTonnes(l.quantite)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="space-y-3">
+                {groupesMois.map(g => (
+                  <div key={g.moisCle ?? 'inconnu'} className="card overflow-hidden p-0">
+                    <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-gray-800 capitalize">{g.label}</h3>
+                        <span className="text-xs text-gray-400">({g.lignes.length})</span>
+                      </div>
+                      <span className="text-sm font-semibold" style={{ color: BRUN }}>Total {g.label.toLowerCase()} : {fmtTonnes(g.total)}</span>
+                    </div>
+                    <div className="overflow-auto">
+                      <table className="w-full text-xs table-fixed">
+                        <thead style={{ backgroundColor: '#fdf5f3' }}>
+                          <tr>
+                            <th className="px-3 py-2 text-left font-semibold text-gray-600 w-24">Date</th>
+                            <th className="px-3 py-2 text-left font-semibold text-gray-600 w-32">Produit</th>
+                            <th className="px-3 py-2 text-left font-semibold text-gray-600 w-32">N° Contrat</th>
+                            <th className="px-3 py-2 text-left font-semibold text-gray-600 w-32">Fournisseur</th>
+                            <th className="px-3 py-2 text-left font-semibold text-gray-600 w-28">Transporteur</th>
+                            <th className="px-3 py-2 text-left font-semibold text-gray-600 w-24">Silo</th>
+                            <th className="px-3 py-2 text-right font-semibold text-gray-600 w-20">Quantité</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {g.lignes.map(l => (
+                            <tr key={l.id} className="border-t border-gray-100">
+                              <td className={`px-3 py-2 ${l.dateApproximative ? 'text-orange-600 italic' : ''}`}>
+                                {l.dateApproximative && '~ '}{fmtLigneDate(l)}
+                              </td>
+                              <td className="px-3 py-2 font-medium text-gray-800">{l.produit}</td>
+                              <td className="px-3 py-2 font-mono text-gray-600">{l.numeroContrat}</td>
+                              <td className="px-3 py-2">{l.fournisseur}</td>
+                              <td className="px-3 py-2">{l.transporteur}</td>
+                              <td className="px-3 py-2">{l.silo}</td>
+                              <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">{fmtTonnes(l.quantite)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>

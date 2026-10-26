@@ -59,6 +59,9 @@ export interface LigneRapport {
   niveau: NiveauLivraison
   /** "Silo" ou "Silo gare" si la livraison est destinée à un silo, sinon null */
   silo: string | null
+  /** mois_prevu brut (1er du mois), pour regrouper par mois même sans date
+   *  précise (ex : seule une semaine ou un mois approximatif est connu) */
+  moisPrevu: string | null
 }
 
 export interface LigneNonPlanifiee {
@@ -206,6 +209,7 @@ function mapRow(l: any): LigneRapport {
     transporteur: getTransporteurNom(l),
     niveau: niveauLivraison(l),
     silo: getSiloNom(l),
+    moisPrevu: l.mois_prevu ?? null,
   }
 }
 
