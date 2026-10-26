@@ -3,7 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, FileText, ShoppingCart, Truck, BookOpen, Search, LogOut, ShieldCheck, Eye, BarChart2, CalendarDays, FileWarning, Receipt, Archive, CreditCard, Printer, AlertTriangle
+  LayoutDashboard, FileText, ShoppingCart, Truck, BookOpen, Search, LogOut, ShieldCheck, Eye, BarChart2, CalendarDays, FileWarning, Receipt, Archive, CreditCard, Printer, AlertTriangle, Warehouse
 } from 'lucide-react'
 import { useAdmin } from './AdminProvider'
 import { cn } from '@/lib/utils'
@@ -87,7 +87,10 @@ export default function Sidebar() {
         )}
         <NavItem href="/planning"      label="Planning"          icon={<LayoutDashboard size={18} />} active={active('/planning')} />
         {isAdmin && (
-          <NavItem href="/rapport-transports" label="Rapport imprimable" icon={<Printer size={18} />} active={active('/rapport-transports')} />
+          <>
+            <NavItem href="/rapport-transports" label="Rapport imprimable" icon={<Printer size={18} />} active={active('/rapport-transports')} />
+            <NavItem href="/rapport-silo"       label="Rapport silo"       icon={<Warehouse size={18} />} active={active('/rapport-silo')} />
+          </>
         )}
 
         {/* FACTURATION */}

@@ -57,6 +57,8 @@ export interface LigneRapport {
   agriculteur: string
   transporteur: string
   niveau: NiveauLivraison
+  /** "Silo" ou "Silo gare" si la livraison est destinée à un silo, sinon null */
+  silo: string | null
 }
 
 export interface LigneNonPlanifiee {
@@ -166,6 +168,15 @@ function getVilleDestination(l: any): string {
   return cv?.agriculteur?.ville_livraison || '—'
 }
 
+// Nom du silo ("Silo" ou "Silo gare") si la livraison est bien destinée à un
+// silo, sinon null — utilisé pour isoler les livraisons silo (rapport-silo.ts)
+// sans dépendre d'une comparaison de texte sur le champ destination affiché.
+function getSiloNom(l: any): string | null {
+  const cv = l.contrat_vente
+  if (!(l.destination_silo || cv?.destination_silo)) return null
+  return (cv?.silo_nom || 'Silo').trim()
+}
+
 function periodeLabel(l: any): string {
   if (l.semaine_prevue) return `Sem. ${l.semaine_prevue}`
   if (l.semaine_souhaitee) return `Sem. ${l.semaine_souhaitee}`
@@ -194,6 +205,7 @@ function mapRow(l: any): LigneRapport {
     agriculteur: getAgriculteurNom(l),
     transporteur: getTransporteurNom(l),
     niveau: niveauLivraison(l),
+    silo: getSiloNom(l),
   }
 }
 
