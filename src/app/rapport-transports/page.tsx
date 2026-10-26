@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import {
   Loader2, CalendarRange, Download, CheckCircle2, Clock, PackageSearch, ChevronUp, ChevronDown, X
 } from 'lucide-react'
@@ -38,6 +38,88 @@ interface Rapport {
   nonPlanifiees: any[]
 }
 
+// ── Dropdown multi-sélection (céréales) ────────────────────────────────────
+function MultiSelect({
+  label,
+  options,
+  selected,
+  onChange,
+}: {
+  label: string
+  options: string[]
+  selected: string[]
+  onChange: (v: string[]) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  function toggle(val: string) {
+    onChange(selected.includes(val) ? selected.filter(v => v !== val) : [...selected, val])
+  }
+
+  const label2 = selected.length === 0
+    ? label
+    : selected.length === 1
+      ? selected[0]
+      : `${selected.length} sélectionnées`
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className={`input text-sm py-1.5 flex items-center gap-1 w-44 justify-between ${selected.length > 0 ? 'border-orange-400 bg-orange-50' : ''}`}
+      >
+        <span className="truncate text-left flex-1" style={{ color: selected.length > 0 ? '#c2410c' : undefined }}>
+          {label2}
+        </span>
+        {selected.length > 0
+          ? <X size={13} className="flex-shrink-0 text-orange-400" onClick={e => { e.stopPropagation(); onChange([]) }} />
+          : <ChevronDown size={13} className="flex-shrink-0 text-gray-400" />
+        }
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg min-w-[12rem] py-1 max-h-64 overflow-y-auto">
+          {options.length === 0 && (
+            <p className="px-3 py-2 text-xs text-gray-400">Aucune option</p>
+          )}
+          {options.map(opt => (
+            <label key={opt} className="flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm">
+              <input
+                type="checkbox"
+                checked={selected.includes(opt)}
+                onChange={() => toggle(opt)}
+                className="rounded border-gray-300 accent-orange-500"
+              />
+              <span className="leading-tight">{opt}</span>
+            </label>
+          ))}
+          {selected.length > 0 && (
+            <div className="border-t border-gray-100 mt-1 pt-1">
+              <button
+                type="button"
+                onClick={() => { onChange([]); setOpen(false) }}
+                className="w-full text-left px-3 py-1.5 text-xs text-gray-400 hover:text-gray-600"
+              >
+                Effacer la sélection
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function RapportTransportsPage() {
   const [dateDebut, setDateDebut] = useState(todayISO())
   const [dateFin, setDateFin] = useState(addDaysISO(todayISO(), 6))
@@ -50,6 +132,7 @@ export default function RapportTransportsPage() {
   const [filtreAgriculteur, setFiltreAgriculteur] = useState('')
   const [filtreContrat, setFiltreContrat] = useState('')
   const [filtreStatut, setFiltreStatut] = useState<FiltresRapport['statut']>('')
+  const [filtreProduits, setFiltreProduits] = useState<string[]>([])
 
   const charger = useCallback((debut: string, fin: string) => {
     setLoading(true)
@@ -87,15 +170,22 @@ export default function RapportTransportsPage() {
     return [...s].sort((a, b) => a.localeCompare(b, 'fr'))
   }, [data])
 
+  const produits = useMemo(() => {
+    const s = new Set<string>()
+    ;[...(data?.realisees ?? []), ...(data?.planifiees ?? []), ...(data?.nonPlanifiees ?? [])].forEach(r => { if (r.produit && r.produit !== '—') s.add(r.produit) })
+    return [...s].sort((a, b) => a.localeCompare(b, 'fr'))
+  }, [data])
+
   const filtres: FiltresRapport = {
     fournisseur: filtreFournisseur || undefined,
     agriculteur: filtreAgriculteur || undefined,
     contrat: filtreContrat || undefined,
     statut: filtreStatut,
+    produits: filtreProduits.length > 0 ? filtreProduits : undefined,
   }
-  const filtresActifs = !!(filtreFournisseur || filtreAgriculteur || filtreContrat || filtreStatut)
+  const filtresActifs = !!(filtreFournisseur || filtreAgriculteur || filtreContrat || filtreStatut || filtreProduits.length > 0)
   function resetFiltres() {
-    setFiltreFournisseur(''); setFiltreAgriculteur(''); setFiltreContrat(''); setFiltreStatut('')
+    setFiltreFournisseur(''); setFiltreAgriculteur(''); setFiltreContrat(''); setFiltreStatut(''); setFiltreProduits([])
   }
 
   const realiseesAffichees = data ? trierLignes(filtrerLignes(data.realisees, filtres), tri, ordre) : []
@@ -107,6 +197,7 @@ export default function RapportTransportsPage() {
   if (filtreAgriculteur) pdfParams.set('agriculteur', filtreAgriculteur)
   if (filtreContrat) pdfParams.set('contrat', filtreContrat)
   if (filtreStatut) pdfParams.set('statut', filtreStatut)
+  if (filtreProduits.length > 0) pdfParams.set('produits', filtreProduits.join(','))
   const pdfHref = `/api/pdf/rapport-transports?${pdfParams.toString()}`
 
   return (
@@ -139,6 +230,7 @@ export default function RapportTransportsPage() {
 
       {/* Filtres */}
       <div className="flex items-center gap-2 flex-wrap">
+        <MultiSelect label="Toutes céréales" options={produits} selected={filtreProduits} onChange={setFiltreProduits} />
         <select value={filtreFournisseur} onChange={e => setFiltreFournisseur(e.target.value)} className="input text-sm py-1.5 w-44">
           <option value="">Tous fournisseurs</option>
           {fournisseurs.map(f => <option key={f} value={f}>{f}</option>)}

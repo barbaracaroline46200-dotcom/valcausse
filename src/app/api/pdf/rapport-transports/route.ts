@@ -51,11 +51,13 @@ export async function GET(req: NextRequest) {
   const triParam = searchParams.get('tri') as TriChamp | null
   const tri: TriChamp = triParam && TRI_VALIDES.includes(triParam) ? triParam : 'date'
   const ordre: Ordre = searchParams.get('ordre') === 'desc' ? 'desc' : 'asc'
+  const produitsParam = searchParams.get('produits')
   const filtres: FiltresRapport = {
     fournisseur: searchParams.get('fournisseur') || undefined,
     agriculteur: searchParams.get('agriculteur') || undefined,
     contrat: searchParams.get('contrat') || undefined,
     statut: (searchParams.get('statut') as FiltresRapport['statut']) || '',
+    produits: produitsParam ? produitsParam.split(',').filter(Boolean) : undefined,
   }
 
   const supabase = getServiceClient()
@@ -104,6 +106,7 @@ export async function GET(req: NextRequest) {
     })
     y -= 20
     const filtresActifs = [
+      filtres.produits && filtres.produits.length > 0 && `Céréale(s) : ${filtres.produits.join(', ')}`,
       filtres.fournisseur && `Fournisseur : ${filtres.fournisseur}`,
       filtres.agriculteur && `Agriculteur : ${filtres.agriculteur}`,
       filtres.contrat && `Contrat : ${filtres.contrat}`,
