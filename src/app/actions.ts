@@ -8,10 +8,17 @@ export async function getDashboardData() {
   const supabase = getServiceClient()
   const { debut, fin } = getAnneeAgricoleISO()
 
-  const { data: contrats } = await supabase
+  const { data: contratsRaw } = await supabase
     .from('contrats_achat')
-    .select('id,numero_contrat,famille,statut,quantite_totale,date_debut,date_fin,gere_par_silo,produit:produits(nom),fournisseur:fournisseurs(nom),livraisons(type,quantite_reelle),contrats_vente(quantite)')
+    .select('id,numero_contrat,famille,statut,quantite_totale,date_debut,date_fin,gere_par_silo,produit:produits(nom),fournisseur:fournisseurs(nom),livraisons(type,quantite_reelle),contrats_vente_liens(quantite)')
     .or(`date_debut.gte.${debut},date_fin.lte.${fin}`)
+
+  // Une vente peut être scindée par tranche sur plusieurs contrats d'achat : la quantité
+  // réservée sur CE contrat est celle du lien, pas le total de la vente (cf. /api/contrats/[id]).
+  const contrats = (contratsRaw ?? []).map((c: any) => ({
+    ...c,
+    contrats_vente: (c.contrats_vente_liens ?? []).map((l: any) => ({ quantite: l.quantite })),
+  }))
 
   const now = new Date()
   const showNextMonth = now.getDate() >= 20

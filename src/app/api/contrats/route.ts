@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
       courtier:courtiers(id,nom,numero_courtier),
       transporteur:transporteurs(id,nom),
       livraisons(id,type,quantite_reelle,quantite_prevue,mois_prevu,montant_transport_reel),
-      contrats_vente(id,numero_contrat,quantite,prix_vente,agriculteur_id,destination_silo,silo_nom,agriculteur:agriculteurs(id,civilite,nom))
+      contrats_vente_liens(quantite,contrat_vente:contrats_vente(id,numero_contrat,prix_vente,agriculteur_id,destination_silo,silo_nom,agriculteur:agriculteurs(id,civilite,nom)))
     `)
     .order('created_at', { ascending: false })
 
@@ -37,6 +37,17 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Une vente peut être scindée par tranche sur plusieurs contrats d'achat : on reconstruit
+  // contrats_vente à partir des liens pour que la quantité reflète la tranche réservée sur
+  // CE contrat d'achat, pas le total de la vente (cf. /api/contrats/[id]).
+  for (const c of data ?? []) {
+    c.contrats_vente = (c.contrats_vente_liens ?? [])
+      .filter((l: any) => l.contrat_vente)
+      .map((l: any) => ({ ...l.contrat_vente, quantite: l.quantite }))
+    delete c.contrats_vente_liens
+  }
+
   return NextResponse.json(data)
 }
 
