@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
   // Ajouter numero_facture_transport dans la recherche livraisons
   livraisonsOrParts.push(`numero_facture_transport.ilike.${like}`)
 
-  const [contrats, ventes, livraisons, fournisseurs, agriculteurs, transporteurs, livraisonsParPoids, facturesFourn, facturesClient] = await Promise.all([
+  const [contrats, ventes, livraisons, fournisseurs, agriculteurs, transporteurs, facturesFourn, facturesClient, livraisonsParPoids] = await Promise.all([
     supabase
       .from('contrats_achat')
       .select('id,numero_contrat,famille,statut,reference_fournisseur,produit:produits(nom),fournisseur:fournisseurs(nom)')
